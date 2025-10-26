@@ -6,24 +6,50 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, BarChart3, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { z } from "zod";
+
+const emailSchema = z.string().email("Invalid email address");
+const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
 
 const AdminAuth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
     
-    setTimeout(() => {
-      setIsLoading(false);
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    try {
+      emailSchema.parse(email);
+      passwordSchema.parse(password);
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
       toast({
         title: "Access granted",
         description: "Redirecting to management portal...",
       });
       navigate("/admin/dashboard");
-    }, 1500);
+    } catch (error: any) {
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid credentials",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -53,7 +79,8 @@ const AdminAuth = () => {
               <div className="space-y-2">
                 <Label htmlFor="adminEmail">Admin Email</Label>
                 <Input 
-                  id="adminEmail" 
+                  id="adminEmail"
+                  name="email"
                   type="email" 
                   placeholder="admin@blueharvests.com" 
                   required 
@@ -62,19 +89,10 @@ const AdminAuth = () => {
               <div className="space-y-2">
                 <Label htmlFor="adminPassword">Password</Label>
                 <Input 
-                  id="adminPassword" 
+                  id="adminPassword"
+                  name="password"
                   type="password" 
                   placeholder="••••••••" 
-                  required 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="twoFactor">2FA Code</Label>
-                <Input 
-                  id="twoFactor" 
-                  type="text" 
-                  placeholder="000000" 
-                  maxLength={6}
                   required 
                 />
               </div>
@@ -83,7 +101,7 @@ const AdminAuth = () => {
               </Button>
               <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                 <BarChart3 className="h-3 w-3" />
-                <span>Secure admin access with 2FA</span>
+                <span>Secure admin access</span>
               </div>
             </form>
           </CardContent>
