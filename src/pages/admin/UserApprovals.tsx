@@ -32,6 +32,15 @@ interface UserProfile {
   rejected_reason: string | null;
   created_at: string;
   roles: string[];
+  // Farmer fields
+  farm_name: string | null;
+  zip_code: string | null;
+  collection_point_address: string | null;
+  // Driver fields
+  vehicle_type: string | null;
+  vehicle_make: string | null;
+  vehicle_year: string | null;
+  license_number: string | null;
 }
 
 const UserApprovals = () => {
@@ -232,8 +241,42 @@ const UserApprovals = () => {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Roles:</span>{' '}
-                      {user.roles.map(r => r.replace('_', ' ')).join(', ')}
+                      {user.roles.map(r => r.replace('_', ' ')).join(', ') || 'N/A'}
                     </div>
+                    
+                    {/* Farmer-specific fields */}
+                    {(user.roles.includes('farmer') || user.roles.includes('lead_farmer')) && (
+                      <>
+                        <div>
+                          <span className="text-muted-foreground">Farm Name:</span> {user.farm_name || 'N/A'}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">ZIP Code:</span> {user.zip_code || 'N/A'}
+                        </div>
+                        {user.roles.includes('lead_farmer') && user.collection_point_address && (
+                          <div className="col-span-2">
+                            <span className="text-muted-foreground">Collection Point:</span> {user.collection_point_address}
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Driver-specific fields */}
+                    {user.roles.includes('driver') && (
+                      <>
+                        <div>
+                          <span className="text-muted-foreground">Vehicle:</span>{' '}
+                          {[user.vehicle_type, user.vehicle_make, user.vehicle_year].filter(Boolean).join(' ') || 'N/A'}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">License #:</span> {user.license_number || 'N/A'}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">ZIP Code:</span> {user.zip_code || 'N/A'}
+                        </div>
+                      </>
+                    )}
+                    
                     <div>
                       <span className="text-muted-foreground">Applied:</span>{' '}
                       {new Date(user.created_at).toLocaleDateString()}
