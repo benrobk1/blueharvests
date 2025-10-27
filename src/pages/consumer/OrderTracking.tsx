@@ -1,37 +1,82 @@
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import OrderTracking from "@/components/OrderTracking";
 import PreApprovedMessaging from "@/components/PreApprovedMessaging";
+import { DriverRating } from "@/components/consumer/DriverRating";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import logo from "@/assets/blue-harvests-logo.jpeg";
+import { formatMoney } from "@/lib/formatMoney";
 
 const ConsumerOrderTracking = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
-  // Mock order data - in real app, this would come from backend
-  const orders = [
-    {
-      orderId: "BH-001234",
-      status: "en_route" as const,
-      driverName: "Mike Johnson",
-      driverPhone: "(555) 234-5678",
-      estimatedTime: "15 minutes",
-      items: "5 items from Green Valley Farm",
-      total: 42.5,
-      deliveryAddress: "123 Main St, Anytown, NY 12345",
-      farmerName: "Green Valley Farm",
+  const { data: orders, isLoading, refetch } = useQuery({
+    queryKey: ['consumer-orders', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          status,
+          total_amount,
+          tip_amount,
+          delivery_date,
+          box_code,
+          created_at,
+          delivery_batch_id,
+          order_items(
+            quantity,
+            unit_price,
+            products(name, unit)
+          ),
+          delivery_batches(
+            driver_id,
+            profiles!delivery_batches_driver_id_fkey(full_name, phone)
+          )
+        `)
+        .eq('consumer_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Check which orders have been rated
+      const orderIds = data?.map(o => o.id) || [];
+      const { data: ratings } = await supabase
+        .from('delivery_ratings')
+        .select('order_id, rating')
+        .in('order_id', orderIds);
+
+      const ratedOrderIds = new Set(ratings?.map(r => r.order_id) || []);
+
+      return data?.map(order => ({
+        ...order,
+        hasRating: ratedOrderIds.has(order.id),
+      })) || [];
     },
-    {
-      orderId: "BH-001189",
-      status: "delivered" as const,
-      driverName: "Sarah Martinez",
-      driverPhone: "(555) 345-6789",
-      items: "3 items from Sunny Acres",
-      total: 28.75,
-      deliveryAddress: "123 Main St, Anytown, NY 12345",
-      farmerName: "Sunny Acres",
-    },
-  ];
+    enabled: !!user?.id,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-earth">
+        <header className="bg-white border-b shadow-soft">
+          <div className="container mx-auto px-4 py-4">
+            <Skeleton className="h-8 w-48" />
+          </div>
+        </header>
+        <main className="container mx-auto px-4 py-8">
+          {[1, 2].map(i => <Skeleton key={i} className="h-64 w-full mb-6" />)}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-earth pb-20 md:pb-8">
@@ -48,35 +93,119 @@ const ConsumerOrderTracking = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 space-y-6">
-        <div className="space-y-6">
-          {orders.map((order) => (
-            <div key={order.orderId} className="space-y-4">
-              <OrderTracking
-                orderId={order.orderId}
-                status={order.status}
-                driverName={order.driverName}
-                driverPhone={order.driverPhone}
-                estimatedTime={order.estimatedTime}
-                items={order.items}
-                total={order.total}
-                deliveryAddress={order.deliveryAddress}
-              />
-              
-              <div className="grid md:grid-cols-2 gap-4">
-                <PreApprovedMessaging
-                  recipientType="driver"
-                  recipientName={order.driverName}
-                  orderId={order.orderId}
-                />
-                <PreApprovedMessaging
-                  recipientType="farmer"
-                  recipientName={order.farmerName}
-                  orderId={order.orderId}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+        {!orders || orders.length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground mb-4">No orders yet</p>
+              <Button onClick={() => navigate('/consumer/shop')}>
+                Start Shopping
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {orders.map((order) => {
+              const driver = order.delivery_batches?.profiles;
+              const itemCount = order.order_items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+
+              return (
+                <Card key={order.id} className="border-2">
+                  <CardContent className="p-6 space-y-4">
+                    {/* Order Header */}
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold">Order #{order.id.slice(0, 8)}</h3>
+                          {order.box_code && (
+                            <Badge variant="outline" className="font-mono">
+                              {order.box_code}
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Placed {new Date(order.created_at).toLocaleDateString()} • {itemCount} items
+                        </p>
+                      </div>
+                      <Badge variant={order.status === 'delivered' ? 'default' : 'secondary'}>
+                        {order.status}
+                      </Badge>
+                    </div>
+
+                    {/* Order Details */}
+                    <div className="bg-muted p-4 rounded-lg space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Delivery Date:</span>
+                        <span className="font-medium">
+                          {new Date(order.delivery_date).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {order.box_code && (
+                        <div className="flex justify-between text-sm">
+                          <span>Box Code:</span>
+                          <span className="font-mono font-medium">{order.box_code}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-sm">
+                        <span>Total:</span>
+                        <span className="font-medium">{formatMoney(Number(order.total_amount))}</span>
+                      </div>
+                      {order.tip_amount > 0 && (
+                        <div className="flex justify-between text-sm text-green-600">
+                          <span>Driver Tip:</span>
+                          <span className="font-medium">{formatMoney(Number(order.tip_amount))}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Items List */}
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Items:</p>
+                      <div className="space-y-1">
+                        {order.order_items?.map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between text-sm">
+                            <span>{item.products.name}</span>
+                            <span className="text-muted-foreground">
+                              {item.quantity} {item.products.unit} × {formatMoney(Number(item.unit_price))}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Driver Info */}
+                    {driver && (
+                      <div className="bg-primary/5 border border-primary/20 p-3 rounded-lg">
+                        <p className="text-sm font-medium">Driver: {driver.full_name}</p>
+                        {driver.phone && (
+                          <p className="text-xs text-muted-foreground">Phone: {driver.phone}</p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Rating Section for Delivered Orders */}
+                    {order.status === 'delivered' && !order.hasRating && order.delivery_batches?.driver_id && (
+                      <div className="pt-4 border-t">
+                        <DriverRating
+                          orderId={order.id}
+                          driverId={order.delivery_batches.driver_id}
+                          driverName={driver?.full_name}
+                          onRatingSubmitted={() => refetch()}
+                        />
+                      </div>
+                    )}
+
+                    {order.hasRating && (
+                      <p className="text-sm text-green-600 text-center py-2">
+                        ✓ You've rated this delivery
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </main>
     </div>
   );

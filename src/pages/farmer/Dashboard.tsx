@@ -9,6 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/formatMoney";
 import { ProductForm } from "@/components/farmer/ProductForm";
+import { BatchConsolidation } from "@/components/farmer/BatchConsolidation";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -28,7 +29,7 @@ const FarmerDashboard = () => {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
-  // Fetch farmer's farm profile
+  // Fetch farmer's farm profile and check if lead farmer
   const { data: farmProfile } = useQuery({
     queryKey: ['farmer-profile', user?.id],
     queryFn: async () => {
@@ -42,18 +43,32 @@ const FarmerDashboard = () => {
     enabled: !!user?.id,
   });
 
-  // Fetch earnings
-  const { data: earnings, isLoading: earningsLoading } = useQuery({
-    queryKey: ['farmer-earnings', farmProfile?.id],
+  const { data: userRoles } = useQuery({
+    queryKey: ['user-roles', user?.id],
     queryFn: async () => {
-      if (!farmProfile?.id) return { today: 0, week: 0, month: 0 };
+      const { data } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user?.id);
+      return data?.map(r => r.role) || [];
+    },
+    enabled: !!user?.id,
+  });
+
+  const isLeadFarmer = userRoles?.includes('lead_farmer');
+
+  // Fetch earnings (including lead farmer commission if applicable)
+  const { data: earnings, isLoading: earningsLoading } = useQuery({
+    queryKey: ['farmer-earnings', farmProfile?.id, user?.id],
+    queryFn: async () => {
+      if (!farmProfile?.id) return { today: 0, week: 0, month: 0, commission: { today: 0, week: 0, month: 0 } };
 
       const now = new Date();
       const todayStart = new Date(now.setHours(0, 0, 0, 0)).toISOString();
       const weekStart = new Date(now.setDate(now.getDate() - 7)).toISOString();
       const monthStart = new Date(now.setDate(now.getDate() - 30)).toISOString();
 
-      // Get orders containing farmer's products
+      // Get orders containing farmer's products (direct sales)
       const { data: todayOrders } = await supabase
         .from('order_items')
         .select('subtotal, products!inner(farm_profile_id)')
@@ -77,9 +92,37 @@ const FarmerDashboard = () => {
       const week = (weekOrders?.reduce((sum, item) => sum + Number(item.subtotal), 0) || 0) * 0.9;
       const month = (monthOrders?.reduce((sum, item) => sum + Number(item.subtotal), 0) || 0) * 0.9;
 
-      return { today, week, month };
+      // Get lead farmer commission if applicable
+      const { data: todayCommission } = await supabase
+        .from('payouts')
+        .select('amount')
+        .eq('recipient_id', user?.id)
+        .eq('recipient_type', 'lead_farmer_commission')
+        .gte('created_at', todayStart);
+
+      const { data: weekCommission } = await supabase
+        .from('payouts')
+        .select('amount')
+        .eq('recipient_id', user?.id)
+        .eq('recipient_type', 'lead_farmer_commission')
+        .gte('created_at', weekStart);
+
+      const { data: monthCommission } = await supabase
+        .from('payouts')
+        .select('amount')
+        .eq('recipient_id', user?.id)
+        .eq('recipient_type', 'lead_farmer_commission')
+        .gte('created_at', monthStart);
+
+      const commission = {
+        today: todayCommission?.reduce((sum, p) => sum + Number(p.amount), 0) || 0,
+        week: weekCommission?.reduce((sum, p) => sum + Number(p.amount), 0) || 0,
+        month: monthCommission?.reduce((sum, p) => sum + Number(p.amount), 0) || 0,
+      };
+
+      return { today, week, month, commission };
     },
-    enabled: !!farmProfile?.id,
+    enabled: !!farmProfile?.id && !!user?.id,
   });
 
   // Fetch products
@@ -221,6 +264,14 @@ const FarmerDashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Lead Farmer Batch Consolidation */}
+        {isLeadFarmer && (
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Batch Consolidation</h2>
+            <BatchConsolidation />
+          </div>
+        )}
+
         {/* Earnings Overview */}
         <div className="grid gap-6 md:grid-cols-3">
           <Card className="border-2">
@@ -236,7 +287,9 @@ const FarmerDashboard = () => {
               ) : (
                 <>
                   <div className="text-3xl font-bold text-foreground">{formatMoney(earnings?.today || 0)}</div>
-                  <p className="text-xs text-muted-foreground mt-1">90% goes to you</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    90% of sales{earnings?.commission.today ? ` + ${formatMoney(earnings.commission.today)} commission` : ''}
+                  </p>
                 </>
               )}
             </CardContent>
@@ -253,7 +306,14 @@ const FarmerDashboard = () => {
               {earningsLoading ? (
                 <Skeleton className="h-10 w-24" />
               ) : (
-                <div className="text-3xl font-bold text-foreground">{formatMoney(earnings?.week || 0)}</div>
+                <>
+                  <div className="text-3xl font-bold text-foreground">{formatMoney(earnings?.week || 0)}</div>
+                  {earnings?.commission.week > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Includes {formatMoney(earnings.commission.week)} lead farmer commission
+                    </p>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
@@ -269,7 +329,14 @@ const FarmerDashboard = () => {
               {earningsLoading ? (
                 <Skeleton className="h-10 w-24" />
               ) : (
-                <div className="text-3xl font-bold text-foreground">{formatMoney(earnings?.month || 0)}</div>
+                <>
+                  <div className="text-3xl font-bold text-foreground">{formatMoney(earnings?.month || 0)}</div>
+                  {earnings?.commission.month > 0 && (
+                    <p className="text-xs text-success mt-1">
+                      + {formatMoney(earnings.commission.month)} commission earnings
+                    </p>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

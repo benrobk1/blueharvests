@@ -291,6 +291,41 @@ export type Database = {
           },
         ]
       }
+      delivery_ratings: {
+        Row: {
+          created_at: string
+          driver_id: string
+          feedback: string | null
+          id: string
+          order_id: string
+          rating: number
+        }
+        Insert: {
+          created_at?: string
+          driver_id: string
+          feedback?: string | null
+          id?: string
+          order_id: string
+          rating: number
+        }
+        Update: {
+          created_at?: string
+          driver_id?: string
+          feedback?: string | null
+          id?: string
+          order_id?: string
+          rating?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_ratings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       disputes: {
         Row: {
           consumer_id: string
@@ -545,6 +580,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          box_code: string | null
           consumer_id: string
           created_at: string | null
           delivery_batch_id: string | null
@@ -556,6 +592,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          box_code?: string | null
           consumer_id: string
           created_at?: string | null
           delivery_batch_id?: string | null
@@ -567,6 +604,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          box_code?: string | null
           consumer_id?: string
           created_at?: string | null
           delivery_batch_id?: string | null
@@ -1080,7 +1118,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_box_code: {
+        Args: { p_batch_id: string; p_stop_sequence: number }
+        Returns: string
+      }
       generate_referral_code: { Args: never; Returns: string }
+      get_driver_rating: { Args: { p_driver_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

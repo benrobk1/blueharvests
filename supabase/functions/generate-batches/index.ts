@@ -532,7 +532,19 @@ serve(async (req) => {
 
         console.log(`Created ${batchStops.length} optimized stops`);
 
-        // 9. Get detailed OSRM route with turn-by-turn directions
+        // 9. Generate box codes for orders
+        console.log('Generating box codes for orders...');
+        for (let i = 0; i < createdStops.length; i++) {
+          const stop = createdStops[i];
+          const boxCode = `B${nextBatchNumber}-${stop.sequence_number}`;
+          
+          await supabaseClient
+            .from('orders')
+            .update({ box_code: boxCode })
+            .eq('id', stop.order_id);
+        }
+
+        // 10. Get detailed OSRM route with turn-by-turn directions
         const coordinates: [number, number][] = batchStops
           .filter(s => s.latitude && s.longitude)
           .map(s => [s.longitude, s.latitude]);
@@ -643,6 +655,57 @@ serve(async (req) => {
           errors.push({ batch_id: batch.id, error: updateError.message });
         }
 
+        // 15. Calculate lead farmer commission (if batch has a lead farmer assigned)
+        if (batch.lead_farmer_id) {
+          console.log('Calculating lead farmer commission for batch', batch.id);
+          
+          // Get lead farmer's commission rate
+          const { data: leadFarmerProfile } = await supabaseClient
+            .from('profiles')
+            .select('commission_rate')
+            .eq('id', batch.lead_farmer_id)
+            .single();
+
+          const commissionRate = leadFarmerProfile?.commission_rate || 5.0;
+
+          // Get all farmer sales in this batch (excluding lead farmer's own sales)
+          const { data: batchOrderItems } = await supabaseClient
+            .from('order_items')
+            .select(`
+              subtotal,
+              products!inner(
+                farm_profiles!inner(farmer_id)
+              )
+            `)
+            .in('order_id', orderIds);
+
+          let commissionableAmount = 0;
+          batchOrderItems?.forEach((item: any) => {
+            const farmerId = item.products?.farm_profiles?.farmer_id;
+            // Only commission on other farmers' sales, not lead farmer's own
+            if (farmerId && farmerId !== batch.lead_farmer_id) {
+              commissionableAmount += Number(item.subtotal);
+            }
+          });
+
+          const commissionAmount = commissionableAmount * (commissionRate / 100);
+
+          if (commissionAmount > 0) {
+            await supabaseClient
+              .from('payouts')
+              .insert({
+                recipient_id: batch.lead_farmer_id,
+                recipient_type: 'lead_farmer_commission',
+                amount: commissionAmount,
+                status: 'pending',
+                description: `Lead farmer commission (${commissionRate}%) for batch ${nextBatchNumber}`,
+                order_id: orderIds[0] // Link to first order in batch for reference
+              });
+
+            console.log(`Created lead farmer commission payout: $${commissionAmount.toFixed(2)}`);
+          }
+        }
+
         batchesCreated.push({
           batch_id: batch.id,
           batch_number: nextBatchNumber,
@@ -652,7 +715,7 @@ serve(async (req) => {
           estimated_duration_minutes: estimatedDuration
         });
 
-        // 15. Send notifications for locked orders
+        // 16. Send notifications for locked orders
         for (const order of orders) {
           try {
             await supabaseClient.functions.invoke('send-notification', {

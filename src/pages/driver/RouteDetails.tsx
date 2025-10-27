@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BoxCodeScanner } from "@/components/driver/BoxCodeScanner";
 import { Navigation, MapPin, Clock, Package, Phone } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -17,6 +18,7 @@ interface BatchStop {
   notes: string | null;
   orders: {
     id: string;
+    box_code: string | null;
     total_amount: number;
     profiles: {
       full_name: string;
@@ -55,6 +57,7 @@ export default function RouteDetails() {
             notes,
             orders!inner(
               id,
+              box_code,
               total_amount,
               profiles!inner(
                 full_name,
@@ -156,7 +159,12 @@ export default function RouteDetails() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 space-y-4">
+      <main className="container mx-auto px-4 py-8 space-y-6">
+        {/* Box Code Scanner */}
+        <BoxCodeScanner />
+
+        {/* Route Stops */}
+        <div className="space-y-4">
         {activeBatch.batch_stops?.map((stop, index) => (
           <Card
             key={stop.id}
@@ -190,6 +198,11 @@ export default function RouteDetails() {
                       <MapPin className="h-3 w-3" />
                       {stop.address}
                     </p>
+                    {stop.orders?.box_code && (
+                      <Badge variant="outline" className="font-mono mt-1">
+                        Box: {stop.orders.box_code}
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <Badge
@@ -262,6 +275,7 @@ export default function RouteDetails() {
             </CardContent>
           </Card>
         ))}
+        </div>
       </main>
     </div>
   );

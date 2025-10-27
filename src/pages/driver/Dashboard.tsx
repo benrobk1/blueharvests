@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DollarSign, Package, TrendingUp, Star, Navigation, Clock } from "lucide-react";
@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
+import { BoxCodeScanner } from "@/components/driver/BoxCodeScanner";
 import { formatMoney } from "@/lib/formatMoney";
 
 const DriverDashboard = () => {
@@ -114,7 +115,7 @@ const DriverDashboard = () => {
     enabled: !!user?.id,
   });
 
-  // Fetch stats
+  // Fetch stats and ratings
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['driver-stats', user?.id],
     queryFn: async () => {
@@ -129,10 +130,50 @@ const DriverDashboard = () => {
 
       const deliveredToday = todayStops?.filter(s => s.status === 'delivered').length || 0;
 
+      // Get actual driver rating
+      const { data: ratings } = await supabase
+        .from('delivery_ratings')
+        .select('rating')
+        .eq('driver_id', user?.id);
+
+      const avgRating = ratings && ratings.length > 0
+        ? ratings.reduce((sum, r) => sum + r.rating, 0) / ratings.length
+        : 0;
+
+      const totalRatings = ratings?.length || 0;
+
+      // Calculate on-time percentage from completed stops
+      const { data: completedStops } = await supabase
+        .from('batch_stops')
+        .select('estimated_arrival, actual_arrival, delivery_batches!inner(driver_id)')
+        .eq('delivery_batches.driver_id', user?.id)
+        .eq('status', 'delivered')
+        .not('actual_arrival', 'is', null)
+        .limit(100);
+
+      let onTimeCount = 0;
+      if (completedStops && completedStops.length > 0) {
+        completedStops.forEach(stop => {
+          if (stop.estimated_arrival && stop.actual_arrival) {
+            const estimated = new Date(stop.estimated_arrival).getTime();
+            const actual = new Date(stop.actual_arrival).getTime();
+            // On time if delivered within 15 minutes of estimate
+            if (actual <= estimated + 15 * 60 * 1000) {
+              onTimeCount++;
+            }
+          }
+        });
+      }
+
+      const onTimePercentage = completedStops && completedStops.length > 0
+        ? Math.round((onTimeCount / completedStops.length) * 100)
+        : 100;
+
       return {
         deliveries: deliveredToday,
-        rating: 4.9, // TODO: Implement rating system
-        onTime: 98, // TODO: Calculate from delivery times
+        rating: avgRating.toFixed(1),
+        totalRatings,
+        onTime: onTimePercentage,
       };
     },
     enabled: !!user?.id,
@@ -231,8 +272,10 @@ const DriverDashboard = () => {
                     <Star className="h-6 w-6 text-warning" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-foreground">{stats?.rating || 0}</div>
-                    <div className="text-sm text-muted-foreground">Customer Rating</div>
+                    <div className="text-2xl font-bold text-foreground">{stats?.rating || '0.0'}</div>
+                    <div className="text-sm text-muted-foreground">
+                      Rating ({stats?.totalRatings || 0} reviews)
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -257,6 +300,9 @@ const DriverDashboard = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* Box Code Scanner */}
+        <BoxCodeScanner />
 
         {/* Active Route */}
         <Card className="border-2">
