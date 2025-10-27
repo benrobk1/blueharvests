@@ -38,7 +38,7 @@ async function geocodeAddress(address: string): Promise<{ latitude: number; long
   }
 }
 
-// Calculate distance between two points using Haversine formula
+// Calculate distance between two points using Haversine formula (fallback)
 function calculateDistance(
   lat1: number,
   lon1: number,
@@ -58,18 +58,227 @@ function calculateDistance(
   return R * c;
 }
 
-// Simple nearest-neighbor TSP algorithm for route optimization
-function optimizeRoute(stops: any[]): any[] {
+// Get OSRM distance matrix for multiple stops
+async function getOsrmDistanceMatrix(
+  coordinates: [number, number][]
+): Promise<{ durations: number[][]; distances: number[][] } | null> {
+  const osrmServer = Deno.env.get('OSRM_SERVER_URL') || 'https://router.project-osrm.org';
+  
+  if (coordinates.length < 2) {
+    console.warn('Need at least 2 coordinates for distance matrix');
+    return null;
+  }
+
+  try {
+    // Round coordinates to 6 decimal places for efficiency
+    const coordString = coordinates
+      .map(([lon, lat]) => `${lon.toFixed(6)},${lat.toFixed(6)}`)
+      .join(';');
+
+    const url = `${osrmServer}/table/v1/driving/${coordString}?annotations=distance,duration`;
+    
+    console.log(`Fetching OSRM distance matrix for ${coordinates.length} stops...`);
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.error('OSRM distance matrix request failed:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (data.code !== 'Ok') {
+      console.error('OSRM error:', data.code, data.message);
+      return null;
+    }
+
+    // Convert durations to minutes and distances to km
+    const durations = data.durations.map((row: number[]) => 
+      row.map((seconds: number) => seconds / 60)
+    );
+    const distances = data.distances.map((row: number[]) => 
+      row.map((meters: number) => meters / 1000)
+    );
+
+    return { durations, distances };
+  } catch (error) {
+    console.error('Error fetching OSRM distance matrix:', error);
+    return null;
+  }
+}
+
+// Get detailed OSRM route with turn-by-turn directions
+async function getOsrmRoute(
+  coordinates: [number, number][]
+): Promise<any | null> {
+  const osrmServer = Deno.env.get('OSRM_SERVER_URL') || 'https://router.project-osrm.org';
+  
+  if (coordinates.length < 2) {
+    return null;
+  }
+
+  try {
+    const coordString = coordinates
+      .map(([lon, lat]) => `${lon.toFixed(6)},${lat.toFixed(6)}`)
+      .join(';');
+
+    const url = `${osrmServer}/route/v1/driving/${coordString}?overview=full&geometries=polyline&steps=true`;
+    
+    console.log('Fetching OSRM route with turn-by-turn directions...');
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      console.error('OSRM route request failed:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (data.code !== 'Ok' || !data.routes || data.routes.length === 0) {
+      console.error('OSRM route error:', data.code);
+      return null;
+    }
+
+    const route = data.routes[0];
+    return {
+      distance: route.distance / 1000, // Convert to km
+      duration: route.duration / 60, // Convert to minutes
+      geometry: route.geometry, // Polyline for map display
+      legs: route.legs.map((leg: any) => ({
+        distance: leg.distance / 1000,
+        duration: leg.duration / 60,
+        steps: leg.steps.map((step: any) => ({
+          maneuver: step.maneuver.type,
+          instruction: step.maneuver.instruction || `${step.maneuver.type} ${step.name || ''}`,
+          distance: step.distance / 1000,
+          duration: step.duration / 60
+        }))
+      }))
+    };
+  } catch (error) {
+    console.error('Error fetching OSRM route:', error);
+    return null;
+  }
+}
+
+// 2-opt algorithm to improve route
+function twoOptImprove(route: any[], distanceMatrix: number[][]): any[] {
+  if (route.length < 4) return route;
+
+  let improved = true;
+  let bestRoute = [...route];
+
+  while (improved) {
+    improved = false;
+    
+    for (let i = 1; i < bestRoute.length - 2; i++) {
+      for (let j = i + 1; j < bestRoute.length - 1; j++) {
+        // Calculate current distance
+        const currentDist = 
+          distanceMatrix[i - 1][i] +
+          distanceMatrix[j][j + 1];
+        
+        // Calculate distance if we reverse the segment
+        const newDist = 
+          distanceMatrix[i - 1][j] +
+          distanceMatrix[i][j + 1];
+        
+        if (newDist < currentDist) {
+          // Reverse the segment between i and j
+          const newRoute = [
+            ...bestRoute.slice(0, i),
+            ...bestRoute.slice(i, j + 1).reverse(),
+            ...bestRoute.slice(j + 1)
+          ];
+          bestRoute = newRoute;
+          improved = true;
+        }
+      }
+    }
+  }
+
+  return bestRoute;
+}
+
+// OSRM-based route optimization with 2-opt improvement
+async function optimizeRouteWithOsrm(stops: any[]): Promise<{
+  optimizedStops: any[];
+  method: string;
+  distanceMatrix?: number[][];
+}> {
+  if (stops.length <= 1) {
+    return { optimizedStops: stops, method: 'single_stop' };
+  }
+
+  // Extract valid coordinates
+  const validStops = stops.filter(s => s.latitude && s.longitude);
+  
+  if (validStops.length !== stops.length) {
+    console.warn(`${stops.length - validStops.length} stops missing coordinates, using fallback`);
+  }
+
+  if (validStops.length === 0) {
+    return { optimizedStops: stops, method: 'no_coordinates' };
+  }
+
+  // Try OSRM first
+  const coordinates: [number, number][] = validStops.map(s => [s.longitude, s.latitude]);
+  const matrixResult = await getOsrmDistanceMatrix(coordinates);
+
+  if (!matrixResult) {
+    console.warn('OSRM unavailable, falling back to Haversine');
+    // Fallback to old nearest-neighbor with Haversine
+    return { optimizedStops: optimizeRouteFallback(stops), method: 'haversine_fallback' };
+  }
+
+  const { distances } = matrixResult;
+
+  // Nearest-neighbor using OSRM distances
+  const optimized = [];
+  const remaining = [...validStops];
+  const indices: number[] = validStops.map((_, i) => i);
+  
+  let currentIndex = 0;
+  optimized.push(remaining.shift()!);
+  indices.shift();
+
+  while (remaining.length > 0) {
+    let nearestIndex = 0;
+    let nearestDistance = Infinity;
+
+    for (let i = 0; i < remaining.length; i++) {
+      const distance = distances[currentIndex][indices[i]];
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = i;
+      }
+    }
+
+    currentIndex = indices.splice(nearestIndex, 1)[0];
+    optimized.push(remaining.splice(nearestIndex, 1)[0]);
+  }
+
+  // Apply 2-opt improvement
+  console.log('Applying 2-opt optimization...');
+  const improvedRoute = twoOptImprove(optimized, distances);
+
+  return { 
+    optimizedStops: improvedRoute, 
+    method: 'osrm_with_2opt',
+    distanceMatrix: distances
+  };
+}
+
+// Fallback nearest-neighbor using Haversine
+function optimizeRouteFallback(stops: any[]): any[] {
   if (stops.length <= 1) return stops;
 
   const optimized = [];
   const remaining = [...stops];
   
-  // Start with first stop
   let current = remaining.shift()!;
   optimized.push(current);
 
-  // Always pick nearest unvisited stop
   while (remaining.length > 0) {
     let nearestIndex = 0;
     let nearestDistance = Infinity;
@@ -97,10 +306,40 @@ function optimizeRoute(stops: any[]): any[] {
   return optimized;
 }
 
-// Calculate estimated arrival times
-function calculateEstimatedArrivals(stops: any[], startTime: Date): any[] {
-  const avgSpeedKmh = 40; // Average driving speed
-  const stopDurationMinutes = 10; // Time per delivery stop
+// Calculate estimated arrival times with OSRM route data
+async function calculateEstimatedArrivalsWithOsrm(
+  stops: any[], 
+  startTime: Date
+): Promise<any[]> {
+  const stopDurationMinutes = 10;
+  
+  // Try to get OSRM route for accurate times
+  const coordinates: [number, number][] = stops
+    .filter(s => s.latitude && s.longitude)
+    .map(s => [s.longitude, s.latitude]);
+
+  const osrmRoute = await getOsrmRoute(coordinates);
+
+  if (osrmRoute && osrmRoute.legs) {
+    // Use OSRM's actual travel times
+    let currentTime = new Date(startTime);
+    
+    return stops.map((stop, index) => {
+      if (index > 0 && osrmRoute.legs[index - 1]) {
+        const travelMinutes = osrmRoute.legs[index - 1].duration;
+        currentTime = new Date(currentTime.getTime() + (travelMinutes + stopDurationMinutes) * 60000);
+      }
+      
+      return {
+        ...stop,
+        estimated_arrival: currentTime.toISOString()
+      };
+    });
+  }
+
+  // Fallback to Haversine-based calculation
+  console.warn('Using fallback time calculation with Haversine');
+  const avgSpeedKmh = 40;
   let currentTime = new Date(startTime);
 
   return stops.map((stop, index) => {
@@ -251,7 +490,6 @@ serve(async (req) => {
         console.log(`Batch ${batch.id} created with number ${nextBatchNumber}`);
 
         // 4. Prepare stops with geocoded data
-        const profile = orders[0].profiles as any;
         const unoptimizedStops = orders.map((order) => {
           const orderProfile = order.profiles as any;
           return {
@@ -264,14 +502,15 @@ serve(async (req) => {
           };
         });
 
-        // 5. Optimize route using nearest-neighbor TSP
-        console.log('Optimizing route...');
-        const optimizedStops = optimizeRoute(unoptimizedStops);
+        // 5. Optimize route using OSRM with 2-opt
+        console.log('Optimizing route with OSRM...');
+        const { optimizedStops, method, distanceMatrix } = await optimizeRouteWithOsrm(unoptimizedStops);
+        console.log(`Route optimization method: ${method}`);
 
         // 6. Calculate estimated arrival times (start at 9 AM on delivery date)
         const startTime = new Date(tomorrowDate);
         startTime.setHours(9, 0, 0, 0);
-        const stopsWithTimes = calculateEstimatedArrivals(optimizedStops, startTime);
+        const stopsWithTimes = await calculateEstimatedArrivalsWithOsrm(optimizedStops, startTime);
 
         // 7. Add sequence numbers
         const batchStops = stopsWithTimes.map((stop, index) => ({
@@ -293,23 +532,47 @@ serve(async (req) => {
 
         console.log(`Created ${batchStops.length} optimized stops`);
 
-        // 9. Generate route_data JSON
-        const totalDistance = batchStops.reduce((total, stop, index) => {
-          if (index === 0) return 0;
-          if (stop.latitude && stop.longitude && 
-              batchStops[index - 1].latitude && batchStops[index - 1].longitude) {
-            return total + calculateDistance(
-              batchStops[index - 1].latitude,
-              batchStops[index - 1].longitude,
-              stop.latitude,
-              stop.longitude
-            );
-          }
-          return total;
-        }, 0);
+        // 9. Get detailed OSRM route with turn-by-turn directions
+        const coordinates: [number, number][] = batchStops
+          .filter(s => s.latitude && s.longitude)
+          .map(s => [s.longitude, s.latitude]);
+        
+        const osrmRoute = await getOsrmRoute(coordinates);
 
-        const routeData = {
+        // 10. Calculate total distance and duration
+        let totalDistance = 0;
+        let totalDuration = 0;
+
+        if (osrmRoute) {
+          totalDistance = osrmRoute.distance;
+          totalDuration = osrmRoute.duration;
+          console.log('Using OSRM actual route distance and duration');
+        } else {
+          // Fallback to Haversine calculations
+          console.warn('OSRM route unavailable, using Haversine fallback');
+          totalDistance = batchStops.reduce((total, stop, index) => {
+            if (index === 0) return 0;
+            if (stop.latitude && stop.longitude && 
+                batchStops[index - 1].latitude && batchStops[index - 1].longitude) {
+              return total + calculateDistance(
+                batchStops[index - 1].latitude,
+                batchStops[index - 1].longitude,
+                stop.latitude,
+                stop.longitude
+              );
+            }
+            return total;
+          }, 0);
+          totalDuration = (totalDistance / 40) * 60; // 40 km/h average
+        }
+
+        // Add stop time to duration
+        const estimatedDuration = Math.ceil(totalDuration + (batchStops.length * 10));
+
+        // 11. Generate enhanced route_data JSON
+        const routeData: any = {
           total_distance_km: Math.round(totalDistance * 100) / 100,
+          total_duration_minutes: estimatedDuration,
           stops: batchStops.map(stop => ({
             sequence: stop.sequence_number,
             address: stop.address,
@@ -317,11 +580,32 @@ serve(async (req) => {
             longitude: stop.longitude,
             estimated_arrival: stop.estimated_arrival
           })),
-          optimization_method: 'nearest_neighbor_tsp',
-          generated_at: new Date().toISOString()
+          optimization_method: method,
+          generated_at: new Date().toISOString(),
+          osrm_server: Deno.env.get('OSRM_SERVER_URL') || 'https://router.project-osrm.org'
         };
 
-        // 10. Create route entry
+        // Add OSRM-specific data if available
+        if (osrmRoute) {
+          routeData.route_geometry = osrmRoute.geometry;
+          routeData.legs = osrmRoute.legs.map((leg: any, index: number) => ({
+            from_stop: index + 1,
+            to_stop: index + 2,
+            distance_km: Math.round(leg.distance * 100) / 100,
+            duration_minutes: Math.round(leg.duration * 10) / 10,
+            instructions: leg.steps.map((step: any) => ({
+              maneuver: step.maneuver,
+              instruction: step.instruction,
+              distance_km: Math.round(step.distance * 100) / 100,
+              duration_minutes: Math.round(step.duration * 10) / 10
+            }))
+          }));
+          routeData.turn_by_turn_directions = osrmRoute.legs.flatMap((leg: any) => 
+            leg.steps.map((step: any) => step.instruction)
+          );
+        }
+
+        // 12. Create route entry
         const { error: routeError } = await supabaseClient
           .from('routes')
           .insert({
@@ -336,12 +620,7 @@ serve(async (req) => {
           errors.push({ batch_id: batch.id, error: routeError.message });
         }
 
-        // 11. Update batch with estimated duration
-        const estimatedDuration = Math.ceil(
-          (totalDistance / 40) * 60 + // Travel time at 40 km/h
-          (batchStops.length * 10) // 10 minutes per stop
-        );
-
+        // 13. Update batch with estimated duration
         await supabaseClient
           .from('delivery_batches')
           .update({ estimated_duration_minutes: estimatedDuration })
@@ -349,7 +628,7 @@ serve(async (req) => {
 
         console.log(`Route optimized: ${totalDistance.toFixed(1)} km, ${estimatedDuration} minutes`);
 
-        // 12. Update orders to confirmed status and link to batch
+        // 14. Update orders to confirmed status and link to batch
         const orderIds = orders.map(o => o.id);
         const { error: updateError } = await supabaseClient
           .from('orders')
@@ -373,7 +652,7 @@ serve(async (req) => {
           estimated_duration_minutes: estimatedDuration
         });
 
-        // 13. Send notifications for locked orders
+        // 15. Send notifications for locked orders
         for (const order of orders) {
           try {
             await supabaseClient.functions.invoke('send-notification', {
