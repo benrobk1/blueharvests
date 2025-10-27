@@ -93,26 +93,12 @@ const Index = () => {
       {/* Value Proposition */}
       <section className="bg-white py-16 px-4">
         <div className="container mx-auto max-w-6xl">
-          <div className="grid gap-12 md:grid-cols-3 text-center">
+          <div className="grid gap-12 text-center">
             <div>
               <div className="mb-4 text-4xl font-bold text-primary">90%</div>
               <h3 className="mb-2 text-lg font-semibold text-foreground">Direct to Farmers</h3>
               <p className="text-sm text-muted-foreground">
                 Farmers keep 90% of product prices, far above wholesale rates
-              </p>
-            </div>
-            <div>
-              <div className="mb-4 text-4xl font-bold text-secondary">100%</div>
-              <h3 className="mb-2 text-lg font-semibold text-foreground">Driver Earnings</h3>
-              <p className="text-sm text-muted-foreground">
-                Delivery drivers receive 100% of delivery fees plus customer tips
-              </p>
-            </div>
-            <div>
-              <div className="mb-4 text-4xl font-bold text-earth">$25</div>
-              <h3 className="mb-2 text-lg font-semibold text-foreground">Minimum Order</h3>
-              <p className="text-sm text-muted-foreground">
-                Low minimum with $10 credit when you spend $100+ monthly
               </p>
             </div>
           </div>
