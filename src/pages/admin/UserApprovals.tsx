@@ -67,7 +67,10 @@ const UserApprovals = () => {
         })
       );
 
-      return usersWithRoles as UserProfile[];
+      // Filter out consumers (they are auto-approved)
+      return usersWithRoles.filter(user => 
+        !user.roles.includes('consumer')
+      ) as UserProfile[];
     },
   });
 

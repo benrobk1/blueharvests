@@ -578,7 +578,7 @@ serve(async (req) => {
       }
     }
 
-    // Process referral credits for first order
+    // Process referral credits and auto-start trial for first order
     const { data: existingOrders } = await supabaseClient
       .from('orders')
       .select('id')
@@ -589,7 +589,7 @@ serve(async (req) => {
     const isFirstOrder = !existingOrders || existingOrders.length === 0;
 
     if (isFirstOrder) {
-      console.log('First order detected, checking for referrals...');
+      console.log('First order detected, checking for referrals and auto-starting trial...');
       
       // Check if user was referred
       const { data: referral } = await supabaseClient
@@ -638,6 +638,62 @@ serve(async (req) => {
           .eq('id', referral.id);
 
         console.log(`Awarded $${creditAmount} referral credit to ${referral.referrer_id}`);
+      }
+
+      // Auto-start 60-day free trial subscription
+      const { data: existingSubscription } = await supabaseClient
+        .from('subscriptions')
+        .select('id')
+        .eq('consumer_id', user.id)
+        .maybeSingle();
+
+      if (!existingSubscription && paymentStatus === 'paid') {
+        console.log('Creating auto-trial subscription for first order...');
+        
+        try {
+          // Get or create Stripe customer
+          const customers = await stripe.customers.list({ email: user.email!, limit: 1 });
+          let customerId: string;
+
+          if (customers.data.length > 0) {
+            customerId = customers.data[0].id;
+          } else {
+            const customer = await stripe.customers.create({
+              email: user.email!,
+              metadata: { supabase_user_id: user.id }
+            });
+            customerId = customer.id;
+          }
+
+          // Create Stripe subscription with 60-day trial
+          const subscription = await stripe.subscriptions.create({
+            customer: customerId,
+            items: [{ price: 'price_1QdZPGP1bV9tPLJmHE0jS5Bi' }], // $9.99/month price ID
+            trial_period_days: 60,
+            metadata: {
+              consumer_id: user.id,
+              auto_started: 'true'
+            }
+          });
+
+          // Store subscription in database
+          await supabaseClient
+            .from('subscriptions')
+            .insert({
+              consumer_id: user.id,
+              stripe_customer_id: customerId,
+              stripe_subscription_id: subscription.id,
+              status: 'trialing',
+              current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
+              current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+              trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+            });
+
+          console.log('Auto-trial subscription created:', subscription.id);
+        } catch (trialError) {
+          console.error('Failed to create auto-trial (non-blocking):', trialError);
+          // Don't fail the checkout if trial creation fails
+        }
       }
     }
 

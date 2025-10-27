@@ -40,9 +40,12 @@ export const CartDrawer = () => {
                   <div key={item.id} className="flex gap-4 p-4 border rounded-lg">
                     <div className="flex-1">
                       <h4 className="font-semibold">{item.products.name}</h4>
-                      <p className="text-sm text-muted-foreground">
+                      <button
+                        onClick={() => navigate(`/farm/${item.products.farm_profiles.id}`)}
+                        className="text-sm text-primary hover:underline"
+                      >
                         {item.products.farm_profiles.farm_name}
-                      </p>
+                      </button>
                       <p className="text-sm font-medium mt-1">
                         {formatMoney(Number(item.unit_price))} / {item.products.unit}
                       </p>

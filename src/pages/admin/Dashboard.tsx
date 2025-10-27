@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import { CreditsManager } from "@/components/admin/CreditsManager";
+import { AdminRoleManager } from "@/components/admin/AdminRoleManager";
 
 const AdminDashboard = () => {
   // Fetch metrics
@@ -349,6 +350,11 @@ const AdminDashboard = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Admin Role Management */}
+        <div className="mt-8">
+          <AdminRoleManager />
         </div>
 
         {/* Credits Management Section */}

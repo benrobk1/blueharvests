@@ -391,11 +391,19 @@ const Checkout = () => {
                   <p className="text-sm text-muted-foreground mb-2">{cartCount} items</p>
                   <div className="space-y-2">
                     {cart.items.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm">
-                        <span>
-                          {item.products.name} x{item.quantity}
-                        </span>
-                        <span>{formatMoney(item.quantity * Number(item.unit_price))}</span>
+                      <div key={item.id} className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>
+                            {item.products.name} x{item.quantity}
+                          </span>
+                          <span>{formatMoney(item.quantity * Number(item.unit_price))}</span>
+                        </div>
+                        <button
+                          onClick={() => navigate(`/farm/${item.products.farm_profiles.id}`)}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          {item.products.farm_profiles.farm_name}
+                        </button>
                       </div>
                     ))}
                   </div>

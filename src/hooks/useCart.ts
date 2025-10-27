@@ -15,6 +15,7 @@ interface CartItem {
     image_url: string | null;
     available_quantity: number;
     farm_profiles: {
+      id: string;
       farm_name: string;
     };
   };
@@ -67,6 +68,7 @@ export const useCart = () => {
             image_url,
             available_quantity,
             farm_profiles (
+              id,
               farm_name
             )
           )
