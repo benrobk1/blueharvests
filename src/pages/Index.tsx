@@ -42,16 +42,9 @@ const Index = () => {
           <div className="flex justify-center mb-8">
             <img src={logo} alt="Blue Harvests Logo" className="h-32 md:h-40 object-contain" />
           </div>
-          <div className="mb-6 inline-block rounded-full bg-white/20 px-6 py-2 backdrop-blur-sm">
-            <span className="text-sm font-medium text-white">Farm Fresh • Local • Sustainable</span>
-          </div>
           <h1 className="mb-6 text-5xl md:text-7xl font-bold text-white tracking-tight">
             Blue Harvests
           </h1>
-          <p className="mx-auto mb-8 max-w-2xl text-lg md:text-xl text-white/90 leading-relaxed">
-            Connecting regional farmers with urban households through transparent pricing,
-            just-in-time delivery, and sustainable relationships.
-          </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <div className="text-white/90 text-sm">90% to Farmers • 100% of Fees to Drivers</div>
           </div>
