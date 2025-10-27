@@ -291,6 +291,59 @@ export type Database = {
           },
         ]
       }
+      disputes: {
+        Row: {
+          consumer_id: string
+          created_at: string
+          description: string
+          dispute_type: string
+          id: string
+          order_id: string
+          refund_amount: number | null
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          consumer_id: string
+          created_at?: string
+          description: string
+          dispute_type: string
+          id?: string
+          order_id: string
+          refund_amount?: number | null
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          consumer_id?: string
+          created_at?: string
+          description?: string
+          dispute_type?: string
+          id?: string
+          order_id?: string
+          refund_amount?: number | null
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "disputes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       farm_photos: {
         Row: {
           created_at: string | null

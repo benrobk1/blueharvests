@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { RoleGate } from "@/components/RoleGate";
 import Index from "./pages/Index";
@@ -27,19 +27,39 @@ import FarmProfileView from "./pages/FarmProfileView";
 import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
 import TermsOfService from "./pages/legal/TermsOfService";
 import UserApprovals from "./pages/admin/UserApprovals";
+import Disputes from "./pages/admin/Disputes";
+import BatchAdjustments from "./pages/admin/BatchAdjustments";
+import FinancialReports from "./pages/admin/FinancialReports";
+import Install from "./pages/Install";
 import { CookieConsent } from "./components/CookieConsent";
+import { BottomNav } from "./components/mobile/BottomNav";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <CookieConsent />
-          <Routes>
+const App = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
+
+const AppContent = () => {
+  const location = useLocation();
+  const isConsumerRoute = location.pathname.startsWith('/consumer/');
+
+  return (
+    <>
+      <CookieConsent />
+      <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/consumer/auth" element={<ConsumerAuth />} />
           <Route path="/driver/auth" element={<DriverAuth />} />
@@ -114,17 +134,32 @@ const App = () => (
               <UserApprovals />
             </RoleGate>
           } />
+          <Route path="/admin/disputes" element={
+            <RoleGate roles={['admin']}>
+              <Disputes />
+            </RoleGate>
+          } />
+          <Route path="/admin/batches" element={
+            <RoleGate roles={['admin']}>
+              <BatchAdjustments />
+            </RoleGate>
+          } />
+          <Route path="/admin/financials" element={
+            <RoleGate roles={['admin']}>
+              <FinancialReports />
+            </RoleGate>
+          } />
           
           <Route path="/farm/:farmId" element={<FarmProfileView />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
           <Route path="/terms" element={<TermsOfService />} />
+          <Route path="/install" element={<Install />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
           </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+          {isConsumerRoute && <BottomNav />}
+        </>
+      );
+    };
 
-export default App;
+    export default App;

@@ -65,7 +65,7 @@ const Shop = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-earth">
+    <div className="min-h-screen bg-gradient-earth pb-20 md:pb-8">
       {/* Header */}
       <header className="bg-white border-b sticky top-0 z-10 shadow-soft">
         <div className="container mx-auto px-4 py-4">

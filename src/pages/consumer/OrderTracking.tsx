@@ -34,8 +34,8 @@ const ConsumerOrderTracking = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-earth">
-      <header className="bg-white border-b shadow-soft">
+    <div className="min-h-screen bg-gradient-earth pb-20 md:pb-8">
+      <header className="bg-white border-b shadow-soft sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate("/consumer/shop")}>

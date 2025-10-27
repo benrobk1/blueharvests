@@ -130,10 +130,19 @@ const AdminDashboard = () => {
                 Market Config
               </Button>
               <Button variant="outline" onClick={() => window.location.href = '/admin/products'}>
-                Product Approval
+                Products
               </Button>
               <Button variant="outline" onClick={() => window.location.href = '/admin/approvals'}>
-                User Approvals
+                Approvals
+              </Button>
+              <Button variant="outline" onClick={() => window.location.href = '/admin/disputes'}>
+                Disputes
+              </Button>
+              <Button variant="outline" onClick={() => window.location.href = '/admin/batches'}>
+                Batches
+              </Button>
+              <Button variant="outline" onClick={() => window.location.href = '/admin/financials'}>
+                Financials
               </Button>
             </div>
           </div>
