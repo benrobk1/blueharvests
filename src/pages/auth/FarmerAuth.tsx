@@ -5,12 +5,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Sprout } from "lucide-react";
+import { ArrowLeft, Sprout, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { z } from "zod";
+import { getAuthErrorMessage } from "@/lib/authErrors";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -21,6 +23,10 @@ const FarmerAuth = () => {
   const { roles } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [farmerType, setFarmerType] = useState<"lead" | "regular">("regular");
+  const [formError, setFormError] = useState<{ title: string; description: string } | null>(null);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [formData, setFormData] = useState({
     farmName: "",
     ownerName: "",
@@ -40,6 +46,7 @@ const FarmerAuth = () => {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
     
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
@@ -76,9 +83,11 @@ const FarmerAuth = () => {
       });
       navigate("/farmer/dashboard");
     } catch (error: any) {
+      const errorMsg = getAuthErrorMessage(error);
+      setFormError(errorMsg);
       toast({
-        title: "Login failed",
-        description: error.message || "Invalid credentials",
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: "destructive",
       });
     } finally {
@@ -89,6 +98,7 @@ const FarmerAuth = () => {
   const handleInterestFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
     
     try {
       // Validate required fields
@@ -167,14 +177,40 @@ const FarmerAuth = () => {
         collectionPointAddress: "",
       });
     } catch (error: any) {
-      console.error('Farmer application error:', error);
+      const errorMsg = getAuthErrorMessage(error);
+      setFormError(errorMsg);
       toast({
-        title: "Application Failed",
-        description: error.message || "Could not submit application",
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const validateEmail = (email: string) => {
+    try {
+      emailSchema.parse(email);
+      setEmailError('');
+    } catch {
+      setEmailError('Please enter a valid email address');
+    }
+  };
+
+  const validatePassword = (password: string) => {
+    if (password.length > 0 && password.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+    } else {
+      setPasswordError('');
+    }
+  };
+
+  const validateConfirmPassword = (password: string, confirmPassword: string) => {
+    if (confirmPassword.length > 0 && password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match');
+    } else {
+      setConfirmPasswordError('');
     }
   };
 
@@ -209,13 +245,38 @@ const FarmerAuth = () => {
               
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
+                  {formError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>{formError.title}</AlertTitle>
+                      <AlertDescription>{formError.description}</AlertDescription>
+                    </Alert>
+                  )}
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input id="email" name="email" type="email" placeholder="you@example.com" required />
+                    <Label htmlFor="email">Email *</Label>
+                    <Input 
+                      id="email" 
+                      name="email" 
+                      type="email" 
+                      placeholder="you@example.com" 
+                      required 
+                      onBlur={(e) => validateEmail(e.target.value)}
+                      className={emailError ? 'border-destructive' : ''}
+                    />
+                    {emailError && <p className="text-xs text-destructive">{emailError}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
-                    <Input id="password" name="password" type="password" placeholder="••••••••" required />
+                    <Label htmlFor="password">Password *</Label>
+                    <Input 
+                      id="password" 
+                      name="password" 
+                      type="password" 
+                      placeholder="••••••••" 
+                      required 
+                      onChange={(e) => validatePassword(e.target.value)}
+                      className={passwordError ? 'border-destructive' : ''}
+                    />
+                    {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? "Logging in..." : "Login"}
@@ -225,6 +286,13 @@ const FarmerAuth = () => {
               
               <TabsContent value="signup">
                 <form onSubmit={handleInterestFormSubmit} className="space-y-4">
+                  {formError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>{formError.title}</AlertTitle>
+                      <AlertDescription>{formError.description}</AlertDescription>
+                    </Alert>
+                  )}
                   <div className="space-y-2">
                     <Label>I am a:</Label>
                     <div className="flex gap-4">
@@ -253,7 +321,7 @@ const FarmerAuth = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="farmName">Farm Name</Label>
+                    <Label htmlFor="farmName">Farm Name *</Label>
                     <Input 
                       id="farmName" 
                       placeholder="Green Valley Farm" 
@@ -263,7 +331,7 @@ const FarmerAuth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="ownerName">Your Name</Label>
+                    <Label htmlFor="ownerName">Your Name *</Label>
                     <Input 
                       id="ownerName" 
                       placeholder="John Smith" 
@@ -273,7 +341,7 @@ const FarmerAuth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signupEmail">Email</Label>
+                    <Label htmlFor="signupEmail">Email *</Label>
                     <Input 
                       id="signupEmail" 
                       type="email" 
@@ -281,32 +349,46 @@ const FarmerAuth = () => {
                       required 
                       value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
+                      onBlur={(e) => validateEmail(e.target.value)}
+                      className={emailError ? 'border-destructive' : ''}
                     />
+                    {emailError && <p className="text-xs text-destructive">{emailError}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">Password *</Label>
                     <Input 
                       id="password" 
                       type="password" 
-                      placeholder="Choose a password (min 6 characters)" 
+                      placeholder="At least 6 characters" 
                       required 
                       value={formData.password}
-                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      onChange={(e) => {
+                        setFormData({...formData, password: e.target.value});
+                        validatePassword(e.target.value);
+                        if (formData.confirmPassword) validateConfirmPassword(e.target.value, formData.confirmPassword);
+                      }}
+                      className={passwordError ? 'border-destructive' : ''}
                     />
+                    {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
                     <Input 
                       id="confirmPassword" 
                       type="password" 
-                      placeholder="Confirm your password" 
+                      placeholder="Re-enter your password" 
                       required 
                       value={formData.confirmPassword}
-                      onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                      onChange={(e) => {
+                        setFormData({...formData, confirmPassword: e.target.value});
+                        validateConfirmPassword(formData.password, e.target.value);
+                      }}
+                      className={confirmPasswordError ? 'border-destructive' : ''}
                     />
+                    {confirmPasswordError && <p className="text-xs text-destructive">{confirmPasswordError}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label htmlFor="phone">Phone Number *</Label>
                     <Input 
                       id="phone" 
                       type="tel" 
@@ -317,7 +399,7 @@ const FarmerAuth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="farmAddress">Farm Address</Label>
+                    <Label htmlFor="farmAddress">Farm Address *</Label>
                     <Input 
                       id="farmAddress" 
                       placeholder="123 Farm Road" 
@@ -327,7 +409,7 @@ const FarmerAuth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="zipCode">ZIP Code</Label>
+                    <Label htmlFor="zipCode">ZIP Code *</Label>
                     <Input 
                       id="zipCode" 
                       placeholder="10001" 

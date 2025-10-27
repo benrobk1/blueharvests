@@ -4,12 +4,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ShoppingBag } from "lucide-react";
+import { ArrowLeft, ShoppingBag, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { z } from "zod";
+import { getAuthErrorMessage } from "@/lib/authErrors";
 
 const emailSchema = z.string().email("Invalid email address");
 const passwordSchema = z.string().min(6, "Password must be at least 6 characters");
@@ -21,6 +23,10 @@ const ConsumerAuth = () => {
   const { roles } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [referralCode, setReferralCode] = useState(searchParams.get('ref') || '');
+  const [formError, setFormError] = useState<{ title: string; description: string } | null>(null);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
 
   useEffect(() => {
     const refParam = searchParams.get('ref');
@@ -32,6 +38,7 @@ const ConsumerAuth = () => {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
     
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
@@ -68,9 +75,11 @@ const ConsumerAuth = () => {
       });
       navigate("/consumer/shop");
     } catch (error: any) {
+      const errorMsg = getAuthErrorMessage(error);
+      setFormError(errorMsg);
       toast({
-        title: "Login failed",
-        description: error.message || "Invalid credentials",
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: "destructive",
       });
     } finally {
@@ -81,10 +90,12 @@ const ConsumerAuth = () => {
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
     
     const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
+    const confirmPassword = formData.get("confirmPassword") as string;
     const fullName = formData.get("fullName") as string;
     const phone = formData.get("phone") as string;
     const address = formData.get("address") as string;
@@ -94,6 +105,10 @@ const ConsumerAuth = () => {
     try {
       emailSchema.parse(email);
       passwordSchema.parse(password);
+
+      if (password !== confirmPassword) {
+        throw new Error("Passwords do not match");
+      }
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -147,13 +162,40 @@ const ConsumerAuth = () => {
       });
       navigate("/consumer/shop");
     } catch (error: any) {
+      const errorMsg = getAuthErrorMessage(error);
+      setFormError(errorMsg);
       toast({
-        title: "Signup failed",
-        description: error.message || "Could not create account",
+        title: errorMsg.title,
+        description: errorMsg.description,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const validateEmail = (email: string) => {
+    try {
+      emailSchema.parse(email);
+      setEmailError('');
+    } catch {
+      setEmailError('Please enter a valid email address');
+    }
+  };
+
+  const validatePassword = (password: string) => {
+    if (password.length > 0 && password.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+    } else {
+      setPasswordError('');
+    }
+  };
+
+  const validateConfirmPassword = (password: string, confirmPassword: string) => {
+    if (confirmPassword.length > 0 && password !== confirmPassword) {
+      setConfirmPasswordError('Passwords do not match');
+    } else {
+      setConfirmPasswordError('');
     }
   };
 
@@ -188,14 +230,39 @@ const ConsumerAuth = () => {
               
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" placeholder="you@example.com" required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" name="password" type="password" placeholder="••••••••" required />
-              </div>
+                  {formError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>{formError.title}</AlertTitle>
+                      <AlertDescription>{formError.description}</AlertDescription>
+                    </Alert>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email *</Label>
+                    <Input 
+                      id="email" 
+                      name="email" 
+                      type="email" 
+                      placeholder="you@example.com" 
+                      required 
+                      onBlur={(e) => validateEmail(e.target.value)}
+                      className={emailError ? 'border-destructive' : ''}
+                    />
+                    {emailError && <p className="text-xs text-destructive">{emailError}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="password">Password *</Label>
+                    <Input 
+                      id="password" 
+                      name="password" 
+                      type="password" 
+                      placeholder="••••••••" 
+                      required 
+                      onChange={(e) => validatePassword(e.target.value)}
+                      className={passwordError ? 'border-destructive' : ''}
+                    />
+                    {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
+                  </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? "Logging in..." : "Login"}
                   </Button>
@@ -204,24 +271,40 @@ const ConsumerAuth = () => {
               
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
+                  {formError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>{formError.title}</AlertTitle>
+                      <AlertDescription>{formError.description}</AlertDescription>
+                    </Alert>
+                  )}
                   <div className="space-y-2">
-                    <Label htmlFor="fullName">Full Name</Label>
+                    <Label htmlFor="fullName">Full Name *</Label>
                     <Input id="fullName" name="fullName" placeholder="John Doe" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signupEmail">Email</Label>
-                    <Input id="signupEmail" name="email" type="email" placeholder="you@example.com" required />
+                    <Label htmlFor="signupEmail">Email *</Label>
+                    <Input 
+                      id="signupEmail" 
+                      name="email" 
+                      type="email" 
+                      placeholder="you@example.com" 
+                      required 
+                      onBlur={(e) => validateEmail(e.target.value)}
+                      className={emailError ? 'border-destructive' : ''}
+                    />
+                    {emailError && <p className="text-xs text-destructive">{emailError}</p>}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
+                    <Label htmlFor="phone">Phone Number *</Label>
                     <Input id="phone" name="phone" type="tel" placeholder="+1 (555) 000-0000" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="address">Delivery Address</Label>
+                    <Label htmlFor="address">Delivery Address *</Label>
                     <Input id="address" name="address" placeholder="123 Main St, Apt 4B" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="zipCode">ZIP Code</Label>
+                    <Label htmlFor="zipCode">ZIP Code *</Label>
                     <Input id="zipCode" name="zipCode" placeholder="10001" required maxLength={5} />
                   </div>
                   <div className="space-y-2">
@@ -239,8 +322,37 @@ const ConsumerAuth = () => {
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signupPassword">Password</Label>
-                    <Input id="signupPassword" name="password" type="password" placeholder="••••••••" required />
+                    <Label htmlFor="signupPassword">Password *</Label>
+                    <Input 
+                      id="signupPassword" 
+                      name="password" 
+                      type="password" 
+                      placeholder="At least 6 characters" 
+                      required 
+                      onChange={(e) => {
+                        validatePassword(e.target.value);
+                        const confirmPwd = (document.getElementById('confirmPassword') as HTMLInputElement)?.value;
+                        if (confirmPwd) validateConfirmPassword(e.target.value, confirmPwd);
+                      }}
+                      className={passwordError ? 'border-destructive' : ''}
+                    />
+                    {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password *</Label>
+                    <Input 
+                      id="confirmPassword" 
+                      name="confirmPassword" 
+                      type="password" 
+                      placeholder="Re-enter your password" 
+                      required 
+                      onChange={(e) => {
+                        const pwd = (document.getElementById('signupPassword') as HTMLInputElement)?.value;
+                        validateConfirmPassword(pwd, e.target.value);
+                      }}
+                      className={confirmPasswordError ? 'border-destructive' : ''}
+                    />
+                    {confirmPasswordError && <p className="text-xs text-destructive">{confirmPasswordError}</p>}
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? "Creating account..." : "Create Account"}
