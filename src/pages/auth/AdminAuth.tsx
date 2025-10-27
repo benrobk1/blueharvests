@@ -16,6 +16,7 @@ const AdminAuth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -52,6 +53,43 @@ const AdminAuth = () => {
     }
   };
 
+  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get("email") as string;
+    const password = formData.get("password") as string;
+
+    try {
+      emailSchema.parse(email);
+      passwordSchema.parse(password);
+
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/admin`
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Account created",
+        description: "Please contact an administrator to activate your admin access.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Sign up failed",
+        description: error.message || "Could not create account",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-earth flex items-center justify-center p-4">
       <div className="w-full max-w-md">
@@ -75,7 +113,7 @@ const AdminAuth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleLogin} className="space-y-4">
+            <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="adminEmail">Admin Email</Label>
                 <Input 
@@ -97,11 +135,20 @@ const AdminAuth = () => {
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Verifying..." : "Access Portal"}
+                {isLoading ? (isSignUp ? "Creating Account..." : "Verifying...") : (isSignUp ? "Create Admin Account" : "Access Portal")}
               </Button>
               <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                 <BarChart3 className="h-3 w-3" />
                 <span>Secure admin access</span>
+              </div>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {isSignUp ? "Already have an account? Sign in" : "Need an account? Sign up"}
+                </button>
               </div>
             </form>
           </CardContent>
