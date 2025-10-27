@@ -30,12 +30,28 @@ const AdminAuth = () => {
       emailSchema.parse(email);
       passwordSchema.parse(password);
 
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+      if (!authData.user) throw new Error("No user data returned");
+
+      // Verify user has admin role
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authData.user.id);
+
+      if (rolesError) throw rolesError;
+
+      const hasAdminRole = userRoles?.some(r => r.role === 'admin');
+      
+      if (!hasAdminRole) {
+        await supabase.auth.signOut();
+        throw new Error('This account does not have admin privileges');
+      }
 
       toast({
         title: "Access granted",
