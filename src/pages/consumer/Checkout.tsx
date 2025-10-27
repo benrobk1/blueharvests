@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Calendar, CreditCard, MapPin } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +20,7 @@ const Checkout = () => {
   const { cart, cartTotal, cartCount } = useCart();
   const { toast } = useToast();
   const [selectedDate, setSelectedDate] = useState<string>("");
+  const [useCredits, setUseCredits] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
@@ -93,71 +94,38 @@ const Checkout = () => {
         throw new Error('Missing required data');
       }
 
-      // Create order
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert({
-          consumer_id: user.id,
+      // Call checkout edge function
+      const { data, error } = await supabase.functions.invoke('checkout', {
+        body: {
+          cart_id: cart.id,
           delivery_date: selectedDate,
-          total_amount: total,
-          status: 'pending',
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // Create order items
-      const orderItems = cart.items.map((item) => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        subtotal: item.quantity * Number(item.unit_price),
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // Create transaction fees
-      const fees = [
-        {
-          order_id: order.id,
-          fee_type: 'platform',
-          amount: platformFee,
-          description: 'Platform fee (10%)',
+          use_credits: useCredits,
         },
-        {
-          order_id: order.id,
-          fee_type: 'delivery',
-          amount: deliveryFee,
-          description: 'Delivery fee',
-        },
-      ];
+      });
 
-      const { error: feesError } = await supabase
-        .from('transaction_fees')
-        .insert(fees);
+      if (error) {
+        throw error;
+      }
 
-      if (feesError) throw feesError;
+      if (data?.error) {
+        const errorMessages: { [key: string]: string } = {
+          'INSUFFICIENT_INVENTORY': data.message || 'Some products are out of stock',
+          'BELOW_MINIMUM_ORDER': data.message || `Minimum order is ${formatMoney(data.minimum)}`,
+          'CUTOFF_PASSED': data.message || 'Order cutoff time has passed',
+          'INVALID_DELIVERY_DATE': data.message || 'Invalid delivery date selected',
+          'MISSING_PROFILE_INFO': data.message || 'Please complete your profile information',
+          'NO_MARKET_CONFIG': data.message || 'Delivery not available in your area',
+        };
 
-      // Clear cart
-      const { error: clearCartError } = await supabase
-        .from('cart_items')
-        .delete()
-        .eq('cart_id', cart.id);
+        throw new Error(errorMessages[data.error] || data.message || 'Order failed');
+      }
 
-      if (clearCartError) throw clearCartError;
-
-      return order;
+      return data;
     },
-    onSuccess: (order) => {
+    onSuccess: (data) => {
       toast({
         title: 'Order placed!',
-        description: `Your order #${order.id.slice(0, 8)} has been confirmed`,
+        description: `Your order has been confirmed for ${format(new Date(data.delivery_date), 'MMM d')}`,
       });
       navigate('/consumer/orders');
     },
@@ -304,9 +272,15 @@ const Checkout = () => {
                     <span>{formatMoney(deliveryFee)}</span>
                   </div>
                   {credits && credits > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>Available Credits</span>
-                      <span>{formatMoney(credits)}</span>
+                    <div className="flex items-center space-x-2 p-3 bg-muted rounded-lg">
+                      <Checkbox
+                        id="use-credits"
+                        checked={useCredits}
+                        onCheckedChange={(checked) => setUseCredits(checked as boolean)}
+                      />
+                      <Label htmlFor="use-credits" className="text-sm cursor-pointer flex-1">
+                        Use {formatMoney(credits)} in available credits
+                      </Label>
                     </div>
                   )}
                 </div>
@@ -314,8 +288,13 @@ const Checkout = () => {
                 <div className="border-t pt-4">
                   <div className="flex justify-between font-bold text-lg">
                     <span>Total</span>
-                    <span>{formatMoney(total)}</span>
+                    <span>{formatMoney(useCredits && credits ? Math.max(0, total - credits) : total)}</span>
                   </div>
+                  {useCredits && credits > 0 && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {formatMoney(Math.min(credits, total))} credits will be applied
+                    </p>
+                  )}
                 </div>
 
                 <Button
