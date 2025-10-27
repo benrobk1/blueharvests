@@ -9,14 +9,29 @@ interface FarmProfile {
   id: string;
   farm_name: string;
   description: string;
+  bio: string;
   location: string;
   farmer_id: string;
+}
+
+interface FarmPhoto {
+  id: string;
+  photo_url: string;
+  display_order: number;
+}
+
+interface ImpactMetrics {
+  totalSales: number;
+  totalOrders: number;
+  familiesFed: number;
 }
 
 const FarmProfileView = () => {
   const { farmId } = useParams();
   const navigate = useNavigate();
   const [farm, setFarm] = useState<FarmProfile | null>(null);
+  const [photos, setPhotos] = useState<FarmPhoto[]>([]);
+  const [metrics, setMetrics] = useState<ImpactMetrics>({ totalSales: 0, totalOrders: 0, familiesFed: 0 });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -26,16 +41,61 @@ const FarmProfileView = () => {
   const loadFarmProfile = async () => {
     if (!farmId) return;
 
-    const { data, error } = await supabase
+    // Load farm profile
+    const { data: farmData, error: farmError } = await supabase
       .from("farm_profiles")
       .select("*")
       .eq("id", farmId)
       .single();
 
-    if (error) {
-      console.error("Error loading farm profile:", error);
-    } else {
-      setFarm(data);
+    if (farmError) {
+      console.error("Error loading farm profile:", farmError);
+      setIsLoading(false);
+      return;
+    }
+
+    setFarm(farmData);
+
+    // Load farm photos
+    const { data: photosData } = await supabase
+      .from("farm_photos")
+      .select("*")
+      .eq("farm_profile_id", farmId)
+      .order("display_order");
+
+    if (photosData) {
+      setPhotos(photosData);
+    }
+
+    // Calculate impact metrics
+    const { data: products } = await supabase
+      .from("products")
+      .select("id")
+      .eq("farm_profile_id", farmId);
+
+    if (products && products.length > 0) {
+      const productIds = products.map(p => p.id);
+      
+      // Get order items for these products
+      const { data: orderItems } = await supabase
+        .from("order_items")
+        .select(`
+          subtotal,
+          order_id,
+          orders!inner(status)
+        `)
+        .in("product_id", productIds)
+        .eq("orders.status", "delivered");
+
+      if (orderItems) {
+        const totalSales = orderItems.reduce((sum, item) => sum + Number(item.subtotal), 0);
+        const uniqueOrders = new Set(orderItems.map(item => item.order_id));
+        const totalOrders = uniqueOrders.size;
+        // Estimate families fed (assuming 1 order feeds 1 family for ~3 meals)
+        const familiesFed = Math.floor(totalOrders * 3);
+
+        setMetrics({ totalSales, totalOrders, familiesFed });
+      }
     }
 
     setIsLoading(false);
@@ -95,6 +155,31 @@ const FarmProfileView = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Impact Metrics */}
+            <div className="grid grid-cols-3 gap-4">
+              <Card className="text-center p-4">
+                <p className="text-2xl font-bold text-earth">${metrics.totalSales.toFixed(0)}</p>
+                <p className="text-sm text-muted-foreground">Total Sales</p>
+              </Card>
+              <Card className="text-center p-4">
+                <p className="text-2xl font-bold text-earth">{metrics.totalOrders}</p>
+                <p className="text-sm text-muted-foreground">Orders Delivered</p>
+              </Card>
+              <Card className="text-center p-4">
+                <p className="text-2xl font-bold text-earth">{metrics.familiesFed}</p>
+                <p className="text-sm text-muted-foreground">Meals Served</p>
+              </Card>
+            </div>
+
+            {farm.bio && (
+              <div>
+                <h3 className="text-lg font-semibold mb-2">Our Story</h3>
+                <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                  {farm.bio}
+                </p>
+              </div>
+            )}
+
             {farm.description && (
               <div>
                 <h3 className="text-lg font-semibold mb-2">About This Farm</h3>
@@ -104,11 +189,26 @@ const FarmProfileView = () => {
               </div>
             )}
 
+            {/* Photo Gallery */}
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold mb-4">Farm Photos</h3>
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Photos coming soon</p>
-              </div>
+              {photos.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {photos.map((photo) => (
+                    <div key={photo.id} className="aspect-square rounded-lg overflow-hidden border-2">
+                      <img
+                        src={photo.photo_url}
+                        alt="Farm photo"
+                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>No photos yet</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

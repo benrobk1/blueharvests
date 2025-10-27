@@ -413,6 +413,7 @@ export type Database = {
       }
       farm_profiles: {
         Row: {
+          bio: string | null
           created_at: string | null
           description: string | null
           farm_name: string
@@ -422,6 +423,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bio?: string | null
           created_at?: string | null
           description?: string | null
           farm_name: string
@@ -431,6 +433,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bio?: string | null
           created_at?: string | null
           description?: string | null
           farm_name?: string
@@ -784,6 +787,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          acquisition_channel: string | null
           approval_status: string | null
           approved_at: string | null
           approved_by: string | null
@@ -820,6 +824,7 @@ export type Database = {
           zip_code: string | null
         }
         Insert: {
+          acquisition_channel?: string | null
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null
@@ -856,6 +861,7 @@ export type Database = {
           zip_code?: string | null
         }
         Update: {
+          acquisition_channel?: string | null
           approval_status?: string | null
           approved_at?: string | null
           approved_by?: string | null

@@ -34,7 +34,11 @@ const ConsumerOrderTracking = () => {
           order_items(
             quantity,
             unit_price,
-            products(name, unit)
+            products(
+              name, 
+              unit,
+              farm_profiles(id, farm_name)
+            )
           ),
           delivery_batches(
             driver_id,
@@ -163,8 +167,17 @@ const ConsumerOrderTracking = () => {
                       <p className="text-sm font-medium">Items:</p>
                       <div className="space-y-1">
                         {order.order_items?.map((item: any, idx: number) => (
-                          <div key={idx} className="flex justify-between text-sm">
-                            <span>{item.products.name}</span>
+                          <div key={idx} className="flex justify-between items-center text-sm">
+                            <button
+                              onClick={() => {
+                                if (item.products?.farm_profiles?.id) {
+                                  navigate(`/farm/${item.products.farm_profiles.id}`);
+                                }
+                              }}
+                              className="text-left hover:text-primary underline-offset-2 hover:underline"
+                            >
+                              {item.products.name}
+                            </button>
                             <span className="text-muted-foreground">
                               {item.quantity} {item.products.unit} × {formatMoney(Number(item.unit_price))}
                             </span>

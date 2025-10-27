@@ -37,6 +37,7 @@ const FarmerProfile = () => {
   const [farmProfile, setFarmProfile] = useState({
     farm_name: "",
     description: "",
+    bio: "",
     location: "",
   });
 
@@ -104,6 +105,7 @@ const FarmerProfile = () => {
       setFarmProfile({
         farm_name: farmData.farm_name || "",
         description: farmData.description || "",
+        bio: farmData.bio || "",
         location: farmData.location || "",
       });
     }
@@ -156,6 +158,7 @@ const FarmerProfile = () => {
         farmer_id: user.id,
         farm_name: farmProfile.farm_name,
         description: farmProfile.description,
+        bio: farmProfile.bio,
         location: farmProfile.location,
       });
 
@@ -349,13 +352,24 @@ const FarmerProfile = () => {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="bio">Your Story</Label>
+                    <Textarea
+                      id="bio"
+                      value={farmProfile.bio}
+                      onChange={(e) => setFarmProfile({ ...farmProfile, bio: e.target.value })}
+                      placeholder="Tell your story as a farmer - your journey, passion, and what drives you..."
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="description">Farm Description</Label>
                     <Textarea
                       id="description"
                       value={farmProfile.description}
                       onChange={(e) => setFarmProfile({ ...farmProfile, description: e.target.value })}
-                      placeholder="Tell customers about your farm, practices, and what makes your produce special..."
-                      rows={5}
+                      placeholder="Describe your farm, practices, and what makes your produce special..."
+                      rows={4}
                     />
                   </div>
 
