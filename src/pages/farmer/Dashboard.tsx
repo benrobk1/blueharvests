@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/formatMoney";
 import { ProductForm } from "@/components/farmer/ProductForm";
 import { BatchConsolidation } from "@/components/farmer/BatchConsolidation";
+import { StripeConnectStatusBanner } from "@/components/StripeConnectStatusBanner";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -264,6 +265,9 @@ const FarmerDashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Stripe Connect Status Banner */}
+        <StripeConnectStatusBanner />
+
         {/* Lead Farmer Batch Consolidation */}
         {isLeadFarmer && (
           <div>

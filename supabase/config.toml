@@ -32,3 +32,6 @@ verify_jwt = true
 
 [functions.send-trial-reminders]
 verify_jwt = false
+
+[functions.reset-demo-data]
+verify_jwt = true

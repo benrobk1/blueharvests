@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Search, MapPin, Package, User, TrendingUp } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Search, MapPin, Package, User, TrendingUp, Clock } from "lucide-react";
 import logo from "@/assets/blue-harvests-logo.jpeg";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
@@ -14,6 +15,7 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { formatMoney } from "@/lib/formatMoney";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { isCutoffPassed } from "@/lib/marketHelpers";
 
 interface Product {
   id: string;
@@ -71,6 +73,19 @@ const Shop = () => {
 
       if (error) throw error;
       return data as Product[];
+    },
+  });
+
+  const { data: marketConfig } = useQuery({
+    queryKey: ['market-config-shop'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('market_configs')
+        .select('*')
+        .eq('zip_code', '10001')
+        .eq('active', true)
+        .maybeSingle();
+      return data;
     },
   });
 
@@ -151,6 +166,18 @@ const Shop = () => {
                 </div>
               </div>
             </Card>
+          )}
+
+          {/* Cutoff Alert */}
+          {marketConfig && (
+            <Alert className="mt-4">
+              <Clock className="h-4 w-4" />
+              <AlertTitle>Order Deadline</AlertTitle>
+              <AlertDescription>
+                Orders for next-day delivery must be placed by {marketConfig.cutoff_time?.slice(0, 5) || '11:59 PM'}.
+                {isCutoffPassed(marketConfig.cutoff_time || '23:59:00') ? ' Currently closed - orders will be for the day after tomorrow.' : ' Currently accepting orders!'}
+              </AlertDescription>
+            </Alert>
           )}
         </div>
       </header>

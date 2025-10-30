@@ -6,12 +6,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Geocoding helper using Mapbox
-async function geocodeAddress(address: string): Promise<{ latitude: number; longitude: number } | null> {
+// ZIP code center coordinates fallback (NYC demo ZIPs)
+function getZipCenterCoordinates(zipCode: string): { latitude: number; longitude: number } {
+  const zipCenters: { [key: string]: [number, number] } = {
+    '10001': [40.7506, -73.9971],
+    '10002': [40.7157, -73.9860],
+    '10003': [40.7320, -73.9875],
+    '10004': [40.6990, -74.0177],
+    '10005': [40.7056, -74.0087],
+    '10006': [40.7093, -74.0120],
+    '10007': [40.7135, -74.0078],
+    '10009': [40.7264, -73.9779],
+    '10010': [40.7392, -73.9817],
+    '10011': [40.7406, -74.0008]
+  };
+  
+  const coords = zipCenters[zipCode] || [40.7580, -73.9855]; // Default NYC center
+  return { latitude: coords[0], longitude: coords[1] };
+}
+
+// Geocoding helper using Mapbox with ZIP fallback
+async function geocodeAddress(address: string, zipCode?: string): Promise<{ latitude: number; longitude: number } | null> {
   const mapboxToken = Deno.env.get('MAPBOX_PUBLIC_TOKEN');
   if (!mapboxToken) {
-    console.error('MAPBOX_PUBLIC_TOKEN not configured');
-    return null;
+    console.warn('MAPBOX_PUBLIC_TOKEN not configured - using ZIP-based fallback');
+    return zipCode ? getZipCenterCoordinates(zipCode) : null;
   }
 
   try {
@@ -21,8 +40,8 @@ async function geocodeAddress(address: string): Promise<{ latitude: number; long
     );
     
     if (!response.ok) {
-      console.error('Mapbox geocoding failed:', response.status);
-      return null;
+      console.warn('Mapbox geocoding failed:', response.status, '- using ZIP fallback');
+      return zipCode ? getZipCenterCoordinates(zipCode) : null;
     }
 
     const data = await response.json();
@@ -31,10 +50,11 @@ async function geocodeAddress(address: string): Promise<{ latitude: number; long
       return { latitude, longitude };
     }
     
-    return null;
+    console.warn('No Mapbox results - using ZIP fallback');
+    return zipCode ? getZipCenterCoordinates(zipCode) : null;
   } catch (error) {
-    console.error('Error geocoding address:', error);
-    return null;
+    console.warn('Error geocoding address:', error, '- using ZIP fallback');
+    return zipCode ? getZipCenterCoordinates(zipCode) : null;
   }
 }
 
@@ -269,12 +289,27 @@ async function optimizeRouteWithOsrm(stops: any[]): Promise<{
   };
 }
 
-// Fallback nearest-neighbor using Haversine
+// Fallback nearest-neighbor using Haversine or ZIP-based sorting
 function optimizeRouteFallback(stops: any[]): any[] {
   if (stops.length <= 1) return stops;
 
+  // Sort by ZIP code first, then by street address
+  const sorted = [...stops].sort((a, b) => {
+    // Extract ZIP from address if available
+    const zipA = a.address?.match(/\d{5}/)?.[0] || '';
+    const zipB = b.address?.match(/\d{5}/)?.[0] || '';
+    
+    if (zipA !== zipB) {
+      return zipA.localeCompare(zipB);
+    }
+    
+    // Within same ZIP, sort by street address
+    return (a.address || '').localeCompare(b.address || '');
+  });
+
+  // Then apply nearest-neighbor if coordinates available
   const optimized = [];
-  const remaining = [...stops];
+  const remaining = [...sorted];
   
   let current = remaining.shift()!;
   optimized.push(current);
@@ -296,6 +331,10 @@ function optimizeRouteFallback(stops: any[]): any[] {
           nearestDistance = distance;
           nearestIndex = i;
         }
+      } else {
+        // If no coordinates, just use next in ZIP-sorted order
+        nearestIndex = i;
+        break;
       }
     }
 
@@ -303,6 +342,7 @@ function optimizeRouteFallback(stops: any[]): any[] {
     optimized.push(current);
   }
 
+  console.log('Using ZIP-based routing fallback');
   return optimized;
 }
 
@@ -426,12 +466,20 @@ serve(async (req) => {
       pendingOrders.map(async (order) => {
         const profile = order.profiles as any;
         const address = profile?.delivery_address;
-        const coords = address ? await geocodeAddress(address) : null;
+        const zipCode = profile?.zip_code;
+        const coords = address ? await geocodeAddress(address, zipCode) : null;
+        
+        // If geocoding completely failed, use ZIP center as fallback
+        const finalCoords = coords || (zipCode ? getZipCenterCoordinates(zipCode) : null);
+        
+        if (!coords && finalCoords) {
+          console.log(`Using ZIP-based coordinates for order ${order.id}`);
+        }
         
         return {
           ...order,
-          latitude: coords?.latitude || null,
-          longitude: coords?.longitude || null
+          latitude: finalCoords?.latitude || null,
+          longitude: finalCoords?.longitude || null
         };
       })
     );

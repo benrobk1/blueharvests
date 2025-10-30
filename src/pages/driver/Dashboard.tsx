@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { DollarSign, Package, TrendingUp, Star, Navigation, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,8 @@ import { BoxCodeScanner } from "@/components/driver/BoxCodeScanner";
 import { formatMoney } from "@/lib/formatMoney";
 import { Progress } from "@/components/ui/progress";
 import { getRatingDisplay, MINIMUM_REVIEWS_THRESHOLD } from "@/lib/ratingHelpers";
+import { StripeConnectStatusBanner } from "@/components/StripeConnectStatusBanner";
+import { calculateEstimatedExpenses } from "@/lib/driverEarningsHelpers";
 
 const DriverDashboard = () => {
   const { user } = useAuth();
@@ -193,29 +196,81 @@ const DriverDashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 space-y-8">
-        {/* Earnings Overview */}
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card className="border-2">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Today's Earnings
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              {earningsLoading ? (
-                <Skeleton className="h-10 w-24" />
-              ) : (
-                <>
-                  <div className="text-3xl font-bold text-foreground">{formatMoney(earnings?.today.total || 0)}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Delivery: {formatMoney(earnings?.today.deliveryFees || 0)} + Tips: {formatMoney(earnings?.today.tips || 0)}
-                  </p>
-                </>
-              )}
-            </CardContent>
-          </Card>
+        {/* Stripe Connect Status Banner */}
+        <StripeConnectStatusBanner />
 
+        {/* Earnings Overview with Expense Breakdown */}
+        <Card className="border-2">
+          <CardHeader>
+            <CardTitle>Today's Earnings Breakdown</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Your net earnings after estimated expenses
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <div className="text-sm text-muted-foreground">Gross Earnings</div>
+                <div className="text-2xl font-bold text-foreground">
+                  {formatMoney(earnings?.today.total || 0)}
+                </div>
+                <div className="text-xs space-y-1">
+                  <div className="flex justify-between">
+                    <span>Delivery Fees:</span>
+                    <span>{formatMoney(earnings?.today.deliveryFees || 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tips:</span>
+                    <span className="text-green-600">{formatMoney(earnings?.today.tips || 0)}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-2 border-l pl-4">
+                <div className="text-sm text-muted-foreground">Estimated Expenses</div>
+                <div className="text-2xl font-bold text-destructive">
+                  -{formatMoney((() => {
+                    const expenses = calculateEstimatedExpenses(stats?.deliveries || 0);
+                    return expenses.total;
+                  })())}
+                </div>
+                <div className="text-xs space-y-1 text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Fuel (est.):</span>
+                    <span>-{formatMoney(calculateEstimatedExpenses(stats?.deliveries || 0).fuel)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tolls (est.):</span>
+                    <span>-{formatMoney(calculateEstimatedExpenses(stats?.deliveries || 0).tolls)}</span>
+                  </div>
+                  <div className="text-[10px] mt-2 italic">
+                    Based on {stats?.deliveries || 0} stops, avg 30mi route
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950 rounded-lg">
+              <div>
+                <div className="text-sm text-muted-foreground">Net Payout (Est.)</div>
+                <div className="text-3xl font-bold text-green-700 dark:text-green-400">
+                  {formatMoney(Math.max(0, (earnings?.today.total || 0) - calculateEstimatedExpenses(stats?.deliveries || 0).total))}
+                </div>
+              </div>
+              <TrendingUp className="h-8 w-8 text-green-600" />
+            </div>
+            
+            <div className="text-xs text-muted-foreground">
+              <strong>Target:</strong> $250-$280 net/day • 
+              <strong> Actual Route:</strong> View in Route Details for precise fuel costs
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Weekly and Monthly Earnings */}
+        <div className="grid gap-6 md:grid-cols-2">
           <Card className="border-2">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">

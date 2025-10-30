@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Calendar, CreditCard, MapPin, Coins, DollarSign } from "lucide-react";
+import { ArrowLeft, Calendar, CreditCard, MapPin, Coins, DollarSign, TrendingUp } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -229,6 +229,10 @@ const Checkout = () => {
                   <Calendar className="h-5 w-5" />
                   Delivery Date
                 </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Orders close at {marketConfig?.cutoff_time?.slice(0, 5) || '11:59 PM'} daily. 
+                  Farmer drop-off: 1-3 PM next day.
+                </p>
               </CardHeader>
               <CardContent>
                 <RadioGroup value={selectedDate} onValueChange={setSelectedDate}>
