@@ -7,15 +7,16 @@ import logo from "@/assets/blue-harvests-logo.jpeg";
 const Index = () => {
   const navigate = useNavigate();
 
-  const mainStakeholders = [
-    {
-      id: "consumer",
-      title: "Shop Farm Fresh",
-      description: "Access locally grown, organic produce delivered fresh to your door",
-      icon: Users,
-      color: "primary",
-      route: "/auth/consumer",
-    },
+  const consumerOption = {
+    id: "consumer",
+    title: "Shop from Farmers",
+    description: "Access locally grown, organic produce delivered fresh to your door",
+    icon: Users,
+    color: "primary",
+    route: "/auth/consumer",
+  };
+
+  const partnerOptions = [
     {
       id: "driver",
       title: "Earn as a Driver",
@@ -48,45 +49,80 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Stakeholder Selection */}
+      {/* Main Consumer Option */}
       <section className="container mx-auto max-w-6xl px-4 py-16">
-        <h2 className="mb-12 text-center text-3xl font-bold text-foreground">
-          Get Started
+        <h2 className="mb-8 text-center text-3xl font-bold text-foreground">
+          Fresh from Local Farms
         </h2>
         
-        <div className="grid gap-6 md:grid-cols-3">
-          {mainStakeholders.map((stakeholder) => {
-            const Icon = stakeholder.icon;
-            return (
-              <Card
-                key={stakeholder.id}
-                className="group relative overflow-hidden border-2 hover:border-primary transition-all duration-300 hover:shadow-large cursor-pointer"
-                onClick={() => navigate(stakeholder.route)}
-              >
-                <div className="p-6 space-y-4">
-                  <div className={`inline-flex h-14 w-14 items-center justify-center rounded-xl bg-${stakeholder.color}/10 text-${stakeholder.color} transition-transform group-hover:scale-110`}>
-                    <Icon className="h-7 w-7" />
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-2">
-                      {stakeholder.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {stakeholder.description}
-                    </p>
-                  </div>
+        {/* Featured Consumer Card */}
+        <Card
+          className="group relative overflow-hidden border-4 border-primary hover:border-primary/80 transition-all duration-300 hover:shadow-large cursor-pointer mb-12"
+          onClick={() => navigate(consumerOption.route)}
+        >
+          <div className="p-8 space-y-6 text-center">
+            <div className="inline-flex h-20 w-20 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110 mx-auto">
+              <Users className="h-10 w-10" />
+            </div>
+            
+            <div>
+              <h3 className="text-2xl font-bold text-foreground mb-3">
+                {consumerOption.title}
+              </h3>
+              <p className="text-base text-muted-foreground leading-relaxed">
+                {consumerOption.description}
+              </p>
+            </div>
 
-                  <Button
-                    className="w-full group-hover:shadow-medium transition-shadow"
-                    variant={stakeholder.color === "primary" ? "default" : "outline"}
-                  >
-                    Continue
-                  </Button>
-                </div>
-              </Card>
-            );
-          })}
+            <Button
+              className="w-full max-w-md mx-auto group-hover:shadow-medium transition-shadow"
+              size="lg"
+            >
+              Start Shopping
+            </Button>
+          </div>
+        </Card>
+
+        {/* Partner Options - More Discreet */}
+        <div className="space-y-3">
+          <h3 className="text-center text-sm font-medium text-muted-foreground">
+            Join Our Network
+          </h3>
+          <div className="grid gap-4 md:grid-cols-2 max-w-3xl mx-auto">
+            {partnerOptions.map((option) => {
+              const Icon = option.icon;
+              return (
+                <Card
+                  key={option.id}
+                  className="group relative overflow-hidden border hover:border-muted-foreground/50 transition-all duration-300 cursor-pointer"
+                  onClick={() => navigate(option.route)}
+                >
+                  <div className="p-4 space-y-3">
+                    <div className={`inline-flex h-10 w-10 items-center justify-center rounded-lg bg-${option.color}/10 text-${option.color}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-base font-semibold text-foreground mb-1">
+                        {option.title}
+                      </h4>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        {option.description}
+                      </p>
+                    </div>
+
+                    <Button
+                      className="w-full"
+                      variant="ghost"
+                      size="sm"
+                    >
+                      Learn More
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -106,7 +142,7 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-foreground py-12 px-4 text-white">
+      <footer className="bg-primary py-12 px-4 text-white">
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-6">
             <h3 className="mb-2 text-2xl font-bold">Blue Harvests</h3>
