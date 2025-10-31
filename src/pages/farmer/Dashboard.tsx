@@ -94,10 +94,11 @@ const FarmerDashboard = () => {
         .eq('products.farm_profile_id', farmProfile.id)
         .gte('created_at', monthStart);
 
-      // Farmer keeps 90% of sales
-      const today = (todayOrders?.reduce((sum, item) => sum + Number(item.subtotal), 0) || 0) * 0.9;
-      const week = (weekOrders?.reduce((sum, item) => sum + Number(item.subtotal), 0) || 0) * 0.9;
-      const month = (monthOrders?.reduce((sum, item) => sum + Number(item.subtotal), 0) || 0) * 0.9;
+      // Farmer keeps 88% of sales (2% goes to lead farmer coordination, 10% to platform)
+      // All farmers are affiliated with lead farmers
+      const today = (todayOrders?.reduce((sum, item) => sum + Number(item.subtotal), 0) || 0) * 0.88;
+      const week = (weekOrders?.reduce((sum, item) => sum + Number(item.subtotal), 0) || 0) * 0.88;
+      const month = (monthOrders?.reduce((sum, item) => sum + Number(item.subtotal), 0) || 0) * 0.88;
 
       // Get lead farmer commission if applicable
       const { data: todayCommission } = await supabase

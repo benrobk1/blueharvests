@@ -193,6 +193,8 @@ async function seedDemo() {
       user_metadata: { full_name: DEMO_DATA.leadFarmer.full_name }
     });
 
+    let leadFarmerFarmProfileId: string | null = null;
+
     if (!leadError && leadAuth.user) {
       await supabase
         .from('profiles')
@@ -209,7 +211,46 @@ async function seedDemo() {
         .from('user_roles')
         .insert({ user_id: leadAuth.user.id, role: 'lead_farmer' });
 
+      // Create farm profile for lead farmer
+      const { data: leadFarmProfile } = await supabase
+        .from('farm_profiles')
+        .insert({
+          farmer_id: leadAuth.user.id,
+          farm_name: DEMO_DATA.leadFarmer.farm_name,
+          description: 'Lead farmer coordinating local deliveries',
+          location: `New York, NY ${DEMO_DATA.leadFarmer.zip_code}`
+        })
+        .select()
+        .single();
+
+      leadFarmerFarmProfileId = leadFarmProfile?.id || null;
+
       console.log(`✅ Created lead farmer: ${DEMO_DATA.leadFarmer.full_name}`);
+
+      // 5. Create farm affiliations (all farmers affiliated with lead farmer)
+      if (leadFarmerFarmProfileId) {
+        console.log('\nCreating farm affiliations...');
+        
+        // Get all farm profiles
+        const { data: allFarmProfiles } = await supabase
+          .from('farm_profiles')
+          .select('id, farmer_id')
+          .neq('farmer_id', leadAuth.user.id); // Exclude lead farmer's own profile
+
+        if (allFarmProfiles) {
+          for (const farmProfile of allFarmProfiles) {
+            await supabase
+              .from('farm_affiliations')
+              .insert({
+                lead_farmer_id: leadAuth.user.id,
+                farm_profile_id: farmProfile.id,
+                commission_rate: 2.0, // 2% commission (correct rate)
+                active: true
+              });
+          }
+          console.log(`✅ Created ${allFarmProfiles.length} farm affiliations with 2% commission`);
+        }
+      }
     }
 
     // 5. Create market config

@@ -734,7 +734,7 @@ serve(async (req) => {
         const farmProfile = product.farm_profiles as any;
         const farmerId = farmProfile.farmer_id;
         const itemSubtotal = product.price * item.quantity;
-        let farmerShare = itemSubtotal * 0.90; // 90% to farmer (before lead farmer commission)
+        let farmerShare = itemSubtotal * 0.88; // 88% to farmer (2% goes to lead farmer, 10% to platform)
         
         // Check for lead farmer affiliation
         const { data: affiliation } = await supabaseClient
@@ -745,7 +745,7 @@ serve(async (req) => {
           .maybeSingle();
         
         if (affiliation?.lead_farmer_id) {
-          const commissionRate = affiliation.commission_rate || 5.0;
+          const commissionRate = affiliation.commission_rate || 2.0; // Default 2%
           const leadFarmerCommission = itemSubtotal * (commissionRate / 100);
           farmerShare -= leadFarmerCommission;
           
@@ -764,7 +764,10 @@ serve(async (req) => {
             });
           }
           
-          console.log(`Lead farmer commission: $${leadFarmerCommission.toFixed(2)} (${commissionRate}%) from order`);
+          console.log(`Lead farmer commission: $${leadFarmerCommission.toFixed(2)} (${commissionRate}%) from $${itemSubtotal.toFixed(2)}`);
+        } else {
+          // CRITICAL: All farmers should have lead farmer affiliation (business rule)
+          console.error(`⚠️ CRITICAL: Farmer ${farmerId} has no lead farmer affiliation! This violates business rules.`);
         }
         
         if (farmerPayouts.has(farmerId)) {
