@@ -44,11 +44,6 @@ const FarmerAuth = () => {
     farmSize: "",
     additionalInfo: "",
     collectionPointLeadFarmer: "",
-    collectionStreetAddress: "",
-    collectionStreetAddressLine2: "",
-    collectionCity: "",
-    collectionState: "",
-    collectionZipCode: "",
   });
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -141,9 +136,9 @@ const FarmerAuth = () => {
       if (!authData.user) throw new Error("Failed to create user account");
 
 
-      // Build collection point address for lead farmers
+      // For lead farmers, use their farm address as the collection point
       const collectionPointAddress = farmerType === "lead" 
-        ? `${formData.collectionStreetAddress}${formData.collectionStreetAddressLine2 ? `, ${formData.collectionStreetAddressLine2}` : ''}, ${formData.collectionCity}, ${formData.collectionState} ${formData.collectionZipCode}`
+        ? `${formData.streetAddress}${formData.streetAddressLine2 ? `, ${formData.streetAddressLine2}` : ''}, ${formData.city}, ${formData.state} ${formData.zipCode}`
         : null;
 
       // Update profile with additional information
@@ -161,6 +156,7 @@ const FarmerAuth = () => {
           zip_code: formData.zipCode,
           country: formData.country,
           collection_point_address: collectionPointAddress,
+          collection_point_lead_farmer_id: farmerType === "regular" ? formData.collectionPointLeadFarmer : null,
           approval_status: 'pending',
           acquisition_channel: acquisitionChannel,
           applied_role: farmerType === "lead" ? "lead_farmer" : "farmer",
@@ -196,11 +192,6 @@ const FarmerAuth = () => {
         farmSize: "",
         additionalInfo: "",
         collectionPointLeadFarmer: "",
-        collectionStreetAddress: "",
-        collectionStreetAddressLine2: "",
-        collectionCity: "",
-        collectionState: "",
-        collectionZipCode: "",
       });
     } catch (error: any) {
       const errorMsg = getAuthErrorMessage(error);
@@ -438,11 +429,18 @@ const FarmerAuth = () => {
 
                   {/* Farm Address Fields */}
                   <div className="space-y-2">
-                    <Label htmlFor="streetAddress">Farm Street Address *</Label>
+                    <Label htmlFor="streetAddress">
+                      {farmerType === "lead" ? "Farm/Collection Point Address *" : "Farm Street Address *"}
+                    </Label>
+                    {farmerType === "lead" && (
+                      <p className="text-xs text-muted-foreground mb-1">
+                        This address will serve as the collection point for other farmers
+                      </p>
+                    )}
                     <Input 
                       id="streetAddress" 
                       placeholder="123 Farm Road" 
-                      required 
+                      required
                       value={formData.streetAddress}
                       onChange={(e) => setFormData({...formData, streetAddress: e.target.value})}
                     />
@@ -549,7 +547,10 @@ const FarmerAuth = () => {
                   
                   {farmerType === "regular" && (
                     <div className="space-y-2">
-                      <Label htmlFor="collectionPointLeadFarmer">Lead Farmer / Collection Point</Label>
+                      <Label htmlFor="collectionPointLeadFarmer">Lead Farmer / Collection Point Name</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Enter the name of the lead farmer you'll drop off your produce to
+                      </p>
                       <Input 
                         id="collectionPointLeadFarmer" 
                         placeholder="Name of lead farmer you'll drop off to" 
@@ -557,70 +558,6 @@ const FarmerAuth = () => {
                         onChange={(e) => setFormData({...formData, collectionPointLeadFarmer: e.target.value})}
                       />
                     </div>
-                  )}
-
-                  {/* Collection Point Address for Lead Farmers */}
-                  {farmerType === "lead" && (
-                    <>
-                      <div className="border-t pt-4 mt-4">
-                        <h3 className="font-semibold mb-4">Collection Point Address</h3>
-                        <div className="space-y-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="collectionStreetAddress">Street Address *</Label>
-                            <Input 
-                              id="collectionStreetAddress" 
-                              placeholder="456 Collection Point Road" 
-                              required 
-                              value={formData.collectionStreetAddress}
-                              onChange={(e) => setFormData({...formData, collectionStreetAddress: e.target.value})}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="collectionStreetAddressLine2">Address Line 2 (Optional)</Label>
-                            <Input 
-                              id="collectionStreetAddressLine2" 
-                              placeholder="Apt, Suite, Building, etc." 
-                              value={formData.collectionStreetAddressLine2}
-                              onChange={(e) => setFormData({...formData, collectionStreetAddressLine2: e.target.value})}
-                            />
-                          </div>
-                          <div className="grid grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="collectionCity">City *</Label>
-                              <Input 
-                                id="collectionCity" 
-                                placeholder="Springfield" 
-                                required 
-                                value={formData.collectionCity}
-                                onChange={(e) => setFormData({...formData, collectionCity: e.target.value})}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="collectionState">State *</Label>
-                              <Input 
-                                id="collectionState" 
-                                placeholder="IL" 
-                                required 
-                                maxLength={2}
-                                value={formData.collectionState}
-                                onChange={(e) => setFormData({...formData, collectionState: e.target.value.toUpperCase()})}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="collectionZipCode">ZIP *</Label>
-                              <Input 
-                                id="collectionZipCode" 
-                                placeholder="10001" 
-                                required 
-                                maxLength={5}
-                                value={formData.collectionZipCode}
-                                onChange={(e) => setFormData({...formData, collectionZipCode: e.target.value})}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </>
                   )}
 
                   <div className="space-y-2">

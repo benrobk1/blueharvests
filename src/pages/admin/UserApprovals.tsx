@@ -332,6 +332,11 @@ const UserApprovals = () => {
                             <span className="text-muted-foreground">Collection Point:</span> {user.collection_point_address}
                           </div>
                         )}
+                        {user.applied_role === 'farmer' && user.collection_point_lead_farmer_id && (
+                          <div className="col-span-2">
+                            <span className="text-muted-foreground">Lead Farmer / Drop-off Point:</span> {user.collection_point_lead_farmer_id}
+                          </div>
+                        )}
                         <div>
                           <span className="text-muted-foreground">Applied Role:</span> {user.applied_role?.replace('_', ' ') || 'farmer'}
                         </div>
