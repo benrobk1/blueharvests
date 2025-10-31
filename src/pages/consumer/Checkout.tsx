@@ -353,7 +353,13 @@ const Checkout = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Security Trust Message */}
+                {/* 
+                  SECURITY: Payment & Privacy Protection Message
+                  Reassures consumers during checkout that:
+                  1. Payment info is encrypted (Stripe handles PCI compliance)
+                  2. Address is protected by RLS (only visible to assigned driver when nearby)
+                  Part of P2 security hardening (building trust at critical conversion point).
+                */}
                 <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg flex items-start gap-3">
                   <svg className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>

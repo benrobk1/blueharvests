@@ -20,7 +20,11 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Rate limiting: Prevent notification spam (20 notifications per hour per consumer)
+    // NOTIFICATION THROTTLING: Rate limit to prevent:
+    // 1. Notification spam to drivers
+    // 2. Push service quota exhaustion (FCM/APNS limits)
+    // 3. Accidental notification loops
+    // Limit: 20 notifications per hour per user
     const rateCheck = await checkRateLimit(supabase, consumerId, {
       maxRequests: 20,
       windowMs: 60 * 60 * 1000,

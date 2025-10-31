@@ -23,6 +23,11 @@ export const PriceBreakdownDrawer = ({
   farmName,
   isCheckout = false 
 }: PriceBreakdownDrawerProps) => {
+  // REVENUE MODEL: 90/5/5 split ensures fair farmer compensation
+  // - 90% to farmer (significantly higher than traditional grocery ~40-50%)
+  // - 5% platform fee (covers operations, support, infrastructure)
+  // - 5% delivery fee (covers driver payouts, route optimization)
+  // This model is transparent to consumers and shown in UI to build trust
   const farmerShare = price * 0.90;
   const platformFee = price * 0.05;
   const deliveryFee = price * 0.05;

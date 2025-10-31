@@ -27,6 +27,11 @@ serve(async (req) => {
       const { data: { user } } = await supabaseClient.auth.getUser(token);
       
       if (user) {
+        // FINANCIAL SAFETY: Strict rate limit on payouts to prevent:
+        // 1. Accidental duplicate payouts (expensive!)
+        // 2. Unauthorized payout requests
+        // 3. Stripe API quota exhaustion
+        // Limit: 1 payout batch per 5 minutes (admins only)
         const rateCheck = await checkRateLimit(supabaseClient, user.id, {
           maxRequests: 1,
           windowMs: 5 * 60 * 1000,

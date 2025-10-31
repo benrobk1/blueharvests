@@ -43,7 +43,11 @@ serve(async (req) => {
 
     console.log('Checkout request:', { user_id: user.id, cart_id, delivery_date, use_credits, has_payment_method: !!payment_method_id, tip_amount });
 
-    // Rate limiting: Prevent checkout abuse (10 attempts per 15 minutes)
+    // ABUSE PREVENTION: Rate limit checkout to prevent:
+    // 1. Payment fraud attempts (multiple failed cards)
+    // 2. Inventory manipulation (rapid cart changes)
+    // 3. System overload (spam checkout requests)
+    // Limit: 10 attempts per 15 minutes per user
     const rateCheck = await checkRateLimit(supabaseClient, user.id, {
       maxRequests: 10,
       windowMs: 15 * 60 * 1000,

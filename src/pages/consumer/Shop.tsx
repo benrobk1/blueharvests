@@ -183,7 +183,12 @@ const Shop = () => {
             </Alert>
           )}
 
-          {/* Security Trust Badge */}
+          {/* 
+            SECURITY: RLS Trust Badge
+            Displays Row-Level Security enforcement to build consumer confidence.
+            Shows that drivers only see addresses when delivery is near (just-in-time access).
+            Part of P2 security hardening (transparency for users).
+          */}
           <Alert className="mt-4 bg-primary/5 border-primary/20">
             <AlertTitle className="flex items-center gap-2 text-primary">
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
