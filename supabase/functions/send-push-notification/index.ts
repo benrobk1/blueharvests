@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0';
+import { checkRateLimit } from '../_shared/rateLimiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,6 +19,25 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
+
+    // Rate limiting: Prevent notification spam (20 notifications per hour per consumer)
+    const rateCheck = await checkRateLimit(supabase, consumerId, {
+      maxRequests: 20,
+      windowMs: 60 * 60 * 1000,
+      keyPrefix: 'push-notification',
+    });
+
+    if (!rateCheck.allowed) {
+      console.warn('Rate limit exceeded for notifications:', consumerId);
+      return new Response(
+        JSON.stringify({ 
+          error: 'TOO_MANY_REQUESTS',
+          message: 'Notification rate limit exceeded.',
+          retryAfter: rateCheck.retryAfter 
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get consumer's push subscription
     const { data: profile, error: profileError } = await supabase

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { checkRateLimit } from '../_shared/rateLimiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,6 +42,25 @@ serve(async (req) => {
     const { cart_id, delivery_date, use_credits, payment_method_id, tip_amount }: CheckoutRequest = await req.json();
 
     console.log('Checkout request:', { user_id: user.id, cart_id, delivery_date, use_credits, has_payment_method: !!payment_method_id, tip_amount });
+
+    // Rate limiting: Prevent checkout abuse (10 attempts per 15 minutes)
+    const rateCheck = await checkRateLimit(supabaseClient, user.id, {
+      maxRequests: 10,
+      windowMs: 15 * 60 * 1000,
+      keyPrefix: 'checkout',
+    });
+
+    if (!rateCheck.allowed) {
+      console.warn('Rate limit exceeded for user:', user.id);
+      return new Response(
+        JSON.stringify({ 
+          error: 'TOO_MANY_REQUESTS', 
+          message: 'Too many checkout attempts. Please try again later.',
+          retryAfter: rateCheck.retryAfter 
+        }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {

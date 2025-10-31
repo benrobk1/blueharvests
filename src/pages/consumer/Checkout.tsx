@@ -353,6 +353,15 @@ const Checkout = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Security Trust Message */}
+                <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg flex items-start gap-3">
+                  <svg className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  </svg>
+                  <p className="text-sm text-muted-foreground">
+                    Your payment info is encrypted. Your address is only shared with your assigned driver when they're nearby.
+                  </p>
+                </div>
                 {availableCreditsAmount > 0 && (
                   <div className="p-4 bg-muted rounded-lg space-y-3">
                     <div className="flex items-center justify-between">

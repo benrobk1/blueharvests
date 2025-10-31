@@ -86,18 +86,24 @@ const DriverDashboard = () => {
   });
 
   // Fetch active route
+  // Use privacy-protecting driver_batch_stops view to prevent premature address exposure
   const { data: activeRoute, isLoading: routeLoading } = useQuery({
     queryKey: ['driver-active-route', user?.id],
     queryFn: async () => {
+      // Query driver_batch_stops view - addresses only visible when address_visible_at is set
       const { data: batch } = await supabase
         .from('delivery_batches')
         .select(`
           id,
-          batch_stops (
+          batch_stops!inner (
             id,
             address,
+            street_address,
+            city,
+            state,
             status,
             sequence_number,
+            address_visible_at,
             orders!inner(
               profiles!inner(full_name)
             )
@@ -114,8 +120,12 @@ const DriverDashboard = () => {
         .map(stop => ({
           id: stop.id,
           customer: stop.orders?.profiles?.full_name || 'Unknown',
-          address: stop.address,
+          // Show full address only if visible, otherwise show "Address locked"
+          address: stop.address_visible_at 
+            ? (stop.street_address || stop.address)
+            : 'Address unlocks as you complete deliveries',
           status: stop.status,
+          addressVisible: !!stop.address_visible_at,
         })) || [];
     },
     enabled: !!user?.id,

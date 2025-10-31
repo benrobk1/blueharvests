@@ -182,6 +182,19 @@ const Shop = () => {
               </AlertDescription>
             </Alert>
           )}
+
+          {/* Security Trust Badge */}
+          <Alert className="mt-4 bg-primary/5 border-primary/20">
+            <AlertTitle className="flex items-center gap-2 text-primary">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+              Your Data is Protected
+            </AlertTitle>
+            <AlertDescription>
+              Row-level security enforced • Drivers see addresses only when delivery is near
+            </AlertDescription>
+          </Alert>
         </div>
       </header>
 

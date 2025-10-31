@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { checkRateLimit } from '../_shared/rateLimiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,6 +18,34 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Rate limiting: Prevent payout processing abuse (1 request per 5 minutes per admin)
+    // Note: In production, add admin authentication and use admin ID for rate limiting
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabaseClient.auth.getUser(token);
+      
+      if (user) {
+        const rateCheck = await checkRateLimit(supabaseClient, user.id, {
+          maxRequests: 1,
+          windowMs: 5 * 60 * 1000,
+          keyPrefix: 'process-payouts',
+        });
+
+        if (!rateCheck.allowed) {
+          console.warn('Rate limit exceeded for payout processing:', user.id);
+          return new Response(
+            JSON.stringify({ 
+              error: 'TOO_MANY_REQUESTS',
+              message: 'Please wait before processing payouts again.',
+              retryAfter: rateCheck.retryAfter 
+            }),
+            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+    }
 
     console.log('Starting payout processing...');
 
