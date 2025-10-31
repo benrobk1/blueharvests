@@ -345,9 +345,9 @@ const UserApprovals = () => {
                               {(() => {
                                 try {
                                   const items = JSON.parse(user.produce_types);
-                                  return items.map((item: {type: string, boxes: number}, idx: number) => (
+                                  return items.map((item: string, idx: number) => (
                                     <div key={idx} className="text-sm">
-                                      • {item.type}: {item.boxes} boxes/week
+                                      • {item}
                                     </div>
                                   ));
                                 } catch {

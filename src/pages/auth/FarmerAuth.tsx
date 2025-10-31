@@ -27,7 +27,7 @@ const FarmerAuth = () => {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
-  const [produceItems, setProduceItems] = useState<Array<{type: string, boxes: number}>>([]);
+  const [produceItems, setProduceItems] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     farmName: "",
     ownerName: "",
@@ -514,56 +514,19 @@ const FarmerAuth = () => {
                   </div>
                   
                   <div className="space-y-3 border-t pt-4">
-                    <Label>Types of Produce & Box Quantities</Label>
-                    <p className="text-sm text-muted-foreground">Add the types of produce you plan to sell</p>
+                    <Label>Types of Produce</Label>
+                    <p className="text-sm text-muted-foreground">Add the types of produce or products you plan to sell</p>
                     {produceItems.map((item, index) => (
-                      <div key={index} className="flex gap-2 items-end">
-                        <div className="flex-1 space-y-2">
-                          <Label htmlFor={`produce-type-${index}`}>Produce Type</Label>
-                          <select 
-                            id={`produce-type-${index}`}
-                            value={item.type}
-                            onChange={(e) => {
-                              const updated = [...produceItems];
-                              updated[index].type = e.target.value;
-                              setProduceItems(updated);
-                            }}
-                            className="w-full h-10 px-3 rounded-md border border-input bg-background"
-                          >
-                            <option value="">Select produce</option>
-                            <option value="Tomatoes">Tomatoes</option>
-                            <option value="Lettuce">Lettuce</option>
-                            <option value="Corn">Corn</option>
-                            <option value="Peppers">Peppers</option>
-                            <option value="Cucumbers">Cucumbers</option>
-                            <option value="Squash">Squash</option>
-                            <option value="Zucchini">Zucchini</option>
-                            <option value="Carrots">Carrots</option>
-                            <option value="Beans">Beans</option>
-                            <option value="Peas">Peas</option>
-                            <option value="Berries">Berries</option>
-                            <option value="Melons">Melons</option>
-                            <option value="Apples">Apples</option>
-                            <option value="Peaches">Peaches</option>
-                            <option value="Herbs">Herbs</option>
-                            <option value="Other">Other</option>
-                          </select>
-                        </div>
-                        <div className="w-32 space-y-2">
-                          <Label htmlFor={`produce-boxes-${index}`}>Boxes/Week</Label>
-                          <Input 
-                            id={`produce-boxes-${index}`}
-                            type="number" 
-                            min="1"
-                            value={item.boxes}
-                            onChange={(e) => {
-                              const updated = [...produceItems];
-                              updated[index].boxes = parseInt(e.target.value) || 0;
-                              setProduceItems(updated);
-                            }}
-                            placeholder="10"
-                          />
-                        </div>
+                      <div key={index} className="flex gap-2 items-center">
+                        <Input 
+                          value={item}
+                          onChange={(e) => {
+                            const updated = [...produceItems];
+                            updated[index] = e.target.value;
+                            setProduceItems(updated);
+                          }}
+                          placeholder="e.g., Tomatoes, Fresh Eggs, Honey"
+                        />
                         <Button 
                           type="button"
                           variant="ghost" 
@@ -578,9 +541,9 @@ const FarmerAuth = () => {
                       type="button"
                       variant="outline" 
                       size="sm"
-                      onClick={() => setProduceItems([...produceItems, {type: '', boxes: 0}])}
+                      onClick={() => setProduceItems([...produceItems, ''])}
                     >
-                      + Add Produce Item
+                      + Add Produce Type
                     </Button>
                   </div>
                   
