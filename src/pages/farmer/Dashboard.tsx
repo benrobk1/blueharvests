@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Package, TrendingUp, Plus, Pencil, Trash2, FileSpreadsheet } from "lucide-react";
+import { DollarSign, Package, TrendingUp, Plus, Pencil, Trash2, FileSpreadsheet, User } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -264,6 +264,10 @@ const FarmerDashboard = () => {
             <p className="text-sm text-muted-foreground">You keep 90% of all sales</p>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => window.location.href = '/farmer/profile'}>
+              <User className="h-4 w-4 mr-2" />
+              Profile
+            </Button>
             <StripeConnectSimple variant="button" />
             <Button variant="outline" onClick={() => setIsBulkEditOpen(true)}>
               <FileSpreadsheet className="h-4 w-4 mr-2" />
@@ -425,14 +429,7 @@ const FarmerDashboard = () => {
         <PayoutDetailsTable recipientType="farmer" />
 
         {/* Tax Information */}
-        <Card className="border-2">
-          <CardHeader>
-            <CardTitle>Tax Information (W-9)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TaxInformationForm />
-          </CardContent>
-        </Card>
+        <TaxInformationForm />
 
         {/* Recent Orders */}
         <Card className="border-2">

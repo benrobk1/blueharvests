@@ -132,24 +132,30 @@ const AdminDashboard = () => {
               <h1 className="text-2xl font-bold text-foreground">Management Portal</h1>
               <p className="text-sm text-muted-foreground">Real-time business intelligence and operations</p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => window.location.href = '/admin/market-config'}>
-                Market Config
-              </Button>
-              <Button variant="outline" onClick={() => window.location.href = '/admin/products'}>
-                Products
-              </Button>
-              <Button variant="outline" onClick={() => window.location.href = '/admin/approvals'}>
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/approvals'}>
                 Approvals
               </Button>
-              <Button variant="outline" onClick={() => window.location.href = '/admin/disputes'}>
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/products'}>
+                Products
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/disputes'}>
                 Disputes
               </Button>
-              <Button variant="outline" onClick={() => window.location.href = '/admin/batches'}>
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/market-config'}>
+                Markets
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/batches'}>
                 Batches
               </Button>
-              <Button variant="outline" onClick={() => window.location.href = '/admin/financials'}>
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/financials'}>
                 Financials
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/analytics'}>
+                Analytics
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/audit-log'}>
+                Audit Log
               </Button>
             </div>
           </div>
