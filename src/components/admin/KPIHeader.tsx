@@ -91,7 +91,7 @@ export const KPIHeader = () => {
   return (
     <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border-b shadow-sm">
       <div className="container mx-auto px-4 py-3">
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <KPIMetric
             label="Households"
             value={kpis.households}
@@ -125,20 +125,6 @@ export const KPIHeader = () => {
             value={`${kpis.onTimePercent}%`}
             icon={<CheckCircle className="h-4 w-4" />}
             status={getOnTimeStatus(kpis.onTimePercent)}
-          />
-          
-          <KPIMetric
-            label="Farmer Share"
-            value={`${kpis.farmerShare}%`}
-            icon={<Sprout className="h-4 w-4" />}
-            comparison="vs 65% grocery"
-          />
-          
-          <KPIMetric
-            label="Driver $/hr"
-            value={formatMoney(kpis.driverHourly)}
-            icon={<TrendingUp className="h-4 w-4" />}
-            comparison="vs $15 DD"
           />
           
           <KPIMetric

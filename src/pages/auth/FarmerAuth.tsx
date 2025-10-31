@@ -121,6 +121,8 @@ const FarmerAuth = () => {
         throw new Error("Passwords do not match");
       }
 
+      const acquisitionChannel = (document.getElementById('acquisitionChannel') as HTMLSelectElement)?.value || 'organic';
+
       // Create the user account
       const { data: authData, error: signupError } = await supabase.auth.signUp({
         email: formData.email,
@@ -166,7 +168,8 @@ const FarmerAuth = () => {
           zip_code: formData.zipCode,
           country: formData.country,
           collection_point_address: collectionPointAddress,
-          approval_status: 'pending'
+          approval_status: 'pending',
+          acquisition_channel: acquisitionChannel,
         })
         .eq('id', authData.user.id);
 
@@ -422,6 +425,17 @@ const FarmerAuth = () => {
                       value={formData.phone}
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="acquisitionChannel">How did you hear about us?</Label>
+                    <select id="acquisitionChannel" name="acquisitionChannel" className="w-full h-10 px-3 rounded-md border border-input bg-background">
+                      <option value="organic">Found online (Search/Website)</option>
+                      <option value="referral">Friend referral</option>
+                      <option value="social">Social media</option>
+                      <option value="event">Farmers market / Event</option>
+                      <option value="other">Other</option>
+                    </select>
                   </div>
 
                   {/* Farm Address Fields */}

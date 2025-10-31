@@ -135,31 +135,18 @@ const AdminDashboard = () => {
               <h1 className="text-2xl font-bold text-foreground">Management Portal</h1>
               <p className="text-sm text-muted-foreground">Real-time business intelligence and operations</p>
             </div>
-            <div className="flex gap-2 flex-wrap">
-              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/approvals'}>
-                Approvals
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/products'}>
-                Products
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/disputes'}>
-                Disputes
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/market-config'}>
-                Markets
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/batches'}>
-                Batches
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/financials'}>
-                Financials
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/analytics'}>
-                Analytics
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => window.location.href = '/admin/audit-log'}>
-                Audit Log
-              </Button>
+            <div className="grid gap-2 md:grid-cols-6 lg:grid-cols-11">
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/user-approvals')}>Approvals</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/product-approval')}>Products</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/disputes')}>Disputes</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/market-config')}>Markets</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/batch-adjustments')}>Batches</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/analytics-financials')}>Analytics</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/audit-log')}>Audit Log</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/farm-affiliations')}>Affiliations</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/tax-documents')}>Tax Docs</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/roles')}>Roles</Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/admin/credits')}>Credits</Button>
             </div>
           </div>
         </div>
@@ -169,94 +156,23 @@ const AdminDashboard = () => {
       <KPIHeader />
 
       <main className="container mx-auto px-4 py-8 space-y-8">
-        {/* Key Metrics */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border-2">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Active Consumers
-              </CardTitle>
-              <Users className="h-4 w-4 text-primary" />
+        {/* Pending Approvals - Single Card */}
+        <Link to="/admin/user-approvals">
+          <Card className="border-2 hover:shadow-md transition-shadow cursor-pointer">
+            <CardHeader>
+              <CardTitle>Pending Approvals</CardTitle>
             </CardHeader>
             <CardContent>
-              {metricsLoading ? (
-                <Skeleton className="h-10 w-24" />
-              ) : (
-                <div className="text-3xl font-bold text-foreground">{metrics?.consumers || 0}</div>
+              {metricsLoading ? <Skeleton className="h-8 w-full" /> : (
+                <div className="text-3xl font-bold">{metrics?.pendingApprovals || 0}</div>
               )}
+              <p className="text-sm text-muted-foreground mt-2">Users awaiting approval</p>
+              <Button size="sm" variant="outline" className="mt-4">
+                Review Approvals
+              </Button>
             </CardContent>
           </Card>
-
-          <Card className="border-2">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Delivery Drivers
-              </CardTitle>
-              <Truck className="h-4 w-4 text-secondary" />
-            </CardHeader>
-            <CardContent>
-              {metricsLoading ? (
-                <Skeleton className="h-10 w-24" />
-              ) : (
-                <>
-                  <div className="text-3xl font-bold text-foreground">{metrics?.drivers || 0}</div>
-                  <p className="text-xs text-muted-foreground mt-1">{metrics?.activeDeliveries || 0} active now</p>
-                </>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-2">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Partner Farms
-              </CardTitle>
-              <Sprout className="h-4 w-4 text-earth" />
-            </CardHeader>
-            <CardContent>
-              {metricsLoading ? (
-                <Skeleton className="h-10 w-24" />
-              ) : (
-                <div className="text-3xl font-bold text-foreground">{metrics?.farmers || 0}</div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card className="border-2">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Revenue (30d)
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-success" />
-            </CardHeader>
-            <CardContent>
-              {metricsLoading ? (
-                <Skeleton className="h-10 w-24" />
-              ) : (
-                <div className="text-3xl font-bold text-foreground">${metrics?.revenue.toFixed(2) || '0.00'}</div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Link to="/admin/approvals">
-            <Card className="border-2 hover:shadow-md transition-shadow cursor-pointer">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Pending Approvals</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                {metricsLoading ? (
-                  <Skeleton className="h-10 w-24" />
-                ) : (
-                  <>
-                    <div className="text-3xl font-bold text-foreground">{metrics?.pendingApprovals || 0}</div>
-                    <p className="text-xs text-muted-foreground mt-1">Farmers & drivers awaiting approval</p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
+        </Link>
 
         {/* Live Delivery Tracking */}
         <Card className="border-2">
@@ -340,48 +256,6 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Quick Management Tools */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Management Tools</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button 
-                variant="outline" 
-                className="h-24 flex flex-col gap-2"
-                onClick={() => navigate("/admin/farm-affiliations")}
-              >
-                <Sprout className="h-6 w-6" />
-                <span>Farm Affiliations</span>
-              </Button>
-              <Button 
-                variant="outline" 
-                className="h-24 flex flex-col gap-2"
-                onClick={() => navigate("/admin/tax-documents")}
-              >
-                <FileText className="h-6 w-6" />
-                <span>Tax Documents</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Admin Tools Tabs - Roles & Credits */}
-        <Tabs defaultValue="roles" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="roles">User Roles</TabsTrigger>
-            <TabsTrigger value="credits">Credits Manager</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="roles" className="mt-6">
-            <AdminRoleManager />
-          </TabsContent>
-          
-          <TabsContent value="credits" className="mt-6">
-            <CreditsManager />
-          </TabsContent>
-        </Tabs>
       </main>
     </div>
   );

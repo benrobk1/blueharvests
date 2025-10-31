@@ -20,7 +20,9 @@ import RouteDetails from "./pages/driver/RouteDetails";
 import LoadBoxes from "./pages/driver/LoadBoxes";
 import FarmerDashboard from "./pages/farmer/Dashboard";
 import AdminDashboard from "./pages/admin/Dashboard";
-import Analytics from "./pages/admin/Analytics";
+import AnalyticsAndFinancials from "./pages/admin/AnalyticsAndFinancials";
+import AdminRoles from "./pages/admin/AdminRoles";
+import CreditsManager from "./pages/admin/CreditsManager";
 import AuditLog from "./pages/admin/AuditLog";
 import MarketConfig from "./pages/admin/MarketConfig";
 import ProductApproval from "./pages/admin/ProductApproval";
@@ -36,7 +38,6 @@ import TermsOfService from "./pages/legal/TermsOfService";
 import UserApprovals from "./pages/admin/UserApprovals";
 import Disputes from "./pages/admin/Disputes";
 import BatchAdjustments from "./pages/admin/BatchAdjustments";
-import FinancialReports from "./pages/admin/FinancialReports";
 import Install from "./pages/Install";
 import { CookieConsent } from "./components/CookieConsent";
 import { BottomNav } from "./components/mobile/BottomNav";
@@ -137,9 +138,19 @@ const AppContent = () => {
               <AdminDashboard />
             </RoleGate>
           } />
-          <Route path="/admin/analytics" element={
+          <Route path="/admin/analytics-financials" element={
             <RoleGate roles={['admin']}>
-              <Analytics />
+              <AnalyticsAndFinancials />
+            </RoleGate>
+          } />
+          <Route path="/admin/roles" element={
+            <RoleGate roles={['admin']}>
+              <AdminRoles />
+            </RoleGate>
+          } />
+          <Route path="/admin/credits" element={
+            <RoleGate roles={['admin']}>
+              <CreditsManager />
             </RoleGate>
           } />
           <Route path="/admin/audit-log" element={
@@ -170,11 +181,6 @@ const AppContent = () => {
           <Route path="/admin/batches" element={
             <RoleGate roles={['admin']}>
               <BatchAdjustments />
-            </RoleGate>
-          } />
-          <Route path="/admin/financials" element={
-            <RoleGate roles={['admin']}>
-              <FinancialReports />
             </RoleGate>
           } />
           <Route path="/admin/farm-affiliations" element={

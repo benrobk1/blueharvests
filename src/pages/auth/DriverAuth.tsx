@@ -112,6 +112,8 @@ const DriverAuth = () => {
         throw new Error("Passwords do not match");
       }
 
+      const acquisitionChannel = (document.getElementById('acquisitionChannel') as HTMLSelectElement)?.value || 'organic';
+
       // Create user account
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: formData.email,
@@ -147,7 +149,8 @@ const DriverAuth = () => {
           vehicle_year: formData.vehicleYear,
           license_number: formData.licenseNumber,
           zip_code: formData.zipCode,
-          approval_status: 'pending'
+          approval_status: 'pending',
+          acquisition_channel: acquisitionChannel,
         })
         .eq('id', authData.user.id);
 
@@ -416,6 +419,18 @@ const DriverAuth = () => {
                       onChange={(e) => setFormData({...formData, availability: e.target.value})}
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="acquisitionChannel">How did you hear about us?</Label>
+                    <select id="acquisitionChannel" name="acquisitionChannel" className="w-full h-10 px-3 rounded-md border border-input bg-background">
+                      <option value="organic">Found online (Search/Website)</option>
+                      <option value="referral">Friend referral</option>
+                      <option value="social">Social media</option>
+                      <option value="event">Farmers market / Event</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="additionalInfo">Additional Information</Label>
                     <Textarea 
