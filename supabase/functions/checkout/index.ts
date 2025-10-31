@@ -734,7 +734,6 @@ serve(async (req) => {
         const farmProfile = product.farm_profiles as any;
         const farmerId = farmProfile.farmer_id;
         const itemSubtotal = product.price * item.quantity;
-        let farmerShare = itemSubtotal * 0.88; // 88% to farmer (2% goes to lead farmer, 10% to platform)
         
         // Check for lead farmer affiliation
         const { data: affiliation } = await supabaseClient
@@ -744,10 +743,18 @@ serve(async (req) => {
           .eq('active', true)
           .maybeSingle();
         
-        if (affiliation?.lead_farmer_id) {
+        let farmerShare: number;
+        
+        // Check if farmer is their own lead farmer (self-sale)
+        if (affiliation?.lead_farmer_id === farmerId) {
+          // Lead farmer selling their own products: gets full 90% (no commission to self)
+          farmerShare = itemSubtotal * 0.90;
+          console.log(`Lead farmer self-sale: $${farmerShare.toFixed(2)} (90%) from $${itemSubtotal.toFixed(2)}`);
+        } else if (affiliation?.lead_farmer_id) {
+          // Regular farmer: 88% + 2% commission to lead farmer
           const commissionRate = affiliation.commission_rate || 2.0; // Default 2%
           const leadFarmerCommission = itemSubtotal * (commissionRate / 100);
-          farmerShare -= leadFarmerCommission;
+          farmerShare = itemSubtotal * 0.88;
           
           // Track lead farmer commission
           if (leadFarmerPayouts.has(affiliation.lead_farmer_id)) {
@@ -764,10 +771,11 @@ serve(async (req) => {
             });
           }
           
-          console.log(`Lead farmer commission: $${leadFarmerCommission.toFixed(2)} (${commissionRate}%) from $${itemSubtotal.toFixed(2)}`);
+          console.log(`Regular farmer: $${farmerShare.toFixed(2)} (88%) + lead commission $${leadFarmerCommission.toFixed(2)} (${commissionRate}%) from $${itemSubtotal.toFixed(2)}`);
         } else {
           // CRITICAL: All farmers should have lead farmer affiliation (business rule)
           console.error(`⚠️ CRITICAL: Farmer ${farmerId} has no lead farmer affiliation! This violates business rules.`);
+          farmerShare = itemSubtotal * 0.88; // Fallback
         }
         
         if (farmerPayouts.has(farmerId)) {

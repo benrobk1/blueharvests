@@ -71,10 +71,6 @@ const Install = () => {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
-                    <span>Works offline</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5" />
                     <span>Faster loading times</span>
                   </li>
                   <li className="flex items-start gap-2">

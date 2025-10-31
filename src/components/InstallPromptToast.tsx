@@ -19,7 +19,7 @@ export const InstallPromptToast = () => {
               <div>
                 <p className="font-semibold text-sm">Install Blue Harvests</p>
                 <p className="text-xs text-muted-foreground">
-                  Get faster access and work offline
+                  Quick access from your home screen
                 </p>
               </div>
             </div>

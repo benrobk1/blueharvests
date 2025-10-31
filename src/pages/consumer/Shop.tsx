@@ -15,7 +15,7 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { formatMoney } from "@/lib/formatMoney";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { isCutoffPassed } from "@/lib/marketHelpers";
+import { isCutoffPassed, getNextAvailableDate } from "@/lib/marketHelpers";
 
 interface Product {
   id: string;
@@ -177,8 +177,39 @@ const Shop = () => {
               <Clock className="h-4 w-4" />
               <AlertTitle>Order Deadline</AlertTitle>
               <AlertDescription>
-                Orders for next-day delivery must be placed by {marketConfig.cutoff_time?.slice(0, 5) || '11:59 PM'}.
-                {isCutoffPassed(marketConfig.cutoff_time || '23:59:00') ? ' Currently closed - orders will be for the day after tomorrow.' : ' Currently accepting orders!'}
+                {(() => {
+                  const isPastCutoff = isCutoffPassed(marketConfig.cutoff_time || '23:59:00');
+                  const cutoffDisplay = marketConfig.cutoff_time?.slice(0, 5) || '11:59 PM';
+                  const nextDeliveryDate = getNextAvailableDate(
+                    marketConfig.cutoff_time || '23:59:00',
+                    marketConfig.delivery_days || []
+                  );
+                  const deliveryDateStr = nextDeliveryDate.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  });
+
+                  if (isPastCutoff) {
+                    return (
+                      <>
+                        Orders placed now will be delivered on <strong>{deliveryDateStr}</strong>.
+                        <br />
+                        <span className="text-xs text-muted-foreground">
+                          (Cutoff for earlier delivery was {cutoffDisplay})
+                        </span>
+                      </>
+                    );
+                  } else {
+                    return (
+                      <>
+                        Order by <strong>{cutoffDisplay}</strong> for delivery on <strong>{deliveryDateStr}</strong>.
+                        <br />
+                        <span className="text-xs text-green-600">✓ Currently accepting orders!</span>
+                      </>
+                    );
+                  }
+                })()}
               </AlertDescription>
             </Alert>
           )}
