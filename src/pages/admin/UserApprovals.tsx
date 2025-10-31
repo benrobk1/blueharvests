@@ -111,6 +111,14 @@ const UserApprovals = () => {
         });
 
       if (historyError) console.error('Failed to log history:', historyError);
+      
+      // Log admin action
+      await supabase.rpc('log_admin_action', {
+        _action_type: 'user_approved',
+        _target_user_id: userId,
+        _old_value: { status: selectedUser?.approval_status },
+        _new_value: { status: 'approved' },
+      });
     },
     onSuccess: () => {
       toast({
@@ -157,6 +165,14 @@ const UserApprovals = () => {
         });
 
       if (historyError) console.error('Failed to log history:', historyError);
+      
+      // Log admin action
+      await supabase.rpc('log_admin_action', {
+        _action_type: 'user_rejected',
+        _target_user_id: userId,
+        _old_value: { status: selectedUser?.approval_status },
+        _new_value: { status: 'rejected', reason },
+      });
     },
     onSuccess: () => {
       toast({

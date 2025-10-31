@@ -108,6 +108,14 @@ const Disputes = () => {
         .eq('id', disputeId);
 
       if (error) throw error;
+      
+      // Log admin action
+      await supabase.rpc('log_admin_action', {
+        _action_type: 'dispute_resolved',
+        _target_resource_type: 'dispute',
+        _target_resource_id: disputeId,
+        _new_value: { status, resolution, refund_amount: refundAmount },
+      });
     },
     onSuccess: () => {
       toast({

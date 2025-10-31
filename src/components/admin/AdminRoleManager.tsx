@@ -64,6 +64,14 @@ export const AdminRoleManager = () => {
         .insert({ user_id: profile.id, role: 'admin' });
 
       if (error) throw error;
+      
+      // Log admin action
+      await supabase.rpc('log_admin_action', {
+        _action_type: 'role_granted',
+        _target_user_id: profile.id,
+        _new_value: { role: 'admin' },
+      });
+      
       return profile;
     },
     onSuccess: (profile) => {
@@ -92,6 +100,13 @@ export const AdminRoleManager = () => {
         .eq('role', 'admin');
 
       if (error) throw error;
+      
+      // Log admin action
+      await supabase.rpc('log_admin_action', {
+        _action_type: 'role_revoked',
+        _target_user_id: userId,
+        _old_value: { role: 'admin' },
+      });
     },
     onSuccess: () => {
       toast({

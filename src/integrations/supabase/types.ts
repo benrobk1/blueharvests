@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_log: {
+        Row: {
+          action_type: string
+          admin_id: string
+          created_at: string | null
+          id: string
+          ip_address: unknown
+          new_value: Json | null
+          old_value: Json | null
+          target_resource_id: string | null
+          target_resource_type: string | null
+          target_user_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action_type: string
+          admin_id: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown
+          new_value?: Json | null
+          old_value?: Json | null
+          target_resource_id?: string | null
+          target_resource_type?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action_type?: string
+          admin_id?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown
+          new_value?: Json | null
+          old_value?: Json | null
+          target_resource_id?: string | null
+          target_resource_type?: string | null
+          target_user_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       approval_history: {
         Row: {
           approved_by: string | null
@@ -48,6 +90,7 @@ export type Database = {
         Row: {
           actual_arrival: string | null
           address: string
+          address_visible_at: string | null
           city: string | null
           created_at: string
           delivery_batch_id: string
@@ -67,6 +110,7 @@ export type Database = {
         Insert: {
           actual_arrival?: string | null
           address: string
+          address_visible_at?: string | null
           city?: string | null
           created_at?: string
           delivery_batch_id: string
@@ -86,6 +130,7 @@ export type Database = {
         Update: {
           actual_arrival?: string | null
           address?: string
+          address_visible_at?: string | null
           city?: string | null
           created_at?: string
           delivery_batch_id?: string
@@ -304,6 +349,13 @@ export type Database = {
             referencedRelation: "batch_stops"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "delivery_proofs_batch_stop_id_fkey"
+            columns: ["batch_stop_id"]
+            isOneToOne: false
+            referencedRelation: "driver_batch_stops"
+            referencedColumns: ["id"]
+          },
         ]
       }
       delivery_ratings: {
@@ -408,6 +460,13 @@ export type Database = {
             columns: ["stop_id"]
             isOneToOne: false
             referencedRelation: "batch_stops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_scan_logs_stop_id_fkey"
+            columns: ["stop_id"]
+            isOneToOne: false
+            referencedRelation: "driver_batch_stops"
             referencedColumns: ["id"]
           },
         ]
@@ -1011,6 +1070,24 @@ export type Database = {
           },
         ]
       }
+      rate_limits: {
+        Row: {
+          created_at: string | null
+          id: string
+          key: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          key: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          key?: string
+        }
+        Relationships: []
+      }
       referrals: {
         Row: {
           created_at: string
@@ -1225,14 +1302,103 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      driver_batch_stops: {
+        Row: {
+          actual_arrival: string | null
+          address: string | null
+          address_visible_at: string | null
+          city: string | null
+          created_at: string | null
+          delivery_batch_id: string | null
+          estimated_arrival: string | null
+          geojson: Json | null
+          id: string | null
+          latitude: number | null
+          longitude: number | null
+          notes: string | null
+          order_id: string | null
+          sequence_number: number | null
+          state: string | null
+          status: string | null
+          street_address: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          actual_arrival?: string | null
+          address?: never
+          address_visible_at?: string | null
+          city?: never
+          created_at?: string | null
+          delivery_batch_id?: string | null
+          estimated_arrival?: string | null
+          geojson?: Json | null
+          id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          order_id?: string | null
+          sequence_number?: number | null
+          state?: never
+          status?: string | null
+          street_address?: never
+          zip_code?: string | null
+        }
+        Update: {
+          actual_arrival?: string | null
+          address?: never
+          address_visible_at?: string | null
+          city?: never
+          created_at?: string | null
+          delivery_batch_id?: string | null
+          estimated_arrival?: string | null
+          geojson?: Json | null
+          id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          order_id?: string | null
+          sequence_number?: number | null
+          state?: never
+          status?: string | null
+          street_address?: never
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_stops_delivery_batch_id_fkey"
+            columns: ["delivery_batch_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_stops_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      cleanup_old_rate_limits: { Args: never; Returns: undefined }
       generate_box_code: {
         Args: { p_batch_id: string; p_stop_sequence: number }
         Returns: string
       }
       generate_referral_code: { Args: never; Returns: string }
+      get_consumer_address: {
+        Args: { _consumer_id: string; _delivery_batch_id?: string }
+        Returns: {
+          city: string
+          full_name: string
+          phone: string
+          state: string
+          street_address: string
+          zip_code: string
+        }[]
+      }
       get_driver_rating: { Args: { p_driver_id: string }; Returns: number }
       has_role: {
         Args: {
@@ -1240,6 +1406,17 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_admin_action: {
+        Args: {
+          _action_type: string
+          _new_value?: Json
+          _old_value?: Json
+          _target_resource_id?: string
+          _target_resource_type?: string
+          _target_user_id?: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
