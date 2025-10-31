@@ -17,6 +17,9 @@ import { getRatingDisplay, MINIMUM_REVIEWS_THRESHOLD } from "@/lib/ratingHelpers
 import { StripeConnectStatusBanner } from "@/components/StripeConnectStatusBanner";
 import { calculateEstimatedExpenses } from "@/lib/driverEarningsHelpers";
 import { RouteDensityMap } from "@/components/driver/RouteDensityMap";
+import { PayoutHistoryChart } from "@/components/PayoutHistoryChart";
+import { PayoutDetailsTable } from "@/components/PayoutDetailsTable";
+import { TaxInformationForm } from "@/components/TaxInformationForm";
 
 const DriverDashboard = () => {
   const { user } = useAuth();
@@ -496,6 +499,20 @@ const DriverDashboard = () => {
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Payout History */}
+        <PayoutHistoryChart recipientType="driver" />
+        <PayoutDetailsTable recipientType="driver" />
+
+        {/* Tax Information */}
+        <Card className="border-2">
+          <CardHeader>
+            <CardTitle>Tax Information (W-9)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TaxInformationForm />
           </CardContent>
         </Card>
 

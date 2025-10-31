@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Truck, Sprout, DollarSign, TrendingUp, MapPin } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +12,8 @@ import { Link } from "react-router-dom";
 import { CreditsManager } from "@/components/admin/CreditsManager";
 import { AdminRoleManager } from "@/components/admin/AdminRoleManager";
 import { KPIHeader } from "@/components/admin/KPIHeader";
+import { FarmAffiliationManager } from "@/components/admin/FarmAffiliationManager";
+import { TaxDocumentGenerator } from "@/components/admin/TaxDocumentGenerator";
 
 const AdminDashboard = () => {
   // Fetch metrics
@@ -356,15 +360,31 @@ const AdminDashboard = () => {
           </Card>
         </div>
 
-        {/* Admin Role Management */}
-        <div className="mt-8">
-          <AdminRoleManager />
-        </div>
-
-        {/* Credits Management Section */}
-        <div className="mt-8">
-          <CreditsManager />
-        </div>
+        {/* Admin Management Tabs */}
+        <Tabs defaultValue="roles" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="roles">Roles</TabsTrigger>
+            <TabsTrigger value="credits">Credits</TabsTrigger>
+            <TabsTrigger value="affiliations">Farm Affiliations</TabsTrigger>
+            <TabsTrigger value="tax">Tax Documents</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="roles" className="mt-6">
+            <AdminRoleManager />
+          </TabsContent>
+          
+          <TabsContent value="credits" className="mt-6">
+            <CreditsManager />
+          </TabsContent>
+          
+          <TabsContent value="affiliations" className="mt-6">
+            <FarmAffiliationManager />
+          </TabsContent>
+          
+          <TabsContent value="tax" className="mt-6">
+            <TaxDocumentGenerator />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );

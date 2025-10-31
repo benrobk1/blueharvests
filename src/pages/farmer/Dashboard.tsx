@@ -11,7 +11,11 @@ import { formatMoney } from "@/lib/formatMoney";
 import { ProductForm } from "@/components/farmer/ProductForm";
 import { BatchConsolidation } from "@/components/farmer/BatchConsolidation";
 import { StripeConnectSimple } from "@/components/farmer/StripeConnectSimple";
-import { CSVProductImport } from "@/components/farmer/CSVProductImport";
+import { BulkEditDialog } from "@/components/farmer/BulkEditDialog";
+import { MultiFarmDashboard } from "@/components/farmer/MultiFarmDashboard";
+import { PayoutHistoryChart } from "@/components/PayoutHistoryChart";
+import { PayoutDetailsTable } from "@/components/PayoutDetailsTable";
+import { TaxInformationForm } from "@/components/TaxInformationForm";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -28,7 +32,7 @@ const FarmerDashboard = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isAddingProduct, setIsAddingProduct] = useState(false);
-  const [isImportingCSV, setIsImportingCSV] = useState(false);
+  const [isBulkEditOpen, setIsBulkEditOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
@@ -260,9 +264,9 @@ const FarmerDashboard = () => {
           </div>
           <div className="flex items-center gap-2">
             <StripeConnectSimple variant="button" />
-            <Button variant="outline" onClick={() => setIsImportingCSV(true)}>
+            <Button variant="outline" onClick={() => setIsBulkEditOpen(true)}>
               <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Import CSV
+              Bulk Import/Edit
             </Button>
             <Button onClick={() => setIsAddingProduct(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -276,6 +280,9 @@ const FarmerDashboard = () => {
       <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Stripe Connect Status Banner */}
         <StripeConnectSimple variant="banner" />
+
+        {/* Multi-Farm Dashboard for Lead Farmers */}
+        {isLeadFarmer && <MultiFarmDashboard />}
 
         {/* Lead Farmer Batch Consolidation */}
         {isLeadFarmer && (
@@ -412,6 +419,20 @@ const FarmerDashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Payout History */}
+        <PayoutHistoryChart recipientType="farmer" />
+        <PayoutDetailsTable recipientType="farmer" />
+
+        {/* Tax Information */}
+        <Card className="border-2">
+          <CardHeader>
+            <CardTitle>Tax Information (W-9)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TaxInformationForm />
+          </CardContent>
+        </Card>
+
         {/* Recent Orders */}
         <Card className="border-2">
           <CardHeader>
@@ -501,16 +522,6 @@ const FarmerDashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* CSV Import Dialog */}
-      <CSVProductImport
-        open={isImportingCSV}
-        onOpenChange={setIsImportingCSV}
-        farmProfileId={farmProfile?.id || ''}
-        onImportComplete={() => {
-          queryClient.invalidateQueries({ queryKey: ["farmer-products"] });
-        }}
-      />
     </div>
   );
 };

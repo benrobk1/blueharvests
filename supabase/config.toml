@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.reset-demo-data]
 verify_jwt = true
+
+[functions.store-tax-info]
+verify_jwt = true
+
+[functions.generate-1099]
+verify_jwt = true
