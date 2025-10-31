@@ -9,6 +9,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import { CreditsManager } from "@/components/admin/CreditsManager";
 import { AdminRoleManager } from "@/components/admin/AdminRoleManager";
+import { KPIHeader } from "@/components/admin/KPIHeader";
 
 const AdminDashboard = () => {
   // Fetch metrics
@@ -150,6 +151,9 @@ const AdminDashboard = () => {
           </div>
         </div>
       </header>
+
+      {/* KPI Header - Live Business Metrics */}
+      <KPIHeader />
 
       <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Key Metrics */}

@@ -19,6 +19,7 @@ import { stripePromise } from "@/lib/stripe";
 import { PaymentForm } from "@/components/checkout/PaymentForm";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
+import { PriceBreakdownDrawer } from "@/components/PriceBreakdownDrawer";
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -417,12 +418,19 @@ const Checkout = () => {
                           </span>
                           <span>{formatMoney(item.quantity * Number(item.unit_price))}</span>
                         </div>
-                        <button
-                          onClick={() => navigate(`/farm/${item.products.farm_profiles.id}`)}
-                          className="text-xs text-primary hover:underline"
-                        >
-                          {item.products.farm_profiles.farm_name}
-                        </button>
+                        <div className="flex items-center justify-between">
+                          <button
+                            onClick={() => navigate(`/farm/${item.products.farm_profiles.id}`)}
+                            className="text-xs text-primary hover:underline"
+                          >
+                            {item.products.farm_profiles.farm_name}
+                          </button>
+                          <PriceBreakdownDrawer 
+                            price={Number(item.unit_price)}
+                            farmName={item.products.farm_profiles.farm_name}
+                            isCheckout
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>

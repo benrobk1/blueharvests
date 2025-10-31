@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { formatMoney } from "@/lib/formatMoney";
+import { PriceBreakdownDrawer } from "@/components/PriceBreakdownDrawer";
 
 interface Product {
   id: string;
@@ -59,6 +60,10 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             <div className="text-xs text-muted-foreground">
               {product.available_quantity} available
             </div>
+            <PriceBreakdownDrawer 
+              price={product.price} 
+              farmName={product.farm_profiles.farm_name}
+            />
           </div>
 
           <Button onClick={() => onAddToCart(product)}>
