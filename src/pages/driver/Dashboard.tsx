@@ -2,7 +2,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { DollarSign, Package, TrendingUp, Star, Navigation, Clock } from "lucide-react";
+import { DollarSign, Package, TrendingUp, Star, Navigation, Clock, Printer } from "lucide-react";
+import { format } from "date-fns";
+import { generateRouteManifestPDF, type RouteManifestData } from '@/lib/pdfGenerator';
+import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -17,6 +20,7 @@ import { RouteDensityMap } from "@/components/driver/RouteDensityMap";
 
 const DriverDashboard = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
 
   // Fetch earnings from delivery fees and tips
   const { data: earnings, isLoading: earningsLoading } = useQuery({
@@ -211,6 +215,89 @@ const DriverDashboard = () => {
     },
     enabled: !!user?.id,
   });
+
+  const handlePrintManifest = async (batchId: string) => {
+    try {
+      const { data: batch } = await supabase
+        .from('delivery_batches')
+        .select(`
+          batch_number,
+          delivery_date,
+          batch_stops (
+            sequence_number,
+            address,
+            notes,
+            estimated_arrival,
+            orders!inner(
+              box_code,
+              profiles!inner(full_name, phone),
+              order_items (
+                quantity,
+                products (name, unit)
+              )
+            )
+          )
+        `)
+        .eq('id', batchId)
+        .single();
+
+      if (!batch) {
+        toast({
+          title: 'Error',
+          description: 'Could not load batch data',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { data: driverProfile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user?.id)
+        .single();
+
+      const sortedStops = (batch.batch_stops as any[])?.sort(
+        (a, b) => a.sequence_number - b.sequence_number
+      );
+
+      const manifestData: RouteManifestData = {
+        batchNumber: batch.batch_number.toString(),
+        deliveryDate: format(new Date(batch.delivery_date), 'MMMM dd, yyyy'),
+        driverName: driverProfile?.full_name || 'Driver',
+        totalStops: sortedStops?.length || 0,
+        stops: sortedStops?.map((stop: any) => ({
+          sequence: stop.sequence_number,
+          customerName: stop.orders?.profiles?.full_name || 'Customer',
+          address: stop.address,
+          phone: stop.orders?.profiles?.phone || null,
+          boxCode: stop.orders?.box_code || null,
+          items: stop.orders?.order_items?.map((item: any) => ({
+            name: item.products?.name || '',
+            quantity: item.quantity,
+            unit: item.products?.unit || '',
+          })) || [],
+          notes: stop.notes,
+          estimatedArrival: stop.estimated_arrival 
+            ? format(new Date(stop.estimated_arrival), 'h:mm a')
+            : null,
+        })) || [],
+      };
+
+      generateRouteManifestPDF(manifestData);
+      
+      toast({
+        title: 'Route manifest downloaded',
+        description: 'PDF saved to your downloads folder',
+      });
+    } catch (error) {
+      console.error('Error generating manifest:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate manifest',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-earth">

@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BoxCodeScanner } from "@/components/driver/BoxCodeScanner";
-import { Navigation, MapPin, Clock, Package, Phone, AlertCircle } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Navigation, MapPin, Clock, Package, Phone, AlertCircle, FileText } from "lucide-react";
+import { format, formatDistanceToNow } from "date-fns";
+import { generateRouteManifestPDF, type RouteManifestData } from '@/lib/pdfGenerator';
 import { useNavigate } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
 
 interface BatchStop {
   id: string;
@@ -39,6 +41,7 @@ interface BatchStop {
 export default function RouteDetails() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const { data: activeBatch, isLoading } = useQuery({
     queryKey: ["driver-route-details", user?.id],
@@ -119,6 +122,46 @@ export default function RouteDetails() {
   const loadedCount = loadedBoxes?.length || 0;
   const allBoxesLoaded = loadedCount === totalBoxes && totalBoxes > 0;
 
+  const handleDownloadManifest = async () => {
+    if (!activeBatch) return;
+
+    const { data: driverProfile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user?.id)
+      .single();
+
+    const manifestData: RouteManifestData = {
+      batchNumber: activeBatch.batch_number.toString(),
+      deliveryDate: format(new Date(activeBatch.delivery_date), 'MMMM dd, yyyy'),
+      driverName: driverProfile?.full_name || 'Driver',
+      totalStops: activeBatch.batch_stops?.length || 0,
+      stops: activeBatch.batch_stops?.map((stop) => ({
+        sequence: stop.sequence_number,
+        customerName: stop.orders?.profiles?.full_name || 'Customer',
+        address: stop.address,
+        phone: stop.orders?.profiles?.phone || null,
+        boxCode: stop.orders?.box_code || null,
+        items: stop.orders?.order_items?.map((item) => ({
+          name: item.products?.name || '',
+          quantity: item.quantity,
+          unit: item.products?.unit || '',
+        })) || [],
+        notes: stop.notes,
+        estimatedArrival: stop.estimated_arrival 
+          ? format(new Date(stop.estimated_arrival), 'h:mm a')
+          : null,
+      })) || [],
+    };
+
+    generateRouteManifestPDF(manifestData);
+    
+    toast({
+      title: 'Route manifest downloaded',
+      description: 'PDF saved to your downloads folder',
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-earth">
@@ -175,10 +218,16 @@ export default function RouteDetails() {
                 {completedStops} of {totalStops} deliveries completed
               </p>
             </div>
-            <Button>
-              <Navigation className="h-4 w-4 mr-2" />
-              Start Navigation
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleDownloadManifest}>
+                <FileText className="h-4 w-4 mr-2" />
+                Download Paper Backup
+              </Button>
+              <Button>
+                <Navigation className="h-4 w-4 mr-2" />
+                Start Navigation
+              </Button>
+            </div>
           </div>
         </div>
       </header>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Package, TrendingUp, Plus, Pencil, Trash2 } from "lucide-react";
+import { DollarSign, Package, TrendingUp, Plus, Pencil, Trash2, FileSpreadsheet } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,7 +10,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/formatMoney";
 import { ProductForm } from "@/components/farmer/ProductForm";
 import { BatchConsolidation } from "@/components/farmer/BatchConsolidation";
-import { StripeConnectStatusBanner } from "@/components/StripeConnectStatusBanner";
+import { StripeConnectSimple } from "@/components/farmer/StripeConnectSimple";
+import { CSVProductImport } from "@/components/farmer/CSVProductImport";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -27,6 +28,7 @@ const FarmerDashboard = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [isImportingCSV, setIsImportingCSV] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
@@ -252,21 +254,28 @@ const FarmerDashboard = () => {
       <header className="bg-white border-b shadow-soft">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">{farmProfile?.farm_name || 'My Farm'}</h1>
-              <p className="text-sm text-muted-foreground">You keep 90% of all sales</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">{farmProfile?.farm_name || 'My Farm'}</h1>
+            <p className="text-sm text-muted-foreground">You keep 90% of all sales</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <StripeConnectSimple variant="button" />
+            <Button variant="outline" onClick={() => setIsImportingCSV(true)}>
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Import CSV
+            </Button>
             <Button onClick={() => setIsAddingProduct(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add Product
             </Button>
+          </div>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Stripe Connect Status Banner */}
-        <StripeConnectStatusBanner />
+        <StripeConnectSimple variant="banner" />
 
         {/* Lead Farmer Batch Consolidation */}
         {isLeadFarmer && (
@@ -492,6 +501,16 @@ const FarmerDashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* CSV Import Dialog */}
+      <CSVProductImport
+        open={isImportingCSV}
+        onOpenChange={setIsImportingCSV}
+        farmProfileId={farmProfile?.id || ''}
+        onImportComplete={() => {
+          queryClient.invalidateQueries({ queryKey: ["farmer-products"] });
+        }}
+      />
     </div>
   );
 };
