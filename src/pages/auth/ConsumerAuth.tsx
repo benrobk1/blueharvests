@@ -105,6 +105,7 @@ const ConsumerAuth = () => {
     const referralCodeInput = formData.get("referralCode") as string;
     
     const fullAddress = `${street}, ${city}, ${state} ${zipCode}`;
+    const acquisitionChannel = formData.get("acquisitionChannel") as string;
 
     try {
       emailSchema.parse(email);
@@ -127,6 +128,7 @@ const ConsumerAuth = () => {
             state,
             zip_code: zipCode,
             delivery_address: fullAddress,
+            acquisition_channel: acquisitionChannel,
           }
         }
       });
@@ -323,6 +325,16 @@ const ConsumerAuth = () => {
                   <div className="space-y-2">
                     <Label htmlFor="zipCode">ZIP Code *</Label>
                     <Input id="zipCode" name="zipCode" placeholder="10001" required maxLength={5} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="acquisitionChannel">How did you hear about us?</Label>
+                    <select id="acquisitionChannel" name="acquisitionChannel" className="w-full h-10 px-3 rounded-md border border-input bg-background">
+                      <option value="organic">Found online (Search/Website)</option>
+                      <option value="referral">Friend referral</option>
+                      <option value="social">Social media</option>
+                      <option value="event">Farmers market / Event</option>
+                      <option value="other">Other</option>
+                    </select>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="referralCode">Referral Code (Optional)</Label>
