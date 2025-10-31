@@ -524,6 +524,48 @@ export type Database = {
           },
         ]
       }
+      farm_affiliations: {
+        Row: {
+          active: boolean | null
+          commission_rate: number | null
+          created_at: string | null
+          farm_profile_id: string
+          id: string
+          lead_farmer_id: string
+        }
+        Insert: {
+          active?: boolean | null
+          commission_rate?: number | null
+          created_at?: string | null
+          farm_profile_id: string
+          id?: string
+          lead_farmer_id: string
+        }
+        Update: {
+          active?: boolean | null
+          commission_rate?: number | null
+          created_at?: string | null
+          farm_profile_id?: string
+          id?: string
+          lead_farmer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "farm_affiliations_farm_profile_id_fkey"
+            columns: ["farm_profile_id"]
+            isOneToOne: false
+            referencedRelation: "farm_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "farm_affiliations_lead_farmer_id_fkey"
+            columns: ["lead_farmer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       farm_photos: {
         Row: {
           created_at: string | null
@@ -969,11 +1011,16 @@ export type Database = {
           stripe_connect_account_id: string | null
           stripe_onboarding_complete: boolean | null
           stripe_payouts_enabled: boolean | null
+          tax_address: string | null
+          tax_id_encrypted: string | null
+          tax_id_type: string | null
+          tax_name: string | null
           terms_accepted_at: string | null
           updated_at: string | null
           vehicle_make: string | null
           vehicle_type: string | null
           vehicle_year: string | null
+          w9_submitted_at: string | null
           zip_code: string | null
         }
         Insert: {
@@ -1011,11 +1058,16 @@ export type Database = {
           stripe_connect_account_id?: string | null
           stripe_onboarding_complete?: boolean | null
           stripe_payouts_enabled?: boolean | null
+          tax_address?: string | null
+          tax_id_encrypted?: string | null
+          tax_id_type?: string | null
+          tax_name?: string | null
           terms_accepted_at?: string | null
           updated_at?: string | null
           vehicle_make?: string | null
           vehicle_type?: string | null
           vehicle_year?: string | null
+          w9_submitted_at?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -1053,11 +1105,16 @@ export type Database = {
           stripe_connect_account_id?: string | null
           stripe_onboarding_complete?: boolean | null
           stripe_payouts_enabled?: boolean | null
+          tax_address?: string | null
+          tax_id_encrypted?: string | null
+          tax_id_type?: string | null
+          tax_name?: string | null
           terms_accepted_at?: string | null
           updated_at?: string | null
           vehicle_make?: string | null
           vehicle_type?: string | null
           vehicle_year?: string | null
+          w9_submitted_at?: string | null
           zip_code?: string | null
         }
         Relationships: [

@@ -725,15 +725,47 @@ serve(async (req) => {
     if (paymentStatus === 'paid') {
       console.log('Creating payout records...');
       
-      // Group items by farmer
+      // Group items by farmer and track lead farmer commissions
       const farmerPayouts = new Map<string, { farmerId: string; amount: number; items: any[] }>();
+      const leadFarmerPayouts = new Map<string, { leadFarmerId: string; amount: number; farmIds: string[] }>();
       
       for (const item of cartItems) {
         const product = item.products as any;
         const farmProfile = product.farm_profiles as any;
         const farmerId = farmProfile.farmer_id;
         const itemSubtotal = product.price * item.quantity;
-        const farmerShare = itemSubtotal * 0.90; // 90% to farmer
+        let farmerShare = itemSubtotal * 0.90; // 90% to farmer (before lead farmer commission)
+        
+        // Check for lead farmer affiliation
+        const { data: affiliation } = await supabaseClient
+          .from('farm_affiliations')
+          .select('lead_farmer_id, commission_rate')
+          .eq('farm_profile_id', product.farm_profile_id)
+          .eq('active', true)
+          .maybeSingle();
+        
+        if (affiliation?.lead_farmer_id) {
+          const commissionRate = affiliation.commission_rate || 5.0;
+          const leadFarmerCommission = itemSubtotal * (commissionRate / 100);
+          farmerShare -= leadFarmerCommission;
+          
+          // Track lead farmer commission
+          if (leadFarmerPayouts.has(affiliation.lead_farmer_id)) {
+            const existing = leadFarmerPayouts.get(affiliation.lead_farmer_id)!;
+            existing.amount += leadFarmerCommission;
+            if (!existing.farmIds.includes(product.farm_profile_id)) {
+              existing.farmIds.push(product.farm_profile_id);
+            }
+          } else {
+            leadFarmerPayouts.set(affiliation.lead_farmer_id, {
+              leadFarmerId: affiliation.lead_farmer_id,
+              amount: leadFarmerCommission,
+              farmIds: [product.farm_profile_id]
+            });
+          }
+          
+          console.log(`Lead farmer commission: $${leadFarmerCommission.toFixed(2)} (${commissionRate}%) from order`);
+        }
         
         if (farmerPayouts.has(farmerId)) {
           const existing = farmerPayouts.get(farmerId)!;
@@ -768,6 +800,25 @@ serve(async (req) => {
           stripe_connect_account_id: farmerProfile?.stripe_connect_account_id || null,
           status: farmerProfile?.stripe_payouts_enabled ? 'pending' : 'pending',
           description: `Farmer payout for ${payout.items.length} products (90% of subtotal)`
+        });
+      }
+
+      // Lead farmer commission payouts
+      for (const [leadFarmerId, payout] of leadFarmerPayouts.entries()) {
+        const { data: leadFarmerProfile } = await supabaseClient
+          .from('profiles')
+          .select('stripe_connect_account_id, stripe_payouts_enabled')
+          .eq('id', leadFarmerId)
+          .single();
+
+        payoutInserts.push({
+          order_id: order.id,
+          recipient_id: leadFarmerId,
+          recipient_type: 'lead_farmer_commission',
+          amount: payout.amount,
+          stripe_connect_account_id: leadFarmerProfile?.stripe_connect_account_id || null,
+          status: leadFarmerProfile?.stripe_payouts_enabled ? 'pending' : 'pending',
+          description: `Lead farmer commission for ${payout.farmIds.length} farm(s)`
         });
       }
 

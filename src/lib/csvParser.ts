@@ -1,4 +1,7 @@
+import * as XLSX from 'xlsx';
+
 export interface CSVProductRow {
+  id?: string;
   name: string;
   description?: string;
   price: string;
@@ -12,7 +15,41 @@ export interface CSVParseResult {
   errors: Array<{ row: number; field: string; error: string }>;
 }
 
-export function parseProductCSV(fileContent: string): CSVParseResult {
+export async function parseProductFile(file: File, mode: 'create' | 'update' = 'create'): Promise<CSVParseResult> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      try {
+        const data = e.target?.result;
+        
+        // Detect file type and parse
+        if (file.name.endsWith('.csv')) {
+          resolve(parseProductCSV(data as string, mode));
+        } else if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+          const workbook = XLSX.read(data, { type: 'binary' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const csvString = XLSX.utils.sheet_to_csv(firstSheet);
+          resolve(parseProductCSV(csvString, mode));
+        } else {
+          reject(new Error('Unsupported file type'));
+        }
+      } catch (error) {
+        reject(error);
+      }
+    };
+    
+    reader.onerror = () => reject(new Error('Failed to read file'));
+    
+    if (file.name.endsWith('.csv')) {
+      reader.readAsText(file);
+    } else {
+      reader.readAsBinaryString(file);
+    }
+  });
+}
+
+export function parseProductCSV(fileContent: string, mode: 'create' | 'update' = 'create'): CSVParseResult {
   const lines = fileContent.split('\n').filter(line => line.trim());
   
   if (lines.length < 2) {
@@ -24,7 +61,12 @@ export function parseProductCSV(fileContent: string): CSVParseResult {
 
   // Parse header
   const header = lines[0].split(',').map(h => h.trim().toLowerCase());
-  const requiredFields = ['name', 'price', 'unit', 'available_quantity'];
+  let requiredFields = ['name', 'price', 'unit', 'available_quantity'];
+  
+  // If update mode, require id column
+  if (mode === 'update') {
+    requiredFields = ['id', ...requiredFields];
+  }
   
   // Validate header
   const missingFields = requiredFields.filter(f => !header.includes(f));
@@ -81,8 +123,19 @@ export function parseProductCSV(fileContent: string): CSVParseResult {
       hasError = true;
     }
 
+    // Validate ID if update mode
+    if (mode === 'update' && row.id) {
+      // Basic UUID validation
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(row.id)) {
+        errors.push({ row: i + 1, field: 'id', error: 'Invalid product ID format' });
+        hasError = true;
+      }
+    }
+
     if (!hasError) {
       valid.push({
+        id: row.id || undefined,
         name: row.name,
         description: row.description || '',
         price: row.price,
@@ -105,6 +158,24 @@ function isValidUrl(string: string): boolean {
   }
 }
 
+// Export products to CSV
+export function generateCSVFromProducts(products: Array<{
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  unit: string;
+  available_quantity: number;
+  image_url?: string;
+}>): string {
+  const header = 'id,name,description,price,unit,available_quantity,image_url';
+  const rows = products.map(p => 
+    `${p.id},"${p.name}","${p.description || ''}",${p.price},${p.unit},${p.available_quantity},${p.image_url || ''}`
+  );
+  
+  return [header, ...rows].join('\n');
+}
+
 // CSV Template Generator
 export function generateCSVTemplate(): string {
   const header = 'name,description,price,unit,available_quantity,image_url';
@@ -113,4 +184,29 @@ export function generateCSVTemplate(): string {
   const example3 = 'Mixed Greens,Organic salad mix,5.99,bunch,20,';
   
   return [header, example1, example2, example3].join('\n');
+}
+
+// Excel Template Generator
+export function generateExcelTemplate(): Blob {
+  const data = [
+    ['name', 'description', 'price', 'unit', 'available_quantity', 'image_url'],
+    ['Organic Tomatoes', 'Fresh heirloom tomatoes', 4.99, 'lb', 50, 'https://example.com/tomatoes.jpg'],
+    ['Baby Carrots', 'Sweet baby carrots', 3.49, 'lb', 30, ''],
+    ['Mixed Greens', 'Organic salad mix', 5.99, 'bunch', 20, ''],
+  ];
+  
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Products');
+  
+  const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'binary' });
+  
+  // Convert binary string to Blob
+  const buf = new ArrayBuffer(wbout.length);
+  const view = new Uint8Array(buf);
+  for (let i = 0; i < wbout.length; i++) {
+    view[i] = wbout.charCodeAt(i) & 0xFF;
+  }
+  
+  return new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 }
