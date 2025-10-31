@@ -72,7 +72,8 @@ const Shop = () => {
             location
           )
         `)
-        .gt("available_quantity", 0);
+        .gt("available_quantity", 0)
+        .eq("approved", true);
 
       if (error) throw error;
       return data as Product[];

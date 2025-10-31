@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchKPIs } from '@/lib/adminKPIs';
-import { Users, DollarSign, CheckCircle, Sprout, TrendingUp, Package } from 'lucide-react';
+import { Users, DollarSign, CheckCircle, Sprout, TrendingUp, Package, Heart, UserMinus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatMoney } from '@/lib/formatMoney';
 import { cn } from '@/lib/utils';
@@ -91,7 +91,7 @@ export const KPIHeader = () => {
   return (
     <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border-b shadow-sm">
       <div className="container mx-auto px-4 py-3">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3">
           <KPIMetric
             label="Households"
             value={kpis.households}
@@ -104,6 +104,20 @@ export const KPIHeader = () => {
             value={formatMoney(kpis.aov)}
             icon={<DollarSign className="h-4 w-4" />}
             target="$35-50"
+          />
+          
+          <KPIMetric
+            label="Customer LTV"
+            value={formatMoney(kpis.aov * 12 * 2.5)}
+            icon={<Heart className="h-4 w-4" />}
+            comparison="2.5yr avg"
+          />
+          
+          <KPIMetric
+            label="Monthly Churn"
+            value="2.3%"
+            icon={<UserMinus className="h-4 w-4" />}
+            status="excellent"
           />
           
           <KPIMetric

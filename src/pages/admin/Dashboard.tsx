@@ -335,44 +335,40 @@ const AdminDashboard = () => {
               )}
             </CardContent>
           </Card>
-
-          <Card className="border-2">
-            <CardHeader>
-              <CardTitle>Business Intelligence</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-muted-foreground">Customer LTV</div>
-                  <div className="text-2xl font-bold text-foreground">$428</div>
-                </div>
-                <TrendingUp className="h-8 w-8 text-success" />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-muted-foreground">Avg Order Value</div>
-                  <div className="text-2xl font-bold text-foreground">$46.32</div>
-                </div>
-                <TrendingUp className="h-8 w-8 text-primary" />
-              </div>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm text-muted-foreground">Monthly Churn</div>
-                  <div className="text-2xl font-bold text-foreground">2.8%</div>
-                </div>
-                <TrendingUp className="h-8 w-8 text-success" />
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Admin Management Tabs */}
+        {/* Quick Management Tools */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Management Tools</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <Button 
+                variant="outline" 
+                className="h-24 flex flex-col gap-2"
+                onClick={() => navigate("/admin/farm-affiliations")}
+              >
+                <Sprout className="h-6 w-6" />
+                <span>Farm Affiliations</span>
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-24 flex flex-col gap-2"
+                onClick={() => navigate("/admin/tax-documents")}
+              >
+                <FileText className="h-6 w-6" />
+                <span>Tax Documents</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Admin Tools Tabs - Roles & Credits */}
         <Tabs defaultValue="roles" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="roles">Roles</TabsTrigger>
-            <TabsTrigger value="credits">Credits</TabsTrigger>
-            <TabsTrigger value="affiliations">Farm Affiliations</TabsTrigger>
-            <TabsTrigger value="tax">Tax Documents</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="roles">User Roles</TabsTrigger>
+            <TabsTrigger value="credits">Credits Manager</TabsTrigger>
           </TabsList>
           
           <TabsContent value="roles" className="mt-6">
@@ -381,14 +377,6 @@ const AdminDashboard = () => {
           
           <TabsContent value="credits" className="mt-6">
             <CreditsManager />
-          </TabsContent>
-          
-          <TabsContent value="affiliations" className="mt-6">
-            <FarmAffiliationManager />
-          </TabsContent>
-          
-          <TabsContent value="tax" className="mt-6">
-            <TaxDocumentGenerator />
           </TabsContent>
         </Tabs>
       </main>

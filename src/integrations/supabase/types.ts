@@ -927,6 +927,9 @@ export type Database = {
       }
       products: {
         Row: {
+          approved: boolean
+          approved_at: string | null
+          approved_by: string | null
           available_quantity: number | null
           created_at: string | null
           description: string | null
@@ -940,6 +943,9 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
           available_quantity?: number | null
           created_at?: string | null
           description?: string | null
@@ -953,6 +959,9 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          approved?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
           available_quantity?: number | null
           created_at?: string | null
           description?: string | null
@@ -966,6 +975,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "products_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_farm_profile_id_fkey"
             columns: ["farm_profile_id"]

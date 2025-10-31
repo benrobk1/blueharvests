@@ -34,13 +34,21 @@ const FarmerAuth = () => {
     password: "",
     confirmPassword: "",
     phone: "",
-    farmAddress: "",
+    streetAddress: "",
+    streetAddressLine2: "",
+    city: "",
+    state: "",
     zipCode: "",
+    country: "USA",
     farmSize: "",
     produceTypes: "",
     additionalInfo: "",
     collectionPointLeadFarmer: "",
-    collectionPointAddress: "",
+    collectionStreetAddress: "",
+    collectionStreetAddressLine2: "",
+    collectionCity: "",
+    collectionState: "",
+    collectionZipCode: "",
   });
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -140,6 +148,11 @@ const FarmerAuth = () => {
 
       if (roleError) throw roleError;
 
+      // Build collection point address for lead farmers
+      const collectionPointAddress = farmerType === "lead" 
+        ? `${formData.collectionStreetAddress}${formData.collectionStreetAddressLine2 ? `, ${formData.collectionStreetAddressLine2}` : ''}, ${formData.collectionCity}, ${formData.collectionState} ${formData.collectionZipCode}`
+        : null;
+
       // Update profile with additional information
       const { error: profileError } = await supabase
         .from('profiles')
@@ -147,8 +160,12 @@ const FarmerAuth = () => {
           full_name: formData.ownerName,
           phone: formData.phone,
           farm_name: formData.farmName,
+          street_address: formData.streetAddress + (formData.streetAddressLine2 ? `, ${formData.streetAddressLine2}` : ''),
+          city: formData.city,
+          state: formData.state,
           zip_code: formData.zipCode,
-          collection_point_address: farmerType === "lead" ? formData.collectionPointAddress : null,
+          country: formData.country,
+          collection_point_address: collectionPointAddress,
           approval_status: 'pending'
         })
         .eq('id', authData.user.id);
@@ -168,13 +185,21 @@ const FarmerAuth = () => {
         password: "",
         confirmPassword: "",
         phone: "",
-        farmAddress: "",
+        streetAddress: "",
+        streetAddressLine2: "",
+        city: "",
+        state: "",
         zipCode: "",
+        country: "USA",
         farmSize: "",
         produceTypes: "",
         additionalInfo: "",
         collectionPointLeadFarmer: "",
-        collectionPointAddress: "",
+        collectionStreetAddress: "",
+        collectionStreetAddressLine2: "",
+        collectionCity: "",
+        collectionState: "",
+        collectionZipCode: "",
       });
     } catch (error: any) {
       const errorMsg = getAuthErrorMessage(error);
@@ -398,27 +423,74 @@ const FarmerAuth = () => {
                       onChange={(e) => setFormData({...formData, phone: e.target.value})}
                     />
                   </div>
+
+                  {/* Farm Address Fields */}
                   <div className="space-y-2">
-                    <Label htmlFor="farmAddress">Farm Address *</Label>
+                    <Label htmlFor="streetAddress">Farm Street Address *</Label>
                     <Input 
-                      id="farmAddress" 
+                      id="streetAddress" 
                       placeholder="123 Farm Road" 
                       required 
-                      value={formData.farmAddress}
-                      onChange={(e) => setFormData({...formData, farmAddress: e.target.value})}
+                      value={formData.streetAddress}
+                      onChange={(e) => setFormData({...formData, streetAddress: e.target.value})}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="zipCode">ZIP Code *</Label>
+                    <Label htmlFor="streetAddressLine2">Address Line 2 (Optional)</Label>
                     <Input 
-                      id="zipCode" 
-                      placeholder="10001" 
-                      required 
-                      maxLength={5}
-                      value={formData.zipCode}
-                      onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
+                      id="streetAddressLine2" 
+                      placeholder="Apt, Suite, Building, etc." 
+                      value={formData.streetAddressLine2}
+                      onChange={(e) => setFormData({...formData, streetAddressLine2: e.target.value})}
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City *</Label>
+                      <Input 
+                        id="city" 
+                        placeholder="Springfield" 
+                        required 
+                        value={formData.city}
+                        onChange={(e) => setFormData({...formData, city: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="state">State *</Label>
+                      <Input 
+                        id="state" 
+                        placeholder="IL" 
+                        required 
+                        maxLength={2}
+                        value={formData.state}
+                        onChange={(e) => setFormData({...formData, state: e.target.value.toUpperCase()})}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="zipCode">ZIP Code *</Label>
+                      <Input 
+                        id="zipCode" 
+                        placeholder="10001" 
+                        required 
+                        maxLength={5}
+                        value={formData.zipCode}
+                        onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="country">Country *</Label>
+                      <Input 
+                        id="country" 
+                        placeholder="USA" 
+                        required 
+                        value={formData.country}
+                        onChange={(e) => setFormData({...formData, country: e.target.value})}
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="farmSize">Farm Size (acres)</Label>
                     <Input 
@@ -449,57 +521,82 @@ const FarmerAuth = () => {
                       />
                     </div>
                   )}
-                  
+
+                  {/* Collection Point Address for Lead Farmers */}
                   {farmerType === "lead" && (
                     <>
-                      <div className="space-y-2">
-                        <Label htmlFor="collectionStreet">Collection Point Street Address *</Label>
-                        <Input 
-                          id="collectionStreet" 
-                          placeholder="123 Farm Road" 
-                          required
-                          value={formData.collectionPointAddress}
-                          onChange={(e) => setFormData({...formData, collectionPointAddress: e.target.value})}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="collectionCity">City *</Label>
-                          <Input 
-                            id="collectionCity" 
-                            placeholder="Springfield" 
-                            required
-                            value={formData.farmAddress}
-                            onChange={(e) => setFormData({...formData, farmAddress: e.target.value})}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="collectionState">State *</Label>
-                          <Input 
-                            id="collectionState" 
-                            placeholder="IL" 
-                            required
-                            maxLength={2}
-                            value={formData.farmSize}
-                            onChange={(e) => setFormData({...formData, farmSize: e.target.value.toUpperCase()})}
-                          />
+                      <div className="border-t pt-4 mt-4">
+                        <h3 className="font-semibold mb-4">Collection Point Address</h3>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="collectionStreetAddress">Street Address *</Label>
+                            <Input 
+                              id="collectionStreetAddress" 
+                              placeholder="456 Collection Point Road" 
+                              required 
+                              value={formData.collectionStreetAddress}
+                              onChange={(e) => setFormData({...formData, collectionStreetAddress: e.target.value})}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="collectionStreetAddressLine2">Address Line 2 (Optional)</Label>
+                            <Input 
+                              id="collectionStreetAddressLine2" 
+                              placeholder="Apt, Suite, Building, etc." 
+                              value={formData.collectionStreetAddressLine2}
+                              onChange={(e) => setFormData({...formData, collectionStreetAddressLine2: e.target.value})}
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="collectionCity">City *</Label>
+                              <Input 
+                                id="collectionCity" 
+                                placeholder="Springfield" 
+                                required 
+                                value={formData.collectionCity}
+                                onChange={(e) => setFormData({...formData, collectionCity: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="collectionState">State *</Label>
+                              <Input 
+                                id="collectionState" 
+                                placeholder="IL" 
+                                required 
+                                maxLength={2}
+                                value={formData.collectionState}
+                                onChange={(e) => setFormData({...formData, collectionState: e.target.value.toUpperCase()})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="collectionZipCode">ZIP *</Label>
+                              <Input 
+                                id="collectionZipCode" 
+                                placeholder="10001" 
+                                required 
+                                maxLength={5}
+                                value={formData.collectionZipCode}
+                                onChange={(e) => setFormData({...formData, collectionZipCode: e.target.value})}
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </>
                   )}
-                  
+
                   <div className="space-y-2">
                     <Label htmlFor="additionalInfo">Additional Information</Label>
                     <Textarea 
                       id="additionalInfo" 
-                      placeholder="Tell us about your farm..." 
+                      placeholder="Tell us more about your farm..." 
+                      rows={3}
                       value={formData.additionalInfo}
                       onChange={(e) => setFormData({...formData, additionalInfo: e.target.value})}
                     />
                   </div>
-                  <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
-                    Your application will be sent to benjaminrk@blueharvests.net for review.
-                  </div>
+                  
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? "Submitting..." : "Submit Application"}
                   </Button>
