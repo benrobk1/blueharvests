@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Shield, Loader2 } from 'lucide-react';
+import { Shield, Loader2, ChevronDown } from 'lucide-react';
 
 export function TaxInformationForm() {
   const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
   const [taxIdType, setTaxIdType] = useState<'ssn' | 'ein'>('ssn');
   const [taxId, setTaxId] = useState('');
   const [taxName, setTaxName] = useState('');
@@ -64,15 +66,24 @@ export function TaxInformationForm() {
   };
   
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Tax Information (W-9)</CardTitle>
-        <CardDescription>
-          Required for annual 1099 tax forms if you earn over $600/year
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card>
+        <CardHeader>
+          <CollapsibleTrigger asChild>
+            <div className="flex items-center justify-between cursor-pointer">
+              <div>
+                <CardTitle>Tax Information (W-9)</CardTitle>
+                <CardDescription>
+                  Required for annual 1099 tax forms if you earn over $600/year
+                </CardDescription>
+              </div>
+              <ChevronDown className={`h-5 w-5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+          </CollapsibleTrigger>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <Label htmlFor="tax-id-type">Tax ID Type</Label>
             <Select value={taxIdType} onValueChange={(v) => setTaxIdType(v as 'ssn' | 'ein')}>
@@ -142,6 +153,8 @@ export function TaxInformationForm() {
           </Button>
         </form>
       </CardContent>
+        </CollapsibleContent>
     </Card>
+    </Collapsible>
   );
 }

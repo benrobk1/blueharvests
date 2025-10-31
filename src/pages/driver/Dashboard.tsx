@@ -10,7 +10,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BoxCodeScanner } from "@/components/driver/BoxCodeScanner";
 import { formatMoney } from "@/lib/formatMoney";
 import { Progress } from "@/components/ui/progress";
 import { getRatingDisplay, MINIMUM_REVIEWS_THRESHOLD } from "@/lib/ratingHelpers";
@@ -20,10 +19,14 @@ import { RouteDensityMap } from "@/components/driver/RouteDensityMap";
 import { PayoutHistoryChart } from "@/components/PayoutHistoryChart";
 import { PayoutDetailsTable } from "@/components/PayoutDetailsTable";
 import { TaxInformationForm } from "@/components/TaxInformationForm";
+import { AvailableRoutes } from "@/components/driver/AvailableRoutes";
+import { useNavigate } from "react-router-dom";
+import { User } from "lucide-react";
 
 const DriverDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Fetch earnings from delivery fees and tips
   const { data: earnings, isLoading: earningsLoading } = useQuery({
@@ -306,10 +309,18 @@ const DriverDashboard = () => {
     <div className="min-h-screen bg-gradient-earth">
       <header className="bg-white border-b shadow-soft">
         <div className="container mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-foreground">Driver Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            Welcome back! You have {stats?.deliveries || 0} deliveries today
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Driver Dashboard</h1>
+              <p className="text-sm text-muted-foreground">
+                Welcome back! You have {stats?.deliveries || 0} deliveries today
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => navigate('/driver/profile')}>
+              <User className="h-4 w-4 mr-2" />
+              Profile
+            </Button>
+          </div>
         </div>
       </header>
 
@@ -507,61 +518,53 @@ const DriverDashboard = () => {
         <PayoutDetailsTable recipientType="driver" />
 
         {/* Tax Information */}
-        <Card className="border-2">
-          <CardHeader>
-            <CardTitle>Tax Information (W-9)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <TaxInformationForm />
-          </CardContent>
-        </Card>
+        <TaxInformationForm />
 
-        {/* Box Code Scanner */}
-        <BoxCodeScanner />
+        {/* Available Routes - Drivers can claim unassigned batches */}
+        <AvailableRoutes />
 
-        {/* Route Density Map - Show if there's an active batch */}
-        {activeBatch?.id && activeRoute && activeRoute.length > 0 && (
-          <RouteDensityMap batchId={activeBatch.id} />
-        )}
-
-        {/* Active Route */}
+        {/* Active Route - Simplified Overview */}
         <Card className="border-2">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Active Route</CardTitle>
-            <Button onClick={() => window.location.href = '/driver/route'}>
-              <Navigation className="h-4 w-4 mr-2" />
-              View Full Route
-            </Button>
+            {activeRoute && activeRoute.length > 0 && (
+              <Button onClick={() => navigate('/driver/route')}>
+                <Navigation className="h-4 w-4 mr-2" />
+                View Full Route
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             {routeLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}
-              </div>
+              <Skeleton className="h-24 w-full" />
             ) : activeRoute && activeRoute.length > 0 ? (
               <div className="space-y-4">
-                {activeRoute.map((stop, index) => (
-                  <div
-                    key={stop.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:border-primary transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center font-bold text-primary">
-                        {index + 1}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-foreground">{stop.customer}</div>
-                        <div className="text-sm text-muted-foreground">{stop.address}</div>
-                      </div>
-                    </div>
-                    <Badge variant={stop.status === 'delivered' ? 'default' : 'outline'}>
-                      {stop.status === 'delivered' ? 'Delivered' : 'Pending'}
-                    </Badge>
+                <div className="flex items-center justify-between p-4 border rounded-lg bg-primary/5">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Next Stop</p>
+                    <p className="font-semibold text-foreground text-lg">{activeRoute[0].customer}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{activeRoute[0].address}</p>
                   </div>
-                ))}
+                  <Badge variant="secondary" className="text-base px-3 py-1">
+                    {activeRoute.length} stops
+                  </Badge>
+                </div>
+                <Button className="w-full" size="lg" onClick={() => navigate('/driver/route')}>
+                  <Navigation className="h-5 w-5 mr-2" />
+                  Start Deliveries
+                </Button>
+                
+                {/* Route Density Map - Show if there's an active batch */}
+                {activeBatch?.id && (
+                  <div className="mt-4">
+                    <RouteDensityMap batchId={activeBatch.id} />
+                  </div>
+                )}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">No active deliveries</p>
+              <p className="text-center text-muted-foreground py-8">
+                No active route. Claim a route from available batches above to start deliveries.
+              </p>
             )}
           </CardContent>
         </Card>

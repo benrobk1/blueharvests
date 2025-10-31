@@ -3,6 +3,9 @@ project_id = "xushmvtkfkijrhfoxhat"
 [functions.checkout]
 verify_jwt = true
 
+[functions.check-stripe-connect]
+verify_jwt = true
+
 [functions.generate-batches]
 verify_jwt = false
 
@@ -13,9 +16,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.stripe-connect-onboard]
-verify_jwt = true
-
-[functions.check-stripe-connect]
 verify_jwt = true
 
 [functions.process-payouts]
