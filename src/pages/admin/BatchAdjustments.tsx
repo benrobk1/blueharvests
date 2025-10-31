@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom';
 const BatchAdjustments = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [selectedBatch, setSelectedBatch] = useState<string | null>(null);
 
   const { data: batches, isLoading } = useQuery({
@@ -106,8 +107,6 @@ const BatchAdjustments = () => {
       </div>
     );
   }
-
-  const navigate = useNavigate();
 
   return (
     <div className="space-y-6">
