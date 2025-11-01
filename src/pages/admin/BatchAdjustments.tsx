@@ -24,7 +24,15 @@ const BatchAdjustments = () => {
         .select(`
           *,
           profiles!delivery_batches_driver_id_fkey(full_name),
-          batch_stops(id, status)
+          batch_stops(id, status),
+          batch_metadata(
+            collection_point_id,
+            collection_point_address,
+            order_count,
+            is_subsidized,
+            merged_zips,
+            estimated_route_hours
+          )
         `)
         .order('delivery_date', { ascending: false })
         .limit(20);
@@ -146,6 +154,34 @@ const BatchAdjustments = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
+                {batch.batch_metadata && batch.batch_metadata.length > 0 && (
+                  <div className="mb-4 p-3 bg-muted/50 rounded-lg space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Collection Point</p>
+                      {batch.batch_metadata[0].is_subsidized && (
+                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                          Subsidized
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {batch.batch_metadata[0].collection_point_address || 'Not assigned'}
+                    </p>
+                    {batch.batch_metadata[0].merged_zips && batch.batch_metadata[0].merged_zips.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Merged ZIPs: {batch.batch_metadata[0].merged_zips.join(', ')}
+                      </p>
+                    )}
+                    {batch.batch_metadata[0].estimated_route_hours && (
+                      <p className="text-xs text-muted-foreground">
+                        Est. Route: {Number(batch.batch_metadata[0].estimated_route_hours).toFixed(1)} hours
+                      </p>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      Orders: {batch.batch_metadata[0].order_count}
+                    </p>
+                  </div>
+                )}
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground flex items-center gap-1">

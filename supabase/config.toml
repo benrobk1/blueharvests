@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.generate-1099]
 verify_jwt = true
+
+[functions.optimize-delivery-batches]
+verify_jwt = false

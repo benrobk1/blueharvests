@@ -86,6 +86,63 @@ export type Database = {
         }
         Relationships: []
       }
+      batch_metadata: {
+        Row: {
+          ai_optimization_data: Json | null
+          collection_point_address: string | null
+          collection_point_id: string | null
+          created_at: string | null
+          delivery_batch_id: string | null
+          estimated_route_hours: number | null
+          id: string
+          is_subsidized: boolean | null
+          merged_zips: string[] | null
+          order_count: number
+          original_zip_codes: string[] | null
+        }
+        Insert: {
+          ai_optimization_data?: Json | null
+          collection_point_address?: string | null
+          collection_point_id?: string | null
+          created_at?: string | null
+          delivery_batch_id?: string | null
+          estimated_route_hours?: number | null
+          id?: string
+          is_subsidized?: boolean | null
+          merged_zips?: string[] | null
+          order_count: number
+          original_zip_codes?: string[] | null
+        }
+        Update: {
+          ai_optimization_data?: Json | null
+          collection_point_address?: string | null
+          collection_point_id?: string | null
+          created_at?: string | null
+          delivery_batch_id?: string | null
+          estimated_route_hours?: number | null
+          id?: string
+          is_subsidized?: boolean | null
+          merged_zips?: string[] | null
+          order_count?: number
+          original_zip_codes?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_metadata_collection_point_id_fkey"
+            columns: ["collection_point_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_metadata_delivery_batch_id_fkey"
+            columns: ["delivery_batch_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_stops: {
         Row: {
           actual_arrival: string | null
@@ -690,38 +747,61 @@ export type Database = {
       market_configs: {
         Row: {
           active: boolean
+          collection_point_id: string | null
           created_at: string
           cutoff_time: string
           delivery_days: string[]
           delivery_fee: number
           id: string
+          max_batch_size: number | null
+          max_route_hours: number | null
+          min_batch_size: number | null
           minimum_order: number
+          target_batch_size: number | null
           updated_at: string
           zip_code: string
         }
         Insert: {
           active?: boolean
+          collection_point_id?: string | null
           created_at?: string
           cutoff_time?: string
           delivery_days: string[]
           delivery_fee: number
           id?: string
+          max_batch_size?: number | null
+          max_route_hours?: number | null
+          min_batch_size?: number | null
           minimum_order?: number
+          target_batch_size?: number | null
           updated_at?: string
           zip_code: string
         }
         Update: {
           active?: boolean
+          collection_point_id?: string | null
           created_at?: string
           cutoff_time?: string
           delivery_days?: string[]
           delivery_fee?: number
           id?: string
+          max_batch_size?: number | null
+          max_route_hours?: number | null
+          min_batch_size?: number | null
           minimum_order?: number
+          target_batch_size?: number | null
           updated_at?: string
           zip_code?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "market_configs_collection_point_id_fkey"
+            columns: ["collection_point_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_items: {
         Row: {
