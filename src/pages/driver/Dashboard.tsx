@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { DollarSign, Package, TrendingUp, Star, Navigation, Clock, Printer, MapPin } from "lucide-react";
+import { DollarSign, Package, TrendingUp, Star, Navigation, Clock, Printer, MapPin, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { generateRouteManifestPDF, type RouteManifestData } from '@/lib/pdfGenerator';
 import { useToast } from "@/hooks/use-toast";
@@ -16,9 +16,6 @@ import { getRatingDisplay, MINIMUM_REVIEWS_THRESHOLD } from "@/lib/ratingHelpers
 import { StripeConnectStatusBanner } from "@/components/StripeConnectStatusBanner";
 import { calculateEstimatedExpenses } from "@/lib/driverEarningsHelpers";
 import { RouteDensityMap } from "@/components/driver/RouteDensityMap";
-import { PayoutHistoryChart } from "@/components/PayoutHistoryChart";
-import { PayoutDetailsTable } from "@/components/PayoutDetailsTable";
-import { TaxInformationForm } from "@/components/TaxInformationForm";
 import { useNavigate } from "react-router-dom";
 import { User } from "lucide-react";
 
@@ -315,10 +312,20 @@ const DriverDashboard = () => {
                 Welcome back! You have {stats?.deliveries || 0} deliveries today
               </p>
             </div>
-            <Button variant="outline" onClick={() => navigate('/driver/profile')}>
-              <User className="h-4 w-4 mr-2" />
-              Profile
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => navigate('/driver/payouts')}>
+                <DollarSign className="h-4 w-4 mr-2" />
+                Payouts
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/driver/tax-info')}>
+                <FileText className="h-4 w-4 mr-2" />
+                Tax Info
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/driver/profile')}>
+                <User className="h-4 w-4 mr-2" />
+                Profile
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -585,12 +592,6 @@ const DriverDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Payout History */}
-        <PayoutHistoryChart recipientType="driver" />
-        <PayoutDetailsTable recipientType="driver" />
-
-        {/* Tax Information */}
-        <TaxInformationForm />
       </main>
     </div>
   );

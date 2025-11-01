@@ -18,6 +18,8 @@ import DriverDashboard from "./pages/driver/Dashboard";
 import AvailableRoutes from "./pages/driver/AvailableRoutes";
 import RouteDetails from "./pages/driver/RouteDetails";
 import LoadBoxes from "./pages/driver/LoadBoxes";
+import DriverPayouts from "./pages/driver/PayoutDetails";
+import DriverTaxInfo from "./pages/driver/TaxInfo";
 import FarmerDashboard from "./pages/farmer/Dashboard";
 import CustomerAnalytics from "./pages/farmer/CustomerAnalytics";
 import AffiliatedFarmers from "./pages/farmer/AffiliatedFarmers";
@@ -123,6 +125,16 @@ const AppContent = () => {
           <Route path="/driver/profile" element={
             <RoleGate roles={['driver']}>
               <DriverProfile />
+            </RoleGate>
+          } />
+          <Route path="/driver/payouts" element={
+            <RoleGate roles={['driver']}>
+              <DriverPayouts />
+            </RoleGate>
+          } />
+          <Route path="/driver/tax-info" element={
+            <RoleGate roles={['driver']}>
+              <DriverTaxInfo />
             </RoleGate>
           } />
           
