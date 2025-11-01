@@ -3,10 +3,10 @@ import { Home, ShoppingBag, Package, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { icon: Home, label: 'Home', path: '/consumer/shop' },
-  { icon: ShoppingBag, label: 'Shop', path: '/consumer/shop' },
-  { icon: Package, label: 'Orders', path: '/consumer/orders' },
-  { icon: User, label: 'Profile', path: '/consumer/profile' },
+  { icon: Home, label: 'Home', path: '/consumer/shop', id: 'home' },
+  { icon: ShoppingBag, label: 'Shop', path: '/consumer/shop', id: 'shop' },
+  { icon: Package, label: 'Orders', path: '/consumer/orders', id: 'orders' },
+  { icon: User, label: 'Profile', path: '/consumer/profile', id: 'profile' },
 ];
 
 export const BottomNav = () => {
@@ -22,7 +22,7 @@ export const BottomNav = () => {
 
           return (
             <button
-              key={item.path}
+              key={item.id}
               onClick={() => navigate(item.path)}
               className={cn(
                 'flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors',
