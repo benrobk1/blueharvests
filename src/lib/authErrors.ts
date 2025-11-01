@@ -86,6 +86,38 @@ export function getAuthErrorMessage(error: any): AuthError {
     };
   }
 
+  // Database constraint/syntax errors
+  if (errorMessage.includes('uuid') || errorMessage.includes('syntax') || errorMessage.includes('invalid input syntax')) {
+    return {
+      title: 'Invalid Selection',
+      description: 'Please select a valid option from the dropdown menu',
+    };
+  }
+
+  // Profile update failures
+  if (errorMessage.includes('profile setup failed') || errorMessage.includes('profile') && errorMessage.includes('failed')) {
+    return {
+      title: 'Registration Incomplete',
+      description: 'Your account was created but profile setup failed. Please contact support to complete registration.',
+    };
+  }
+
+  // Account creation failures
+  if (errorMessage.includes('account creation failed')) {
+    return {
+      title: 'Registration Failed',
+      description: error?.message?.replace('Account creation failed: ', '') || 'Unable to create your account. Please try again.',
+    };
+  }
+
+  // Pending approval
+  if (errorMessage.includes('pending approval')) {
+    return {
+      title: 'Application Already Submitted',
+      description: 'An application with this email is already pending approval. Please wait for admin review.',
+    };
+  }
+
   // Generic fallback
   return {
     title: 'Something Went Wrong',

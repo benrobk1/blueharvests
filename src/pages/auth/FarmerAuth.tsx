@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,6 +28,8 @@ const FarmerAuth = () => {
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [produceItems, setProduceItems] = useState<string[]>([]);
+  const [leadFarmers, setLeadFarmers] = useState<Array<{id: string, farm_name: string, full_name: string}>>([]);
+  const [leadFarmersLoading, setLeadFarmersLoading] = useState(true);
   const [formData, setFormData] = useState({
     farmName: "",
     ownerName: "",
@@ -45,6 +47,28 @@ const FarmerAuth = () => {
     additionalInfo: "",
     collectionPointLeadFarmer: "",
   });
+
+  // Fetch approved lead farmers for dropdown
+  useEffect(() => {
+    const fetchLeadFarmers = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, farm_name, full_name')
+          .eq('applied_role', 'lead_farmer')
+          .eq('approval_status', 'approved')
+          .order('farm_name');
+        
+        if (error) throw error;
+        if (data) setLeadFarmers(data);
+      } catch (error) {
+        console.error('Error fetching lead farmers:', error);
+      } finally {
+        setLeadFarmersLoading(false);
+      }
+    };
+    fetchLeadFarmers();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -109,11 +133,31 @@ const FarmerAuth = () => {
         throw new Error("Please fill in all required fields");
       }
 
+      // For regular farmers, require lead farmer selection
+      if (farmerType === "regular" && !formData.collectionPointLeadFarmer) {
+        throw new Error("Please select a lead farmer / collection point");
+      }
+
       emailSchema.parse(formData.email);
       passwordSchema.parse(formData.password);
 
       if (formData.password !== formData.confirmPassword) {
         throw new Error("Passwords do not match");
+      }
+
+      // Check if email already has an account
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id, approval_status')
+        .eq('email', formData.email)
+        .single();
+
+      if (existingUser) {
+        if (existingUser.approval_status === 'pending') {
+          throw new Error('An application with this email is already pending approval. Please wait for admin review.');
+        } else {
+          throw new Error('An account with this email already exists. Try logging in instead.');
+        }
       }
 
       const acquisitionChannel = (document.getElementById('acquisitionChannel') as HTMLSelectElement)?.value || 'organic';
@@ -132,9 +176,15 @@ const FarmerAuth = () => {
         }
       });
 
-      if (signupError) throw signupError;
-      if (!authData.user) throw new Error("Failed to create user account");
+      if (signupError) {
+        throw new Error(`Account creation failed: ${signupError.message}`);
+      }
+      if (!authData.user) {
+        throw new Error("Account creation failed: No user returned");
+      }
 
+      // Wait for auth trigger to complete before updating profile
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // For lead farmers, use their farm address as the collection point
       const collectionPointAddress = farmerType === "lead" 
@@ -167,7 +217,10 @@ const FarmerAuth = () => {
           onConflict: 'id'
         });
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        // User was created but profile update failed - need cleanup
+        throw new Error(`Profile setup failed: ${profileError.message}`);
+      }
 
       toast({
         title: "Application Submitted!",
@@ -547,16 +600,30 @@ const FarmerAuth = () => {
                   
                   {farmerType === "regular" && (
                     <div className="space-y-2">
-                      <Label htmlFor="collectionPointLeadFarmer">Lead Farmer / Collection Point Name</Label>
+                      <Label htmlFor="collectionPointLeadFarmer">Lead Farmer / Collection Point *</Label>
                       <p className="text-xs text-muted-foreground">
-                        Enter the name of the lead farmer you'll drop off your produce to
+                        Select the lead farmer you'll drop off your produce to
                       </p>
-                      <Input 
-                        id="collectionPointLeadFarmer" 
-                        placeholder="Name of lead farmer you'll drop off to" 
-                        value={formData.collectionPointLeadFarmer}
-                        onChange={(e) => setFormData({...formData, collectionPointLeadFarmer: e.target.value})}
-                      />
+                      {leadFarmersLoading ? (
+                        <p className="text-sm text-muted-foreground">Loading lead farmers...</p>
+                      ) : leadFarmers.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No approved lead farmers available yet. Please check back later.</p>
+                      ) : (
+                        <select
+                          id="collectionPointLeadFarmer"
+                          className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                          value={formData.collectionPointLeadFarmer}
+                          onChange={(e) => setFormData({...formData, collectionPointLeadFarmer: e.target.value})}
+                          required
+                        >
+                          <option value="">-- Select a lead farmer --</option>
+                          {leadFarmers.map(lf => (
+                            <option key={lf.id} value={lf.id}>
+                              {lf.farm_name} ({lf.full_name})
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   )}
 
