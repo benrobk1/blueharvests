@@ -40,7 +40,14 @@ const Index = () => {
       {/* Hero Section */}
       <header className="relative overflow-hidden bg-gradient-hero">
         <div className="w-full">
-          <img src={logo} alt="Blue Harvests Logo" className="w-full h-auto object-cover" />
+          <img 
+            src={logo} 
+            alt="Blue Harvests - Family Farm Fresh, Locally Traceable, Climate Friendly" 
+            className="w-full h-auto object-cover" 
+            loading="lazy"
+            width="1200"
+            height="400"
+          />
         </div>
         <div className="container mx-auto max-w-6xl text-center py-8 px-4">
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
