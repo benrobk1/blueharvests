@@ -131,9 +131,9 @@ export function MultiFarmDashboard() {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="font-semibold">{affiliation.farm_profiles.farm_name}</h4>
+                      <h4 className="font-semibold">{affiliation.farm_profiles?.farm_name || 'Unknown Farm'}</h4>
                       <p className="text-sm text-muted-foreground">
-                        Farmer: {affiliation.farm_profiles.profiles.full_name}
+                        Farmer: {affiliation.farm_profiles?.profiles?.full_name || 'Unknown Farmer'}
                       </p>
                     </div>
                     <Badge variant="secondary">
