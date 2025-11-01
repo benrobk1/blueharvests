@@ -1,10 +1,11 @@
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/LoadingButton";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { formatMoney } from "@/lib/formatMoney";
 import { PriceBreakdownDrawer } from "@/components/PriceBreakdownDrawer";
-import { Calendar, MapPin } from "lucide-react";
+import { Calendar, MapPin, Check } from "lucide-react";
+import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
@@ -36,6 +37,8 @@ interface ProductCardProps {
 export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const [isAdding, setIsAdding] = useState(false);
+  const [justAdded, setJustAdded] = useState(false);
 
   // Get consumer's zip code for distance calculation
   const { data: profile } = useQuery({
@@ -57,8 +60,16 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
     ? calculateFarmToConsumerDistance(product.farm_profiles.location, profile.zip_code)
     : null;
 
+  const handleAddToCart = async () => {
+    setIsAdding(true);
+    await onAddToCart(product);
+    setIsAdding(false);
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 2000);
+  };
+
   return (
-    <Card className="overflow-hidden hover:shadow-large transition-shadow">
+    <Card className="overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-200">
       <div className="bg-gradient-hero p-8 text-center">
         {product.image_url ? (
           <img src={product.image_url} alt={product.name} className="w-full h-32 object-cover rounded" />
@@ -113,9 +124,21 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             />
           </div>
 
-          <Button onClick={() => onAddToCart(product)}>
-            Add to Cart
-          </Button>
+          <LoadingButton 
+            onClick={handleAddToCart}
+            isLoading={isAdding}
+            loadingText="Adding..."
+            disabled={justAdded}
+          >
+            {justAdded ? (
+              <>
+                <Check className="h-4 w-4 mr-1" />
+                Added!
+              </>
+            ) : (
+              'Add to Cart'
+            )}
+          </LoadingButton>
         </div>
       </div>
     </Card>

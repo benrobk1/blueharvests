@@ -2,12 +2,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import { LoadingButton } from "@/components/LoadingButton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Calendar, CreditCard, MapPin, Coins, DollarSign, TrendingUp } from "lucide-react";
+import { ArrowLeft, Calendar, CreditCard, MapPin, Coins, DollarSign, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +36,8 @@ const Checkout = () => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [tipPercentage, setTipPercentage] = useState<number>(0);
   const [customTip, setCustomTip] = useState<string>("");
+  const [showDateError, setShowDateError] = useState(false);
+  const [showTermsError, setShowTermsError] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
@@ -126,7 +130,17 @@ const Checkout = () => {
 
   const createOrder = useMutation({
     mutationFn: async () => {
-      if (!user || !cart || !selectedDate) {
+      if (!selectedDate) {
+        setShowDateError(true);
+        throw new Error('Please select a delivery date');
+      }
+
+      if (!termsAccepted) {
+        setShowTermsError(true);
+        throw new Error('Please accept the terms and conditions');
+      }
+
+      if (!user || !cart) {
         throw new Error('Missing required data');
       }
 
@@ -168,28 +182,86 @@ const Checkout = () => {
       } else {
         // Order completed without payment (fully covered by credits)
         toast({
-          title: 'Order placed!',
-          description: `Your order has been confirmed for ${format(new Date(data.delivery_date), 'MMM d')}`,
+          title: '🎉 Order Placed Successfully!',
+          description: (
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <span>Confirmed for {format(new Date(data.delivery_date), 'MMM d')}</span>
+            </div>
+          ),
+          duration: 5000,
         });
         navigate('/consumer/orders');
       }
     },
     onError: (error: Error) => {
       toast({
-        title: 'Order failed',
+        title: '❌ Order Failed',
         description: error.message,
         variant: 'destructive',
+        duration: 6000,
       });
     },
   });
 
   const handlePaymentSuccess = () => {
     toast({
-      title: 'Payment successful!',
-      description: 'Your order has been confirmed.',
+      title: '🎉 Payment Successful!',
+      description: (
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-4 w-4 text-green-500" />
+          <span>Your order has been confirmed!</span>
+        </div>
+      ),
+      duration: 5000,
     });
     navigate('/consumer/orders');
   };
+
+  if (!profile || !marketConfig) {
+    return (
+      <div className="min-h-screen bg-gradient-earth p-4">
+        <div className="container max-w-4xl mx-auto py-8">
+          <Skeleton className="h-10 w-32 mb-6" />
+          <Skeleton className="h-9 w-48 mb-8" />
+          <div className="grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-6">
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-40" />
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <Skeleton className="h-20 w-full" />
+                  <Skeleton className="h-10 w-32" />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-40" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-64 w-full" />
+                </CardContent>
+              </Card>
+            </div>
+            <div>
+              <Card>
+                <CardHeader>
+                  <Skeleton className="h-6 w-32" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-16 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!cart || cartCount === 0) {
     return (
@@ -253,7 +325,10 @@ const Checkout = () => {
                 </p>
               </CardHeader>
               <CardContent>
-                <RadioGroup value={selectedDate} onValueChange={setSelectedDate}>
+                <RadioGroup value={selectedDate} onValueChange={(date) => {
+                  setSelectedDate(date);
+                  setShowDateError(false);
+                }}>
                   <div className="space-y-3">
                     {availableDates.map((date) => (
                       <div key={date.value} className="flex items-center space-x-2">
@@ -268,11 +343,26 @@ const Checkout = () => {
                         >
                           {date.label}
                           {!date.isAvailable && ' (Not available)'}
+                          {selectedDate === date.value && date.isAvailable && (
+                            <CheckCircle2 className="inline-block ml-2 h-4 w-4 text-green-500" />
+                          )}
                         </Label>
                       </div>
                     ))}
                   </div>
                 </RadioGroup>
+                {showDateError && !selectedDate && (
+                  <p className="text-sm text-destructive flex items-center gap-2 mt-3">
+                    <AlertCircle className="h-4 w-4" />
+                    Please select a delivery date to proceed
+                  </p>
+                )}
+                {selectedDate && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-2 mt-3">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    Delivery scheduled for {availableDates.find(d => d.value === selectedDate)?.label}
+                  </p>
+                )}
               </CardContent>
             </Card>
 
@@ -508,11 +598,17 @@ const Checkout = () => {
                     <Checkbox
                       id="terms"
                       checked={termsAccepted}
-                      onCheckedChange={(checked) => setTermsAccepted(checked as boolean)}
+                      onCheckedChange={(checked) => {
+                        setTermsAccepted(checked as boolean);
+                        setShowTermsError(false);
+                      }}
+                      className={showTermsError && !termsAccepted ? 'border-destructive' : ''}
                     />
                     <label
                       htmlFor="terms"
-                      className="text-sm leading-tight cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      className={`text-sm leading-tight cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${
+                        showTermsError && !termsAccepted ? 'text-destructive' : ''
+                      }`}
                     >
                       I agree to the{' '}
                       <Link to="/terms" target="_blank" className="text-primary hover:underline">
@@ -524,27 +620,37 @@ const Checkout = () => {
                       </Link>
                     </label>
                   </div>
+                  {showTermsError && !termsAccepted && (
+                    <p className="text-sm text-destructive flex items-center gap-2 ml-6">
+                      <AlertCircle className="h-4 w-4" />
+                      You must accept the terms to continue
+                    </p>
+                  )}
                 </div>
 
                 {!clientSecret && (
-                  <Button
-                    className="w-full"
+                  <LoadingButton
+                    className={`w-full ${selectedDate && termsAccepted && !createOrder.isPending ? 'animate-pulse' : ''}`}
                     size="lg"
                     onClick={() => createOrder.mutate()}
-                    disabled={!selectedDate || !termsAccepted || createOrder.isPending}
+                    isLoading={createOrder.isPending}
+                    loadingText="Creating order..."
+                    disabled={!selectedDate || !termsAccepted}
                   >
-                    {createOrder.isPending ? 'Processing...' : total === 0 ? 'Complete Order' : 'Proceed to Payment'}
-                  </Button>
+                    {total === 0 ? 'Complete Order' : 'Proceed to Payment'}
+                  </LoadingButton>
                 )}
 
-                {!selectedDate && (
-                  <p className="text-sm text-muted-foreground text-center">
+                {showDateError && !selectedDate && (
+                  <p className="text-sm text-destructive text-center flex items-center justify-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
                     Please select a delivery date
                   </p>
                 )}
                 
-                {!termsAccepted && selectedDate && (
-                  <p className="text-sm text-muted-foreground text-center">
+                {showTermsError && !termsAccepted && selectedDate && (
+                  <p className="text-sm text-destructive text-center flex items-center justify-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
                     Please accept the terms to continue
                   </p>
                 )}

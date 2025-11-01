@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
-import { Button } from '@/components/ui/button';
+import { LoadingButton } from '@/components/LoadingButton';
 import { useToast } from '@/hooks/use-toast';
+import { CreditCard, CheckCircle2 } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 interface PaymentFormProps {
   onSuccess: () => void;
@@ -13,6 +15,7 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
   const elements = useElements();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentProgress, setPaymentProgress] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +25,12 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
     }
 
     setIsProcessing(true);
+    setPaymentProgress(30);
+
+    // Simulate progress for better UX
+    const progressInterval = setInterval(() => {
+      setPaymentProgress((prev) => Math.min(prev + 10, 90));
+    }, 200);
 
     const { error } = await stripe.confirmPayment({
       elements,
@@ -30,14 +39,29 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
       },
     });
 
+    clearInterval(progressInterval);
+    setPaymentProgress(100);
+
     if (error) {
       toast({
-        title: 'Payment Failed',
+        title: '❌ Payment Failed',
         description: error.message,
         variant: 'destructive',
+        duration: 6000,
       });
       setIsProcessing(false);
+      setPaymentProgress(0);
     } else {
+      toast({
+        title: '✅ Payment Confirmed',
+        description: (
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            <span>Processing your order...</span>
+          </div>
+        ),
+        duration: 3000,
+      });
       onSuccess();
     }
   };
@@ -45,13 +69,27 @@ export const PaymentForm = ({ onSuccess, amount }: PaymentFormProps) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <PaymentElement />
-      <Button
+      {isProcessing && (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Processing payment...
+            </span>
+            <span>{paymentProgress}%</span>
+          </div>
+          <Progress value={paymentProgress} className="h-2" />
+        </div>
+      )}
+      <LoadingButton
         type="submit"
-        disabled={!stripe || isProcessing}
+        disabled={!stripe}
+        isLoading={isProcessing}
+        loadingText="Processing payment..."
         className="w-full"
       >
-        {isProcessing ? 'Processing...' : `Pay $${amount.toFixed(2)}`}
-      </Button>
+        Pay ${amount.toFixed(2)}
+      </LoadingButton>
     </form>
   );
 };
