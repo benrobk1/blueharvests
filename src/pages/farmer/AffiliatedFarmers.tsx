@@ -147,7 +147,8 @@ export default function AffiliatedFarmers() {
                     <Button
                       variant="outline"
                       className="flex-1"
-                      onClick={() => navigate(`/farm/${farmer?.farmer_id}`)}
+                      onClick={() => navigate(`/farm/${farmer?.id}`)}
+                      disabled={!farmer?.id}
                     >
                       <ExternalLink className="mr-2 h-4 w-4" />
                       View Profile
