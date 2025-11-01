@@ -135,7 +135,6 @@ const Checkout = () => {
           cart_id: cart.id,
           delivery_date: selectedDate,
           use_credits: useCredits,
-          credits_amount: creditsToUse,
           tip_amount: tipAmount,
         },
       });
