@@ -12,12 +12,15 @@ import { formatMoney } from '@/lib/formatMoney';
 import { toast } from 'sonner';
 import { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import { ProductForm } from '@/components/farmer/ProductForm';
 
 export default function InventoryManagement() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const { data: farmProfile } = useQuery({
     queryKey: ['farm-profile', user?.id],
@@ -66,6 +69,44 @@ export default function InventoryManagement() {
       toast.success(variables.currentStatus ? 'Product unapproved' : 'Product approved');
     },
   });
+
+  const updateProductMutation = useMutation({
+    mutationFn: async ({ productId, data }: { productId: string; data: any }) => {
+      const { error } = await supabase
+        .from('products')
+        .update({
+          name: data.name,
+          description: data.description,
+          price: parseFloat(data.price),
+          unit: data.unit,
+          available_quantity: parseInt(data.available_quantity),
+          image_url: data.image_url || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', productId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Product updated successfully');
+      setIsEditDialogOpen(false);
+      setEditingProduct(null);
+    },
+  });
+
+  const handleEditProduct = (product: any) => {
+    setEditingProduct(product);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateProduct = async (data: any) => {
+    if (!editingProduct) return;
+    await updateProductMutation.mutateAsync({ 
+      productId: editingProduct.id, 
+      data 
+    });
+  };
 
   const filteredProducts = products?.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -166,7 +207,7 @@ export default function InventoryManagement() {
                         <div className="flex gap-2">
                           <Button
                             size="sm"
-                            variant={product.approved ? 'outline' : 'default'}
+                            variant={product.approved ? 'default' : 'outline'}
                             onClick={() => approveProductMutation.mutate({ 
                               productId: product.id, 
                               currentStatus: product.approved 
@@ -179,7 +220,7 @@ export default function InventoryManagement() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => {/* TODO: Open edit dialog */}}
+                            onClick={() => handleEditProduct(product)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -197,6 +238,21 @@ export default function InventoryManagement() {
           )}
         </CardContent>
       </Card>
+
+      <ProductForm
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSubmit={handleUpdateProduct}
+        defaultValues={editingProduct ? {
+          name: editingProduct.name,
+          description: editingProduct.description || '',
+          price: String(editingProduct.price),
+          unit: editingProduct.unit,
+          available_quantity: String(editingProduct.available_quantity),
+          image_url: editingProduct.image_url || '',
+        } : undefined}
+        isEdit={true}
+      />
     </div>
   );
 }
