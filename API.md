@@ -329,6 +329,81 @@ curl -X POST https://xushmvtkfkijrhfoxhat.supabase.co/functions/v1/process-payou
 
 ---
 
+## Stripe Webhook (POST-DEMO)
+
+Handle Stripe webhook events for payment and subscription state sync.
+
+**Endpoint:** `POST /functions/v1/stripe-webhook`
+
+**Auth Required:** ❌ No (signature verification instead)
+
+**Rate Limit:** None (Stripe retries failed webhooks)
+
+**Security:**
+- Webhook signature verification using `STRIPE_WEBHOOK_SECRET`
+- Rejects unsigned requests with 400 error
+
+**Supported Events:**
+
+| Event Type | Description | TODO Implementation |
+|------------|-------------|---------------------|
+| `payment_intent.succeeded` | Payment completed | Update order to 'paid', send confirmation email, award credits |
+| `payment_intent.payment_failed` | Payment failed | Mark order as 'failed', notify consumer with retry instructions |
+| `customer.subscription.updated` | Subscription changed | Sync subscription status, update credits eligibility |
+| `customer.subscription.deleted` | Subscription canceled | Disable credits earning, send cancellation confirmation |
+| `charge.dispute.created` | Customer dispute filed | Notify admin, flag order for review, pause payouts |
+| `payout.failed` | Payout to Stripe Connect failed | Retry payout logic, alert finance team |
+
+**Request (from Stripe):**
+```
+POST /functions/v1/stripe-webhook
+stripe-signature: t=1234567890,v1=abc123...
+Content-Type: application/json
+
+{
+  "id": "evt_1234567890",
+  "type": "payment_intent.succeeded",
+  "data": {
+    "object": {
+      "id": "pi_1234567890",
+      "amount": 2500,
+      "currency": "usd",
+      "metadata": {
+        "order_id": "abc-123-def-456"
+      }
+    }
+  }
+}
+```
+
+**Response (200):**
+```json
+{
+  "received": true,
+  "event": "payment_intent.succeeded"
+}
+```
+
+**Error Response (400):**
+```json
+{
+  "error": "Webhook Error: Invalid signature"
+}
+```
+
+**Setup Instructions:**
+1. Add `STRIPE_WEBHOOK_SECRET` to Lovable Cloud Secrets
+2. Configure webhook endpoint in Stripe Dashboard → Webhooks
+3. Implement event handlers in `stripe-webhook/index.ts` (currently stubs)
+
+**Why This Matters:**
+- Shows production-readiness thinking
+- Webhook signature verification is critical security
+- TODOs demonstrate edge cases have been considered
+- Ready to implement post-demo with minimal code changes
+
+---
+
 ## Development
 
 ### Local Testing

@@ -123,6 +123,51 @@ Blue Harvests is a full-stack local food delivery marketplace built on React, Ty
 - **Never Logged**: Sensitive data filtered from logs
 - **Fail-Fast**: Missing critical secrets cause immediate error
 
+### Operational Safety: Driver Address Privacy
+
+**Critical Design Decision**: Driver addresses are hidden until pickup confirmation to prevent operational abuse.
+
+**How It Works**:
+1. Orders are created with full delivery addresses stored in `profiles` table
+2. Drivers see only:
+   - ZIP code (for route planning)
+   - Approximate collection point location
+   - Batch size and order count
+3. When driver scans box code at collection point:
+   - `address_visible_at` timestamp is set on `batch_stops` table
+   - Full street address becomes visible in driver app
+   - Driver can now navigate to exact delivery location
+
+**Why This Matters**:
+- **Prevents Cherry-Picking**: Drivers can't reject routes based on "bad" addresses before claiming
+- **Privacy Protection**: Consumer addresses not exposed to drivers until pickup is confirmed
+- **Operational Fairness**: All drivers see same route info when claiming batches
+- **Fraud Prevention**: Drivers can't game the system by knowing addresses in advance
+
+**Database Implementation**:
+```sql
+-- batch_stops table
+address_visible_at timestamp;  -- NULL until box code scanned at collection point
+
+-- RLS Policy (see supabase/migrations/)
+CREATE POLICY "Drivers see addresses only after pickup"
+ON batch_stops FOR SELECT
+TO authenticated
+USING (
+  CASE 
+    WHEN has_role(auth.uid(), 'driver') THEN 
+      address_visible_at IS NOT NULL
+    ELSE 
+      true  -- Consumers/farmers/admins always see addresses
+  END
+);
+```
+
+**Frontend Implementation**:
+- `src/components/driver/RouteDetails.tsx`: Shows/hides address based on `address_visible_at`
+- `src/components/driver/BoxCodeScanner.tsx`: Sets `address_visible_at` on successful scan
+- `src/pages/driver/Dashboard.tsx`: Displays batch-level info (ZIP, order count) only
+
 ## 💰 Revenue Model
 
 | Component          | Percentage | Recipient       | Notes                        |
