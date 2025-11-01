@@ -19,6 +19,7 @@ const DriverProfile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [userId, setUserId] = useState<string>("");
   const [profile, setProfile] = useState({
     full_name: "",
     email: "",
@@ -43,6 +44,8 @@ const DriverProfile = () => {
       navigate("/auth/driver");
       return;
     }
+
+    setUserId(user.id);
 
     const { data, error } = await supabase
       .from("profiles")
@@ -244,18 +247,22 @@ const DriverProfile = () => {
               </TabsContent>
 
               <TabsContent value="documents" className="space-y-4">
-                <DocumentUpload
-                  userId={profile.email.split('@')[0]}
-                  documentType="driver_license"
-                  currentUrl={profile.driver_license_url || undefined}
-                  onUploadComplete={loadProfile}
-                />
-                <DocumentUpload
-                  userId={profile.email.split('@')[0]}
-                  documentType="insurance"
-                  currentUrl={profile.insurance_url || undefined}
-                  onUploadComplete={loadProfile}
-                />
+                {userId && (
+                  <>
+                    <DocumentUpload
+                      userId={userId}
+                      documentType="driver_license"
+                      currentUrl={profile.driver_license_url || undefined}
+                      onUploadComplete={loadProfile}
+                    />
+                    <DocumentUpload
+                      userId={userId}
+                      documentType="insurance"
+                      currentUrl={profile.insurance_url || undefined}
+                      onUploadComplete={loadProfile}
+                    />
+                  </>
+                )}
               </TabsContent>
 
               <TabsContent value="payments">

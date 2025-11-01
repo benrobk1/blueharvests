@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, X } from 'lucide-react';
+import { useEffect } from 'react';
 
 interface DocumentUploadProps {
   userId: string;
@@ -21,11 +22,22 @@ const DOCUMENT_LABELS = {
   coi: 'Certificate of Insurance (COI)',
 };
 
+// Helper to extract storage path from URL or path string
+const toStoragePath = (val: string | null): string | null => {
+  if (!val) return null;
+  if (val.includes('/documents/')) {
+    const parts = val.split('/documents/');
+    return parts[1] || null;
+  }
+  return val;
+};
+
 export const DocumentUpload = ({ userId, documentType, currentUrl, onUploadComplete }: DocumentUploadProps) => {
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(currentUrl || null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [currentPath, setCurrentPath] = useState<string | null>(toStoragePath(currentUrl || null));
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -71,7 +83,7 @@ export const DocumentUpload = ({ userId, documentType, currentUrl, onUploadCompl
       const fileName = `${userId}/${documentType}_${Date.now()}.${fileExt}`;
 
       // Upload file to storage
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('documents')
         .upload(fileName, file, {
           cacheControl: '3600',
@@ -80,16 +92,11 @@ export const DocumentUpload = ({ userId, documentType, currentUrl, onUploadCompl
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('documents')
-        .getPublicUrl(fileName);
-
-      // Update profile with document URL
+      // Store the path (not public URL) in the profile
       const updateField = `${documentType}_url`;
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ [updateField]: publicUrl })
+        .update({ [updateField]: fileName })
         .eq('id', userId);
 
       if (updateError) throw updateError;
@@ -99,7 +106,8 @@ export const DocumentUpload = ({ userId, documentType, currentUrl, onUploadCompl
         description: 'Your document has been uploaded successfully',
       });
 
-      setPreviewUrl(publicUrl);
+      setCurrentPath(fileName);
+      setPreviewUrl(null); // Reset preview, will regenerate on next render
       onUploadComplete?.();
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -115,19 +123,13 @@ export const DocumentUpload = ({ userId, documentType, currentUrl, onUploadCompl
   };
 
   const handleRemove = async () => {
-    if (!currentUrl) return;
+    if (!currentPath) return;
 
     try {
-      // Extract file path from URL
-      const urlParts = currentUrl.split('/documents/');
-      if (urlParts.length < 2) return;
-      
-      const filePath = urlParts[1];
-
-      // Delete from storage
+      // Delete from storage using the path
       const { error: deleteError } = await supabase.storage
         .from('documents')
-        .remove([filePath]);
+        .remove([currentPath]);
 
       if (deleteError) throw deleteError;
 
@@ -146,6 +148,7 @@ export const DocumentUpload = ({ userId, documentType, currentUrl, onUploadCompl
       });
 
       setPreviewUrl(null);
+      setCurrentPath(null);
       onUploadComplete?.();
     } catch (error: any) {
       console.error('Remove error:', error);
@@ -156,6 +159,29 @@ export const DocumentUpload = ({ userId, documentType, currentUrl, onUploadCompl
       });
     }
   };
+
+  // Generate signed URL for preview when currentPath changes
+  useEffect(() => {
+    const loadPreview = async () => {
+      if (!currentPath) {
+        setPreviewUrl(null);
+        return;
+      }
+      
+      try {
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(currentPath, 3600); // 1 hour
+        
+        if (error) throw error;
+        setPreviewUrl(data?.signedUrl || null);
+      } catch (error: any) {
+        console.error('Error loading preview:', error);
+      }
+    };
+
+    loadPreview();
+  }, [currentPath]);
 
   return (
     <Card>

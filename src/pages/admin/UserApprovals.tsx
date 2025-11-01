@@ -44,7 +44,7 @@ interface UserProfile {
   collection_point_address: string | null;
   collection_point_lead_farmer_id: string | null;
   acquisition_channel: string | null;
-  applied_role: 'farmer' | 'lead_farmer' | null;
+  applied_role: 'farmer' | 'lead_farmer' | 'driver' | null;
   farm_size: string | null;
   produce_types: string | null;
   additional_info: string | null;
@@ -65,6 +65,37 @@ const UserApprovals = () => {
   const navigate = useNavigate();
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+
+  // Helper to extract storage path from URL or path string
+  const toStoragePath = (val: string | null): string | null => {
+    if (!val) return null;
+    if (val.includes('/documents/')) {
+      const parts = val.split('/documents/');
+      return parts[1] || null;
+    }
+    return val;
+  };
+
+  // Helper to create signed URL and open in new window
+  const createSignedUrl = async (path: string | null) => {
+    if (!path) return;
+    try {
+      const { data, error } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(path, 60);
+      
+      if (error) throw error;
+      if (data?.signedUrl) {
+        window.open(data.signedUrl, '_blank');
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error viewing document',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
 
   const { data: pendingUsers, isLoading } = useQuery({
     queryKey: ['pending-users'],
@@ -357,8 +388,14 @@ const UserApprovals = () => {
                     </div>
                   </div>
                     
-                  {/* Farmer-specific fields */}
-                  {(user.roles.includes('farmer') || user.roles.includes('lead_farmer')) && (
+                  {/* Farmer-specific fields - Use applied_role for pending applicants */}
+                  {(() => {
+                    const isFarmerApplicant = user.applied_role === 'farmer' || 
+                      user.applied_role === 'lead_farmer' || 
+                      user.roles.includes('farmer') || 
+                      user.roles.includes('lead_farmer');
+                    return isFarmerApplicant;
+                  })() && (
                     <>
                       {/* Farm Details */}
                       <div>
@@ -411,7 +448,7 @@ const UserApprovals = () => {
                       </div>
 
                       {/* Lead Farmer Specific */}
-                      {user.roles.includes('lead_farmer') && (
+                      {(user.applied_role === 'lead_farmer' || user.roles.includes('lead_farmer')) && (
                         <div>
                           <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Collection Point Details</h3>
                           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -446,8 +483,8 @@ const UserApprovals = () => {
                     </>
                   )}
                     
-                  {/* Driver-specific fields */}
-                  {user.roles.includes('driver') && (
+                  {/* Driver-specific fields - Use applied_role for pending applicants */}
+                  {(user.applied_role === 'driver' || user.roles.includes('driver')) && (
                     <>
                       <div>
                         <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Driver Details</h3>
@@ -481,39 +518,57 @@ const UserApprovals = () => {
                   {/* Documents */}
                   <div>
                     <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Documents</h3>
-                    <div className="flex flex-wrap gap-2">
+                    <div className="space-y-2">
                       {user.driver_license_url && (
-                        <a
-                          href={user.driver_license_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline flex items-center gap-1"
-                        >
-                          <FileText className="h-4 w-4" />
-                          Driver License
-                        </a>
+                        <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            <span className="text-sm font-medium">Driver's License</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => createSignedUrl(toStoragePath(user.driver_license_url))}
+                            className="text-primary hover:underline text-sm flex items-center gap-1"
+                          >
+                            <Eye className="h-3 w-3" />
+                            View
+                          </Button>
+                        </div>
                       )}
                       {user.insurance_url && (
-                        <a
-                          href={user.insurance_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline flex items-center gap-1"
-                        >
-                          <FileText className="h-4 w-4" />
-                          Insurance
-                        </a>
+                        <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            <span className="text-sm font-medium">Insurance</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => createSignedUrl(toStoragePath(user.insurance_url))}
+                            className="text-primary hover:underline text-sm flex items-center gap-1"
+                          >
+                            <Eye className="h-3 w-3" />
+                            View
+                          </Button>
+                        </div>
                       )}
                       {user.coi_url && (
-                        <a
-                          href={user.coi_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline flex items-center gap-1"
-                        >
-                          <FileText className="h-4 w-4" />
-                          COI
-                        </a>
+                        <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            <span className="text-sm font-medium">Certificate of Insurance (COI)</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => createSignedUrl(toStoragePath(user.coi_url))}
+                            className="text-primary hover:underline text-sm flex items-center gap-1"
+                          >
+                            <Eye className="h-3 w-3" />
+                            View
+                          </Button>
+                        </div>
                       )}
                       {!user.driver_license_url && !user.insurance_url && !user.coi_url && (
                         <span className="text-sm text-muted-foreground">No documents uploaded</span>

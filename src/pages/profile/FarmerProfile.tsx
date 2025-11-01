@@ -23,6 +23,7 @@ const FarmerProfile = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isLeadFarmer, setIsLeadFarmer] = useState(false);
+  const [userId, setUserId] = useState<string>("");
   const [profile, setProfile] = useState({
     full_name: "",
     email: "",
@@ -69,6 +70,8 @@ const FarmerProfile = () => {
       navigate("/auth/farmer");
       return;
     }
+
+    setUserId(user.id);
 
     const { data, error } = await supabase
       .from("profiles")
@@ -392,12 +395,14 @@ const FarmerProfile = () => {
               </TabsContent>
 
               <TabsContent value="documents" className="space-y-4">
-                <DocumentUpload
-                  userId={profile.email.split('@')[0]}
-                  documentType="coi"
-                  currentUrl={profile.coi_url || undefined}
-                  onUploadComplete={loadProfile}
-                />
+                {userId && (
+                  <DocumentUpload
+                    userId={userId}
+                    documentType="coi"
+                    currentUrl={profile.coi_url || undefined}
+                    onUploadComplete={loadProfile}
+                  />
+                )}
               </TabsContent>
 
               <TabsContent value="payments">

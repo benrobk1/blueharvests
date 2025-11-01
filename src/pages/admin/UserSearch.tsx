@@ -32,12 +32,17 @@ interface UserSearchResult {
   city: string | null;
   state: string | null;
   zip_code: string | null;
+  country: string | null;
   collection_point_address: string | null;
+  collection_point_lead_farmer_id: string | null;
   applied_role: string | null;
   farm_size: string | null;
   produce_types: string | null;
   acquisition_channel: string | null;
   additional_info: string | null;
+  delivery_schedule: string[] | null;
+  lead_farmer_name?: string;
+  lead_farmer_farm_name?: string;
   // Driver fields
   vehicle_type: string | null;
   vehicle_make: string | null;
@@ -58,7 +63,13 @@ const UserSearch = () => {
     queryFn: async () => {
       let query = supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          lead_farmer:collection_point_lead_farmer_id(
+            full_name,
+            farm_name
+          )
+        `)
         .order('created_at', { ascending: false });
 
       // Apply search filter
@@ -87,6 +98,8 @@ const UserSearch = () => {
           return {
             ...profile,
             roles: roles?.map((r) => r.role) || [],
+            lead_farmer_name: (profile as any).lead_farmer?.full_name,
+            lead_farmer_farm_name: (profile as any).lead_farmer?.farm_name,
           };
         })
       );
@@ -217,7 +230,8 @@ const UserSearch = () => {
                       )}
 
                       {/* Farmer info */}
-                      {user.roles.some(r => r === 'farmer' || r === 'lead_farmer') && (
+                      {(user.applied_role === 'farmer' || user.applied_role === 'lead_farmer' || 
+                        user.roles.some(r => r === 'farmer' || r === 'lead_farmer')) && (
                         <>
                           {user.farm_name && (
                             <div className="flex items-center gap-2">
@@ -235,7 +249,7 @@ const UserSearch = () => {
                       )}
 
                       {/* Driver info */}
-                      {user.roles.includes('driver') && (
+                      {(user.applied_role === 'driver' || user.roles.includes('driver')) && (
                         <>
                           {user.vehicle_type && (
                             <div className="flex items-center gap-2">
@@ -278,21 +292,32 @@ const UserSearch = () => {
                           </div>
 
                           {/* Farmer-specific fields */}
-                          {user.roles.some(r => r === 'farmer' || r === 'lead_farmer') && (
+                          {(user.applied_role === 'farmer' || user.applied_role === 'lead_farmer' || 
+                            user.roles.some(r => r === 'farmer' || r === 'lead_farmer')) && (
                             <div>
                               <h4 className="font-semibold mb-2">Farm Information</h4>
                               <div className="grid gap-2 text-sm">
                                 {user.farm_name && <div><span className="text-muted-foreground">Farm Name:</span> {user.farm_name}</div>}
-                                {user.applied_role && <div><span className="text-muted-foreground">Role:</span> {user.applied_role.replace('_', ' ')}</div>}
+                                {user.applied_role && <div><span className="text-muted-foreground">Applied Role:</span> {user.applied_role.replace('_', ' ')}</div>}
                                 {user.farm_size && <div><span className="text-muted-foreground">Farm Size:</span> {user.farm_size}</div>}
                                 {user.street_address && (
                                   <div>
-                                    <span className="text-muted-foreground">Address:</span> {user.street_address}
-                                    {user.city && user.state && `, ${user.city}, ${user.state} ${user.zip_code || ''}`}
+                                    <span className="text-muted-foreground">Full Address:</span>
+                                    <div className="mt-1">
+                                      {user.street_address}<br />
+                                      {user.city}, {user.state} {user.zip_code}<br />
+                                      {user.country || 'USA'}
+                                    </div>
                                   </div>
                                 )}
-                                {user.roles.includes('lead_farmer') && user.collection_point_address && (
+                                {(user.applied_role === 'lead_farmer' || user.roles.includes('lead_farmer')) && user.collection_point_address && (
                                   <div><span className="text-muted-foreground">Collection Point:</span> {user.collection_point_address}</div>
+                                )}
+                                {(user.applied_role === 'lead_farmer' || user.roles.includes('lead_farmer')) && user.delivery_schedule && user.delivery_schedule.length > 0 && (
+                                  <div><span className="text-muted-foreground">Delivery Schedule:</span> {user.delivery_schedule.join(', ')}</div>
+                                )}
+                                {user.applied_role === 'farmer' && user.collection_point_lead_farmer_id && user.lead_farmer_farm_name && user.lead_farmer_name && (
+                                  <div><span className="text-muted-foreground">Lead Farmer Requested:</span> {user.lead_farmer_farm_name} ({user.lead_farmer_name})</div>
                                 )}
                                 {user.produce_types && (
                                   <div>
@@ -317,7 +342,7 @@ const UserSearch = () => {
                           )}
 
                           {/* Driver-specific fields */}
-                          {user.roles.includes('driver') && (
+                          {(user.applied_role === 'driver' || user.roles.includes('driver')) && (
                             <div>
                               <h4 className="font-semibold mb-2">Driver Information</h4>
                               <div className="grid gap-2 text-sm">
