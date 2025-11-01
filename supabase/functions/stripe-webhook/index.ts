@@ -24,6 +24,7 @@
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0';
 import Stripe from 'https://esm.sh/stripe@18.5.0';
 
 const corsHeaders = {
@@ -88,6 +89,54 @@ serve(async (req) => {
         headers: corsHeaders 
       });
     }
+
+    // Idempotency check: prevent duplicate processing
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const { data: existingEvent } = await supabaseClient
+      .from('stripe_webhook_events')
+      .select('id')
+      .eq('stripe_event_id', event.id)
+      .single();
+
+    if (existingEvent) {
+      console.log(`[${requestId}] [STRIPE_WEBHOOK] ⚠️  Event ${event.id} already processed, skipping`);
+      return new Response(
+        JSON.stringify({ received: true, skipped: true }), 
+        { 
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        }
+      );
+    }
+
+    // Record event as being processed (prevents concurrent duplicates)
+    const { error: insertError } = await supabaseClient
+      .from('stripe_webhook_events')
+      .insert({
+        stripe_event_id: event.id,
+        event_type: event.type,
+      });
+
+    if (insertError) {
+      // If insert fails due to unique constraint, event was processed concurrently
+      if (insertError.code === '23505') {
+        console.log(`[${requestId}] [STRIPE_WEBHOOK] ⚠️  Event ${event.id} being processed concurrently, skipping`);
+        return new Response(
+          JSON.stringify({ received: true, skipped: true }), 
+          { 
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+      throw insertError;
+    }
+
+    console.log(`[${requestId}] [STRIPE_WEBHOOK] 📝 Event ${event.id} recorded, processing...`);
 
     // Handle events
     switch (event.type) {
