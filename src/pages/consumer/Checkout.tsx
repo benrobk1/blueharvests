@@ -218,6 +218,33 @@ const Checkout = () => {
     navigate('/consumer/orders');
   };
 
+  // Check if profile is missing required address info
+  if (profile && !profile.zip_code) {
+    return (
+      <div className="min-h-screen bg-gradient-earth flex items-center justify-center p-4">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-primary" />
+              Complete Your Profile
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Please add your delivery address and ZIP code before placing an order.
+            </p>
+            <Button onClick={() => navigate('/consumer/profile')} className="w-full">
+              Go to Profile
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/consumer/shop')} className="w-full">
+              Back to Shop
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!profile || !marketConfig) {
     return (
       <div className="min-h-screen bg-gradient-earth p-4">
