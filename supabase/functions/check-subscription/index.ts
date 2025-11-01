@@ -52,7 +52,9 @@ serve(async (req) => {
 
     logStep("Local subscription fetched", { localSub });
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    const stripe = new Stripe(stripeKey, {
+      // Using account default API version for compatibility
+    });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
     if (customers.data.length === 0) {

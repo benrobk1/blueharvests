@@ -70,7 +70,7 @@ serve(async (req) => {
 
     // Initialize Stripe
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-      apiVersion: '2025-08-27.basil',
+      // Using account default API version for compatibility
     });
 
     let accountId = profile?.stripe_connect_account_id;
