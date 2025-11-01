@@ -1337,6 +1337,41 @@ export type Database = {
           },
         ]
       }
+      saved_carts: {
+        Row: {
+          consumer_id: string
+          created_at: string
+          id: string
+          items: Json
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          consumer_id: string
+          created_at?: string
+          id?: string
+          items: Json
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          consumer_id?: string
+          created_at?: string
+          id?: string
+          items?: Json
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_carts_consumer_id_fkey"
+            columns: ["consumer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shopping_carts: {
         Row: {
           consumer_id: string

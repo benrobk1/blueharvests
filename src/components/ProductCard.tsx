@@ -1,16 +1,18 @@
-import { Card } from "@/components/ui/card";
-import { LoadingButton } from "@/components/LoadingButton";
-import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
-import { formatMoney } from "@/lib/formatMoney";
-import { PriceBreakdownDrawer } from "@/components/PriceBreakdownDrawer";
-import { Calendar, MapPin, Check } from "lucide-react";
-import { useState } from "react";
-import { formatDistanceToNow } from "date-fns";
-import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { calculateFarmToConsumerDistance } from "@/lib/distanceHelpers";
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { formatMoney } from '@/lib/formatMoney';
+import { useAuth } from '@/contexts/AuthContext';
+import { Calendar, MapPin, Sprout, Check } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
+import { PriceBreakdownDrawer } from './PriceBreakdownDrawer';
+import { LoadingButton } from './LoadingButton';
+import { calculateDistance } from '@/lib/distanceHelpers';
+import { FarmStoryModal } from './FarmStoryModal';
+import { useState } from 'react';
 
 interface Product {
   id: string;
@@ -39,6 +41,26 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
   const { user } = useAuth();
   const [isAdding, setIsAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
+  const [showFarmStory, setShowFarmStory] = useState(false);
+
+  // Get farmer info
+  const { data: farmerData } = useQuery({
+    queryKey: ['farmer', product.farm_profile_id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('farm_profiles')
+        .select(`
+          farmer_id,
+          profiles!farm_profiles_farmer_id_fkey (
+            avatar_url,
+            full_name
+          )
+        `)
+        .eq('id', product.farm_profile_id)
+        .single();
+      return data;
+    },
+  });
 
   // Get consumer's zip code for distance calculation
   const { data: profile } = useQuery({
@@ -57,7 +79,7 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
 
   // Calculate distance from farm
   const milesFromFarm = product.farm_profiles.location && profile?.zip_code
-    ? calculateFarmToConsumerDistance(product.farm_profiles.location, profile.zip_code)
+    ? calculateDistance(product.farm_profiles.location, profile.zip_code)
     : null;
 
   const handleAddToCart = async () => {
@@ -70,48 +92,70 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
 
   return (
     <Card className="overflow-hidden hover:shadow-xl hover:scale-[1.02] transition-all duration-200">
-      <div className="bg-gradient-hero p-8 text-center">
-        {product.image_url ? (
-          <img src={product.image_url} alt={product.name} className="w-full h-32 object-cover rounded" />
-        ) : (
-          <div className="text-6xl mb-2">🌱</div>
-        )}
-      </div>
+      {product.image_url && (
+        <img 
+          src={product.image_url} 
+          alt={product.name} 
+          className="w-full aspect-video object-cover" 
+          loading="lazy"
+        />
+      )}
       
-      <div className="p-6 space-y-4">
+      <CardContent className="p-4 space-y-3">
         <div>
-          <h3 className="text-xl font-semibold text-foreground">{product.name}</h3>
-          <button
-            onClick={() => navigate(`/farm/${product.farm_profile_id}`)}
-            className="text-sm text-primary hover:underline cursor-pointer"
-          >
-            {product.farm_profiles.farm_name}
-          </button>
-          {product.description && (
-            <p className="text-sm text-muted-foreground mt-1">{product.description}</p>
-          )}
-          
-          {/* Trust signals */}
-          <div className="flex flex-wrap gap-2 mt-2">
-            {product.harvest_date && (
-              <Badge variant="secondary" className="text-xs">
-                <Calendar className="h-3 w-3 mr-1" />
-                Picked {formatDistanceToNow(new Date(product.harvest_date), { addSuffix: true })}
-              </Badge>
-            )}
-            
-            {milesFromFarm && (
-              <Badge variant="outline" className="text-xs">
-                <MapPin className="h-3 w-3 mr-1" />
-                {milesFromFarm} mi away
-              </Badge>
-            )}
+          <h3 className="font-semibold text-lg line-clamp-1">{product.name}</h3>
+          <div className="flex items-center gap-2 mt-1">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={farmerData?.profiles?.avatar_url || ''} />
+              <AvatarFallback>
+                <Sprout className="h-3 w-3" />
+              </AvatarFallback>
+            </Avatar>
+            <button
+              onClick={() => navigate(`/farm/${product.farm_profile_id}`)}
+              className="text-sm text-primary hover:underline"
+            >
+              {product.farm_profiles.farm_name}
+            </button>
           </div>
         </div>
 
-        <div className="flex items-center justify-between">
+        {product.description && (
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            {product.description}
+          </p>
+        )}
+
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {product.harvest_date && (
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              {format(new Date(product.harvest_date), 'MMM d')}
+            </div>
+          )}
+          {milesFromFarm && (
+            <>
+              {product.harvest_date && <span>•</span>}
+              <div className="flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {milesFromFarm} mi
+              </div>
+            </>
+          )}
+        </div>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowFarmStory(true)}
+          className="text-xs h-7 px-2"
+        >
+          Farm Story →
+        </Button>
+
+        <div className="flex items-center justify-between pt-2 border-t">
           <div>
-            <div className="text-2xl font-bold text-foreground">
+            <div className="text-xl font-bold">
               {formatMoney(product.price)}
               <span className="text-sm font-normal text-muted-foreground">/{product.unit}</span>
             </div>
@@ -140,7 +184,13 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
             )}
           </LoadingButton>
         </div>
-      </div>
+      </CardContent>
+
+      <FarmStoryModal
+        farmProfileId={product.farm_profile_id}
+        open={showFarmStory}
+        onOpenChange={setShowFarmStory}
+      />
     </Card>
   );
 };

@@ -1,14 +1,31 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ShoppingCart, Minus, Plus, Trash2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ShoppingCart, Minus, Plus, Trash2, Save, History } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { formatMoney } from "@/lib/formatMoney";
 import { useNavigate } from "react-router-dom";
+import { SaveCartDialog } from "@/components/SaveCartDialog";
+import { SavedCartsList } from "@/components/SavedCartsList";
+import { CartItemSkeleton } from "@/components/CartItemSkeleton";
+import { useState } from "react";
 
 export const CartDrawer = () => {
-  const { cart, cartCount, cartTotal, updateQuantity, removeItem } = useCart();
+  const { 
+    cart, 
+    cartCount, 
+    cartTotal, 
+    updateQuantity, 
+    removeItem, 
+    isLoading,
+    savedCarts, 
+    saveCart, 
+    loadSavedCart, 
+    deleteSavedCart 
+  } = useCart();
   const navigate = useNavigate();
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
 
   return (
     <Sheet>
@@ -23,17 +40,39 @@ export const CartDrawer = () => {
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-lg">
+      <SheetContent className="w-full sm:max-w-lg flex flex-col">
         <SheetHeader>
           <SheetTitle>Shopping Cart</SheetTitle>
         </SheetHeader>
         
-        <div className="flex flex-col h-full pt-6">
-          {!cart?.items || cart.items.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-muted-foreground">Your cart is empty</p>
-            </div>
-          ) : (
+        <Tabs defaultValue="cart" className="flex-1 flex flex-col pt-6">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="cart">
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Cart ({cartCount})
+            </TabsTrigger>
+            <TabsTrigger value="saved">
+              <History className="h-4 w-4 mr-2" />
+              Saved ({savedCarts.length})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Current Cart Tab */}
+          <TabsContent value="cart" className="flex-1 flex flex-col mt-4">
+            {isLoading ? (
+              <div className="flex-1 space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <CartItemSkeleton key={i} />
+                ))}
+              </div>
+            ) : !cart?.items || cart.items.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <ShoppingCart className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p className="text-muted-foreground">Your cart is empty</p>
+                </div>
+              </div>
+            ) : (
             <>
               <div className="flex-1 overflow-y-auto space-y-4 pb-4">
                 {cart.items.map((item) => (
@@ -83,19 +122,27 @@ export const CartDrawer = () => {
                 ))}
               </div>
               
-              <div className="border-t pt-4 space-y-4">
+              <div className="border-t pt-4 space-y-3">
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total:</span>
                   <span>{formatMoney(cartTotal)}</span>
                 </div>
-                <Button 
-                  className="w-full" 
-                  size="lg"
-                  onClick={() => navigate('/consumer/checkout')}
-                  disabled={cartTotal < 25}
-                >
-                  {cartTotal < 25 ? `$${(25 - cartTotal).toFixed(2)} more for minimum` : 'Checkout'}
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => setShowSaveDialog(true)}
+                    disabled={!cart?.items || cart.items.length === 0}
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Cart
+                  </Button>
+                  <Button 
+                    onClick={() => navigate('/consumer/checkout')}
+                    disabled={cartTotal < 25}
+                  >
+                    {cartTotal < 25 ? `$${(25 - cartTotal).toFixed(2)} more` : 'Checkout'}
+                  </Button>
+                </div>
                 {cartTotal < 25 && (
                   <p className="text-sm text-muted-foreground text-center">
                     Minimum order: {formatMoney(25)}
@@ -103,8 +150,29 @@ export const CartDrawer = () => {
                 )}
               </div>
             </>
-          )}
-        </div>
+            )}
+          </TabsContent>
+
+          {/* Saved Carts Tab */}
+          <TabsContent value="saved" className="flex-1 overflow-y-auto mt-4">
+            <SavedCartsList
+              savedCarts={savedCarts}
+              onLoad={(cartId) => loadSavedCart.mutate(cartId)}
+              onDelete={(cartId) => deleteSavedCart.mutate(cartId)}
+              isLoading={loadSavedCart.isPending || deleteSavedCart.isPending}
+            />
+          </TabsContent>
+        </Tabs>
+
+        <SaveCartDialog
+          open={showSaveDialog}
+          onOpenChange={setShowSaveDialog}
+          onSave={(name) => {
+            saveCart.mutate(name);
+            setShowSaveDialog(false);
+          }}
+          isSaving={saveCart.isPending}
+        />
       </SheetContent>
     </Sheet>
   );

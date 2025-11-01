@@ -11,7 +11,10 @@ import logo from "@/assets/blue-harvests-logo.jpeg";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
 import { ProductCard } from "@/components/ProductCard";
+import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
 import { CartDrawer } from "@/components/CartDrawer";
+import { ReferralBanner } from "@/components/consumer/ReferralBanner";
+import { ReferralModal } from "@/components/consumer/ReferralModal";
 import { formatMoney } from "@/lib/formatMoney";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -38,6 +41,7 @@ const Shop = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchParams] = useSearchParams();
+  const [showReferralModal, setShowReferralModal] = useState(false);
   const { addToCart } = useCart();
   const { subscriptionStatus, refreshSubscription } = useAuth();
   const { toast } = useToast();
@@ -237,6 +241,9 @@ const Shop = () => {
 
       {/* Products */}
       <main className="container mx-auto px-4 py-8">
+        {/* Referral Banner */}
+        <ReferralBanner onOpenModal={() => setShowReferralModal(true)} />
+
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-foreground mb-2">Farm Fresh Produce</h2>
           <p className="text-muted-foreground">
@@ -245,8 +252,10 @@ const Shop = () => {
         </div>
 
         {isLoading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading fresh produce...</p>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
           </div>
         ) : filteredProducts.length === 0 ? (
           <div className="text-center py-12">
@@ -284,6 +293,9 @@ const Shop = () => {
           </div>
         </Card>
       </main>
+
+      {/* Referral Modal */}
+      <ReferralModal open={showReferralModal} onOpenChange={setShowReferralModal} />
     </div>
   );
 };
