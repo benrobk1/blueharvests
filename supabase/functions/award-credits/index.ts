@@ -1,15 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { withAdminAuth } from '../_shared/middleware/withAdminAuth.ts';
 import { getCorsHeaders, validateOrigin } from '../_shared/middleware/withCORS.ts';
 
-interface AwardCreditsRequest {
-  consumer_id: string;
-  amount: number;
-  description: string;
-  transaction_type?: 'earned' | 'bonus' | 'refund';
-  expires_in_days?: number;
-}
+// Input validation schema
+const AwardCreditsSchema = z.object({
+  consumer_id: z.string().uuid({ message: "Invalid consumer ID format" }),
+  amount: z.number().positive({ message: "Amount must be positive" }).max(1000, { message: "Amount cannot exceed $1000" }),
+  description: z.string().min(1, { message: "Description is required" }).max(500, { message: "Description must be less than 500 characters" }),
+  transaction_type: z.enum(['earned', 'bonus', 'refund']).optional(),
+  expires_in_days: z.number().int().positive().max(365, { message: "Expiration cannot exceed 365 days" }).optional()
+});
+
+type AwardCreditsRequest = z.infer<typeof AwardCreditsSchema>;
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -30,26 +34,34 @@ serve(async (req) => {
     const adminAuthHandler = withAdminAuth(async (req, ctx) => {
       console.log(`[AWARD_CREDITS] Admin user ${ctx.user.id} awarding credits`);
 
+      // Parse and validate input
+      let validatedInput: AwardCreditsRequest;
+      try {
+        const body = await req.json();
+        validatedInput = AwardCreditsSchema.parse(body);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          return new Response(JSON.stringify({
+            error: 'VALIDATION_ERROR',
+            message: 'Request validation failed',
+            details: error.errors
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        throw error;
+      }
+
       const { 
         consumer_id, 
         amount, 
         description, 
         transaction_type = 'earned',
         expires_in_days = 90 
-      }: AwardCreditsRequest = await req.json();
+      } = validatedInput;
 
       console.log('Awarding credits:', { consumer_id, amount, description, transaction_type, admin: ctx.user.id });
-
-      // Validate inputs
-      if (!consumer_id || !amount || amount <= 0) {
-        return new Response(JSON.stringify({
-          error: 'INVALID_INPUT',
-          message: 'Consumer ID and positive amount required'
-        }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
 
       // Get current credit balance
       const { data: latestCredit } = await supabaseClient

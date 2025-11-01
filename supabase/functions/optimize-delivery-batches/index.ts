@@ -12,9 +12,17 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { BatchOptimizationService } from '../_shared/services/BatchOptimizationService.ts';
 import { withAdminAuth } from '../_shared/middleware/withAdminAuth.ts';
 import { getCorsHeaders, validateOrigin } from '../_shared/middleware/withCORS.ts';
+
+// Input validation schema
+const OptimizeBatchesSchema = z.object({
+  delivery_date: z.string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Date must be in YYYY-MM-DD format" })
+    .refine(date => !isNaN(Date.parse(date)), { message: "Invalid date value" })
+});
 
 serve(async (req) => {
   // Handle CORS preflight
@@ -47,7 +55,26 @@ serve(async (req) => {
     const adminAuthHandler = withAdminAuth(async (req, ctx) => {
       console.log(`[${requestId}] [BATCH_OPT] Admin user ${ctx.user.id} authorized`);
       
-      const { delivery_date } = await req.json();
+      // Parse and validate input
+      let delivery_date: string;
+      try {
+        const body = await req.json();
+        const validated = OptimizeBatchesSchema.parse(body);
+        delivery_date = validated.delivery_date;
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          console.error(`[${requestId}] [BATCH_OPT] Validation error:`, error.errors);
+          return new Response(JSON.stringify({
+            error: 'VALIDATION_ERROR',
+            message: 'Request validation failed',
+            details: error.errors
+          }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        throw error;
+      }
 
       const service = new BatchOptimizationService(supabase, lovableApiKey);
       const result = await service.optimizeBatches(delivery_date);
