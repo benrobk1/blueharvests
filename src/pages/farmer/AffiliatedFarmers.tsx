@@ -86,15 +86,15 @@ export default function AffiliatedFarmers() {
         <div className="grid gap-6 md:grid-cols-2">
           {affiliatedFarmers.map((affiliation: any) => {
             const farmer = affiliation.farm_profiles;
-            const profile = farmer.profiles;
+            const profile = farmer?.profiles;
 
             return (
               <Card key={affiliation.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle>{farmer.farm_name}</CardTitle>
-                      <CardDescription>Managed by {profile.full_name}</CardDescription>
+                      <CardTitle>{farmer?.farm_name || 'Unknown Farm'}</CardTitle>
+                      <CardDescription>Managed by {profile?.full_name || 'Unknown Farmer'}</CardDescription>
                     </div>
                     <Badge variant="secondary">
                       {affiliation.commission_rate}% commission
@@ -102,19 +102,19 @@ export default function AffiliatedFarmers() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {farmer.bio && (
+                  {farmer?.bio && (
                     <p className="text-sm text-muted-foreground line-clamp-2">{farmer.bio}</p>
                   )}
 
                   <div className="space-y-2">
-                    {farmer.location && (
+                    {farmer?.location && (
                       <div className="flex items-center gap-2 text-sm">
                         <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         <span>{farmer.location}</span>
                       </div>
                     )}
 
-                    {profile.phone && (
+                    {profile?.phone && (
                       <div className="flex items-center gap-2 text-sm">
                         <Phone className="h-4 w-4 text-muted-foreground" />
                         <a href={`tel:${profile.phone}`} className="hover:underline">
@@ -123,7 +123,7 @@ export default function AffiliatedFarmers() {
                       </div>
                     )}
 
-                    {profile.email && (
+                    {profile?.email && (
                       <div className="flex items-center gap-2 text-sm">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <a href={`mailto:${profile.email}`} className="hover:underline">
@@ -147,17 +147,19 @@ export default function AffiliatedFarmers() {
                     <Button
                       variant="outline"
                       className="flex-1"
-                      onClick={() => window.location.href = `/farm-profile/${farmer.farmer_id}`}
+                      onClick={() => window.location.href = `/farm-profile/${farmer?.farmer_id}`}
                     >
                       <ExternalLink className="mr-2 h-4 w-4" />
                       View Profile
                     </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => window.location.href = `mailto:${profile.email}`}
-                    >
-                      <Mail className="h-4 w-4" />
-                    </Button>
+                    {profile?.email && (
+                      <Button
+                        variant="outline"
+                        onClick={() => window.location.href = `mailto:${profile.email}`}
+                      >
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
