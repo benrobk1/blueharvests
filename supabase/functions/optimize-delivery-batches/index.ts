@@ -49,6 +49,10 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
     
+    if (!lovableApiKey) {
+      console.warn('⚠️  LOVABLE_API_KEY not configured - will use fallback batching logic');
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { delivery_date } = await req.json();
@@ -237,7 +241,7 @@ Optimize the batching strategy and return ONLY valid JSON.`;
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'google/gemini-2.5-pro',
+              model: 'google/gemini-2.5-flash',
               messages: [
                 { role: 'system', content: 'You are a logistics optimization AI. Always respond with valid JSON only.' },
                 { role: 'user', content: aiPrompt }
@@ -245,19 +249,28 @@ Optimize the batching strategy and return ONLY valid JSON.`;
             }),
           });
 
-          if (aiResponse.ok) {
-            const aiData = await aiResponse.json();
-            const content = aiData.choices[0].message.content;
-            
-            // Extract JSON from markdown code blocks if present
-            const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```\n([\s\S]*?)\n```/);
-            const jsonStr = jsonMatch ? jsonMatch[1] : content;
-            
-            optimization = JSON.parse(jsonStr);
-            console.log(`AI optimization successful: ${optimization?.batches.length} batches`);
+          if (!aiResponse.ok) {
+            if (aiResponse.status === 429) {
+              console.warn('⚠️  AI rate limit exceeded (429) - using fallback batching');
+            } else if (aiResponse.status === 402) {
+              console.warn('⚠️  AI credits exhausted (402) - using fallback batching');
+            } else {
+              console.error(`❌ AI optimization failed with status ${aiResponse.status}`);
+            }
+            throw new Error(`AI API error: ${aiResponse.status}`);
           }
+
+          const aiData = await aiResponse.json();
+          const content = aiData.choices[0].message.content;
+          
+          // Extract JSON from markdown code blocks if present
+          const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```\n([\s\S]*?)\n```/);
+          const jsonStr = jsonMatch ? jsonMatch[1] : content;
+          
+          optimization = JSON.parse(jsonStr);
+          console.log(`✅ AI optimization successful: ${optimization?.batches.length} batches for ${cpOrders.length} orders`);
         } catch (aiError) {
-          console.error('AI optimization failed:', aiError);
+          console.warn('⚠️  AI optimization unavailable, using geographic fallback:', aiError instanceof Error ? aiError.message : 'Unknown error');
         }
       }
 
