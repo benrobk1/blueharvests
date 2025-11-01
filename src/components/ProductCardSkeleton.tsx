@@ -1,7 +1,8 @@
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export const ProductCardSkeleton = () => {
+const ProductCardSkeleton = () => {
   return (
     <Card className="overflow-hidden h-full">
       <Skeleton className="w-full aspect-video" />
@@ -20,3 +21,5 @@ export const ProductCardSkeleton = () => {
     </Card>
   );
 };
+
+export default React.memo(ProductCardSkeleton);

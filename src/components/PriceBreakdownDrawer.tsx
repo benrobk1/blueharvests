@@ -1,3 +1,4 @@
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -19,7 +20,7 @@ interface PriceBreakdownDrawerProps {
   isCheckout?: boolean;
 }
 
-export const PriceBreakdownDrawer = ({ 
+const PriceBreakdownDrawer = ({ 
   price, 
   farmName,
   isCheckout = false 
@@ -106,3 +107,5 @@ export const PriceBreakdownDrawer = ({
     </Drawer>
   );
 };
+
+export default React.memo(PriceBreakdownDrawer);

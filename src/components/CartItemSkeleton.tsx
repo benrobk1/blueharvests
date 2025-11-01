@@ -1,6 +1,7 @@
+import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
-export const CartItemSkeleton = () => {
+const CartItemSkeleton = () => {
   return (
     <div className="flex items-center gap-3 py-3">
       <Skeleton className="h-16 w-16 rounded" />
@@ -15,3 +16,5 @@ export const CartItemSkeleton = () => {
     </div>
   );
 };
+
+export default React.memo(CartItemSkeleton);

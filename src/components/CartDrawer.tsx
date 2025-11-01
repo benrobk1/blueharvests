@@ -8,7 +8,7 @@ import { formatMoney } from "@/lib/formatMoney";
 import { useNavigate } from "react-router-dom";
 import { SaveCartDialog } from "@/components/SaveCartDialog";
 import { SavedCartsList } from "@/components/SavedCartsList";
-import { CartItemSkeleton } from "@/components/CartItemSkeleton";
+import CartItemSkeleton from "@/components/CartItemSkeleton";
 import { useState } from "react";
 
 export const CartDrawer = () => {

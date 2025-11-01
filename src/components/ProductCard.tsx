@@ -1,18 +1,15 @@
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { formatMoney } from '@/lib/formatMoney';
-import { useAuth } from '@/contexts/AuthContext';
 import { Calendar, MapPin, Sprout, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { PriceBreakdownDrawer } from './PriceBreakdownDrawer';
+import PriceBreakdownDrawer from './PriceBreakdownDrawer';
 import { LoadingButton } from './LoadingButton';
 import { calculateFarmToConsumerDistance } from '@/lib/distanceHelpers';
 import { FarmStoryModal } from './FarmStoryModal';
-import { useState } from 'react';
 
 interface Product {
   id: string;
@@ -34,53 +31,28 @@ interface Product {
 interface ProductCardProps {
   product: Product;
   onAddToCart: (product: Product) => void;
+  farmerData?: {
+    profiles?: {
+      avatar_url?: string;
+      full_name?: string;
+    };
+  };
+  consumerProfile?: {
+    zip_code?: string;
+  } | null;
 }
 
-export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
+const ProductCard = ({ product, onAddToCart, farmerData, consumerProfile }: ProductCardProps) => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [isAdding, setIsAdding] = useState(false);
   const [justAdded, setJustAdded] = useState(false);
   const [showFarmStory, setShowFarmStory] = useState(false);
 
-  // Get farmer info
-  const { data: farmerData } = useQuery({
-    queryKey: ['farmer', product.farm_profile_id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('farm_profiles')
-        .select(`
-          farmer_id,
-          profiles!farm_profiles_farmer_id_fkey (
-            avatar_url,
-            full_name
-          )
-        `)
-        .eq('id', product.farm_profile_id)
-        .single();
-      return data;
-    },
-  });
-
-  // Get consumer's zip code for distance calculation
-  const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
-      const { data } = await supabase
-        .from('profiles')
-        .select('zip_code')
-        .eq('id', user.id)
-        .single();
-      return data;
-    },
-    enabled: !!user,
-  });
-
-  // Calculate distance from farm
-  const milesFromFarm = product.farm_profiles.location && profile?.zip_code
-    ? calculateFarmToConsumerDistance(product.farm_profiles.location, profile.zip_code)
-    : null;
+  // Memoize distance calculation
+  const milesFromFarm = useMemo(() => {
+    if (!product.farm_profiles.location || !consumerProfile?.zip_code) return null;
+    return calculateFarmToConsumerDistance(product.farm_profiles.location, consumerProfile.zip_code);
+  }, [product.farm_profiles.location, consumerProfile?.zip_code]);
 
   const handleAddToCart = async () => {
     setIsAdding(true);
@@ -95,9 +67,11 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
       {product.image_url && (
         <img 
           src={product.image_url} 
-          alt={product.name} 
+          alt={`${product.name} from ${product.farm_profiles.farm_name}`}
           className="w-full aspect-video object-cover" 
           loading="lazy"
+          decoding="async"
+          sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
         />
       )}
       
@@ -194,3 +168,5 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
     </Card>
   );
 };
+
+export default React.memo(ProductCard);

@@ -21,7 +21,7 @@ import { stripePromise } from "@/lib/stripe";
 import { PaymentForm } from "@/components/checkout/PaymentForm";
 import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
-import { PriceBreakdownDrawer } from "@/components/PriceBreakdownDrawer";
+import PriceBreakdownDrawer from "@/components/PriceBreakdownDrawer";
 import type { CheckoutRequest } from "@/contracts/checkout";
 
 const Checkout = () => {

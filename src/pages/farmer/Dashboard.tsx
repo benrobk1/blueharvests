@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatMoney } from '@/lib/formatMoney';
@@ -18,100 +18,117 @@ export default function FarmerDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const { data: farmProfile, isLoading: farmLoading } = useQuery({
-    queryKey: ['farmer-profile', user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('farm_profiles')
-        .select('*')
-        .eq('farmer_id', user?.id)
-        .single();
-      return data;
-    },
-    enabled: !!user?.id,
+  // Parallel queries for better performance
+  const queries = useQueries({
+    queries: [
+      {
+        queryKey: ['farmer-profile', user?.id],
+        queryFn: async () => {
+          const { data } = await supabase
+            .from('farm_profiles')
+            .select('*')
+            .eq('farmer_id', user?.id)
+            .single();
+          return data;
+        },
+        enabled: !!user?.id,
+      },
+      {
+        queryKey: ['user-roles', user?.id],
+        queryFn: async () => {
+          const { data } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user?.id);
+          return data?.map(r => r.role) || [];
+        },
+        enabled: !!user?.id,
+      },
+    ],
   });
 
-  const { data: userRoles, isLoading: rolesLoading } = useQuery({
-    queryKey: ['user-roles', user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user?.id);
-      return data?.map(r => r.role) || [];
-    },
-    enabled: !!user?.id,
-  });
-
+  const farmProfile = queries[0].data;
+  const userRoles = queries[1].data;
   const isLeadFarmer = userRoles?.includes('lead_farmer');
+  const farmLoading = queries[0].isLoading;
+  const rolesLoading = queries[1].isLoading;
 
-  const { data: userProfile, isLoading: profileLoading } = useQuery({
-    queryKey: ['user-profile', user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('collection_point_lead_farmer_id, zip_code')
-        .eq('id', user?.id)
-        .single();
-      return data;
-    },
-    enabled: !!user?.id && !isLeadFarmer,
+  // Secondary queries that depend on user roles
+  const secondaryQueries = useQueries({
+    queries: [
+      {
+        queryKey: ['user-profile', user?.id],
+        queryFn: async () => {
+          const { data } = await supabase
+            .from('profiles')
+            .select('collection_point_lead_farmer_id, zip_code')
+            .eq('id', user?.id)
+            .single();
+          return data;
+        },
+        enabled: !!user?.id && !isLeadFarmer,
+      },
+      {
+        queryKey: ['farmer-earnings', farmProfile?.id],
+        queryFn: async () => {
+          const { data: orders } = await supabase
+            .from('orders')
+            .select(`
+              id,
+              created_at,
+              order_items!inner(
+                subtotal,
+                products!inner(farm_profile_id)
+              )
+            `)
+            .eq('order_items.products.farm_profile_id', farmProfile?.id)
+            .eq('status', 'delivered');
+
+          const todayStart = new Date();
+          todayStart.setHours(0, 0, 0, 0);
+
+          const today = orders
+            ?.filter((o) => new Date(o.created_at) >= todayStart)
+            .reduce((sum, o) => sum + o.order_items.reduce((s, i) => s + Number(i.subtotal), 0), 0) || 0;
+
+          return { today };
+        },
+        enabled: !!farmProfile?.id,
+      },
+      {
+        queryKey: ['product-count', farmProfile?.id],
+        queryFn: async () => {
+          const { count } = await supabase
+            .from('products')
+            .select('*', { count: 'exact', head: true })
+            .eq('farm_profile_id', farmProfile?.id);
+          return count || 0;
+        },
+        enabled: !!farmProfile?.id,
+      },
+      {
+        queryKey: ['pending-orders-count', farmProfile?.id],
+        queryFn: async () => {
+          const { count } = await supabase
+            .from('orders')
+            .select('order_items!inner(products!inner(farm_profile_id))', { count: 'exact', head: true })
+            .eq('order_items.products.farm_profile_id', farmProfile?.id)
+            .in('status', ['pending', 'confirmed']);
+          return count || 0;
+        },
+        enabled: !!farmProfile?.id,
+      },
+    ],
   });
 
+  const userProfile = secondaryQueries[0].data;
+  const earnings = secondaryQueries[1].data;
+  const productCount = secondaryQueries[2].data;
+  const pendingOrdersCount = secondaryQueries[3].data;
+  const profileLoading = secondaryQueries[0].isLoading;
+  const earningsLoading = secondaryQueries[1].isLoading;
+  
   const collectionPointLeadFarmerId = userProfile?.collection_point_lead_farmer_id;
-
-  const { data: earnings, isLoading: earningsLoading } = useQuery({
-    queryKey: ['farmer-earnings', farmProfile?.id],
-    queryFn: async () => {
-      const { data: orders } = await supabase
-        .from('orders')
-        .select(`
-          id,
-          created_at,
-          order_items!inner(
-            subtotal,
-            products!inner(farm_profile_id)
-          )
-        `)
-        .eq('order_items.products.farm_profile_id', farmProfile?.id)
-        .eq('status', 'delivered');
-
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-
-      const today = orders
-        ?.filter((o) => new Date(o.created_at) >= todayStart)
-        .reduce((sum, o) => sum + o.order_items.reduce((s, i) => s + Number(i.subtotal), 0), 0) || 0;
-
-      return { today };
-    },
-    enabled: !!farmProfile?.id,
-  });
-
-  const { data: productCount } = useQuery({
-    queryKey: ['product-count', farmProfile?.id],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .eq('farm_profile_id', farmProfile?.id);
-      return count || 0;
-    },
-    enabled: !!farmProfile?.id,
-  });
-
-  const { data: pendingOrdersCount } = useQuery({
-    queryKey: ['pending-orders-count', farmProfile?.id],
-    queryFn: async () => {
-      const { count } = await supabase
-        .from('orders')
-        .select('order_items!inner(products!inner(farm_profile_id))', { count: 'exact', head: true })
-        .eq('order_items.products.farm_profile_id', farmProfile?.id)
-        .in('status', ['pending', 'confirmed']);
-      return count || 0;
-    },
-    enabled: !!farmProfile?.id,
-  });
 
   if (profileLoading || rolesLoading || farmLoading || earningsLoading) {
     return (

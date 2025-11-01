@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useDeferredValue } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,8 @@ import { Search, MapPin, Package, User, TrendingUp, Clock } from "lucide-react";
 import logo from "@/assets/blue-harvests-logo.jpeg";
 import { supabase } from "@/integrations/supabase/client";
 import { useCart } from "@/hooks/useCart";
-import { ProductCard } from "@/components/ProductCard";
-import { ProductCardSkeleton } from "@/components/ProductCardSkeleton";
+import ProductCard from "@/components/ProductCard";
+import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { CartDrawer } from "@/components/CartDrawer";
 import { ReferralBanner } from "@/components/consumer/ReferralBanner";
 import { ReferralModal } from "@/components/consumer/ReferralModal";
@@ -19,6 +19,7 @@ import { formatMoney } from "@/lib/formatMoney";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { isCutoffPassed, getNextAvailableDate } from "@/lib/marketHelpers";
+import { preloadImage } from "@/lib/imageHelpers";
 
 interface Product {
   id: string;
@@ -40,10 +41,11 @@ interface Product {
 const Shop = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearch = useDeferredValue(searchQuery);
   const [searchParams] = useSearchParams();
   const [showReferralModal, setShowReferralModal] = useState(false);
   const { addToCart } = useCart();
-  const { subscriptionStatus, refreshSubscription } = useAuth();
+  const { subscriptionStatus, refreshSubscription, user } = useAuth();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -82,6 +84,57 @@ const Shop = () => {
       if (error) throw error;
       return data as Product[];
     },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  // Fetch all farmer data for products in one query (prevents N+1 problem)
+  const farmProfileIds = useMemo(() => 
+    [...new Set(products.map(p => p.farm_profile_id))],
+    [products]
+  );
+
+  const { data: farmerData } = useQuery({
+    queryKey: ['farmers-batch', farmProfileIds],
+    queryFn: async () => {
+      if (farmProfileIds.length === 0) return {};
+      
+      const { data } = await supabase
+        .from('farm_profiles')
+        .select(`
+          id,
+          farmer_id,
+          profiles!farm_profiles_farmer_id_fkey (
+            avatar_url,
+            full_name
+          )
+        `)
+        .in('id', farmProfileIds);
+      
+      // Create a map for easy lookup
+      const map: Record<string, any> = {};
+      data?.forEach(farm => {
+        map[farm.id] = farm;
+      });
+      return map;
+    },
+    enabled: farmProfileIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Get consumer's profile for distance calculation
+  const { data: consumerProfile } = useQuery({
+    queryKey: ['profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('zip_code')
+        .eq('id', user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user,
+    staleTime: 10 * 60 * 1000, // 10 minutes
   });
 
   const { data: marketConfig } = useQuery({
@@ -97,10 +150,20 @@ const Shop = () => {
     },
   });
 
-  const filteredProducts = products.filter((product) =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.farm_profiles.farm_name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducts = useMemo(
+    () => products.filter((product) =>
+      product.name.toLowerCase().includes(deferredSearch.toLowerCase()) ||
+      product.farm_profiles.farm_name.toLowerCase().includes(deferredSearch.toLowerCase())
+    ),
+    [products, deferredSearch]
   );
+
+  // Preload first 3 product images for faster perceived load
+  useEffect(() => {
+    filteredProducts.slice(0, 3).forEach(p => {
+      if (p.image_url) preloadImage(p.image_url).catch(() => {});
+    });
+  }, [filteredProducts]);
 
   const handleAddToCart = (product: Product) => {
     addToCart.mutate({
@@ -270,6 +333,8 @@ const Shop = () => {
                 key={product.id}
                 product={product}
                 onAddToCart={handleAddToCart}
+                farmerData={farmerData?.[product.farm_profile_id]}
+                consumerProfile={consumerProfile}
               />
             ))}
           </div>

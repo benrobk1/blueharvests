@@ -50,7 +50,15 @@ import Install from "./pages/Install";
 import { CookieConsent } from "./components/CookieConsent";
 import { BottomNav } from "./components/mobile/BottomNav";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      gcTime: 5 * 60 * 1000, // 5 minutes (previously cacheTime)
+      refetchOnWindowFocus: false, // Disable aggressive refetching
+    },
+  },
+});
 
 const App = () => {
   return (

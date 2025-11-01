@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -90,6 +91,8 @@ export const useCart = () => {
       };
     },
     enabled: !!user,
+    staleTime: 0, // Always fresh
+    refetchOnWindowFocus: true, // Check on tab return
   });
 
   const addToCart = useMutation({
@@ -344,12 +347,15 @@ export const useCart = () => {
     },
   });
 
-  const cartTotal = cart?.items?.reduce(
-    (sum, item) => sum + item.quantity * Number(item.unit_price),
-    0
-  ) || 0;
+  const cartTotal = useMemo(
+    () => cart?.items?.reduce((sum, item) => sum + item.quantity * Number(item.unit_price), 0) || 0,
+    [cart?.items]
+  );
 
-  const cartCount = cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
+  const cartCount = useMemo(
+    () => cart?.items?.reduce((sum, item) => sum + item.quantity, 0) || 0,
+    [cart?.items]
+  );
 
   return {
     cart,
