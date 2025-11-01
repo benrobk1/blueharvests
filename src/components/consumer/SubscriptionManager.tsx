@@ -84,25 +84,14 @@ export const SubscriptionManager = () => {
                 <li>Track your monthly spending progress</li>
               </ul>
             </div>
-            <div className="space-y-2">
-              <Button 
-                onClick={() => handleSubscribe(true)} 
-                disabled={isLoading}
-                className="w-full"
-                size="lg"
-              >
-                {isLoading ? "Loading..." : "Start 1-Month Free Trial"}
-              </Button>
-              <Button 
-                onClick={() => handleSubscribe(false)} 
-                disabled={isLoading}
-                variant="outline"
-                className="w-full"
-                size="lg"
-              >
-                Subscribe Now - $10/month
-              </Button>
-            </div>
+            <Button 
+              onClick={() => handleSubscribe(true)} 
+              disabled={isLoading}
+              className="w-full"
+              size="lg"
+            >
+              {isLoading ? "Loading..." : "Subscribe Now - $10/month"}
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">
