@@ -19,10 +19,13 @@ verify_jwt = false
 verify_jwt = true
 
 [functions.process-payouts]
-verify_jwt = false
+verify_jwt = true
 
 [functions.award-credits]
-verify_jwt = false
+verify_jwt = true
+
+[functions.optimize-delivery-batches]
+verify_jwt = true
 
 [functions.create-subscription-checkout]
 verify_jwt = true
@@ -41,9 +44,6 @@ verify_jwt = true
 
 [functions.generate-1099]
 verify_jwt = true
-
-[functions.optimize-delivery-batches]
-verify_jwt = false
 
 [functions.stripe-webhook]
 verify_jwt = false

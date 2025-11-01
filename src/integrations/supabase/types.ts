@@ -413,6 +413,13 @@ export type Database = {
             referencedRelation: "driver_batch_stops"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "delivery_proofs_batch_stop_id_fkey"
+            columns: ["batch_stop_id"]
+            isOneToOne: false
+            referencedRelation: "driver_batch_stops_secure"
+            referencedColumns: ["id"]
+          },
         ]
       }
       delivery_ratings: {
@@ -524,6 +531,13 @@ export type Database = {
             columns: ["stop_id"]
             isOneToOne: false
             referencedRelation: "driver_batch_stops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_scan_logs_stop_id_fkey"
+            columns: ["stop_id"]
+            isOneToOne: false
+            referencedRelation: "driver_batch_stops_secure"
             referencedColumns: ["id"]
           },
         ]
@@ -1589,6 +1603,84 @@ export type Database = {
           status?: string | null
           street_address?: never
           zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_stops_delivery_batch_id_fkey"
+            columns: ["delivery_batch_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_stops_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      driver_batch_stops_secure: {
+        Row: {
+          actual_arrival: string | null
+          address: string | null
+          address_visible_at: string | null
+          city: string | null
+          created_at: string | null
+          delivery_batch_id: string | null
+          estimated_arrival: string | null
+          geojson: Json | null
+          id: string | null
+          latitude: number | null
+          longitude: number | null
+          notes: string | null
+          order_id: string | null
+          sequence_number: number | null
+          state: string | null
+          status: string | null
+          street_address: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          actual_arrival?: string | null
+          address?: never
+          address_visible_at?: string | null
+          city?: never
+          created_at?: string | null
+          delivery_batch_id?: string | null
+          estimated_arrival?: string | null
+          geojson?: Json | null
+          id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          order_id?: string | null
+          sequence_number?: number | null
+          state?: never
+          status?: string | null
+          street_address?: never
+          zip_code?: never
+        }
+        Update: {
+          actual_arrival?: string | null
+          address?: never
+          address_visible_at?: string | null
+          city?: never
+          created_at?: string | null
+          delivery_batch_id?: string | null
+          estimated_arrival?: string | null
+          geojson?: Json | null
+          id?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          order_id?: string | null
+          sequence_number?: number | null
+          state?: never
+          status?: string | null
+          street_address?: never
+          zip_code?: never
         }
         Relationships: [
           {

@@ -1,4 +1,4 @@
-import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0';
+import { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { checkRateLimit, RateLimitConfig } from '../rateLimiter.ts';
 
 const corsHeaders = {

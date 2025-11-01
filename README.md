@@ -90,6 +90,20 @@ CVC: Any 3 digits
 ZIP: 10001
 ```
 
+### Security Notes
+
+**Sensitive endpoints require admin authentication:**
+- All admin functions validate JWT + `admin` role
+- Non-admin requests return `403 Forbidden`
+- Rate limiting enforced on all sensitive operations
+
+**Address privacy:**
+- Driver queries use secure views that mask addresses
+- Progressive disclosure: addresses reveal as deliveries progress
+- Database-level protection against premature exposure
+
+See [`SECURITY.md`](./SECURITY.md) for complete security architecture.
+
 ### Webhook Configuration
 
 **Stripe webhooks** are pre-configured in Lovable Cloud deployment:

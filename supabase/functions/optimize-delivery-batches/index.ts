@@ -13,13 +13,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { BatchOptimizationService } from '../_shared/services/BatchOptimizationService.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { withAdminAuth } from '../_shared/middleware/withAdminAuth.ts';
+import { getCorsHeaders, validateOrigin } from '../_shared/middleware/withCORS.ts';
 
 serve(async (req) => {
+  // Handle CORS preflight
+  const origin = validateOrigin(req);
+  const corsHeaders = getCorsHeaders(origin);
+  
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -41,20 +42,29 @@ serve(async (req) => {
     }
     
     const supabase = createClient(supabaseUrl, supabaseKey);
-    const { delivery_date } = await req.json();
+    
+    // Apply admin auth middleware
+    const adminAuthHandler = withAdminAuth(async (req, ctx) => {
+      console.log(`[${requestId}] [BATCH_OPT] Admin user ${ctx.user.id} authorized`);
+      
+      const { delivery_date } = await req.json();
 
-    const service = new BatchOptimizationService(supabase, lovableApiKey);
-    const result = await service.optimizeBatches(delivery_date);
+      const service = new BatchOptimizationService(supabase, lovableApiKey);
+      const result = await service.optimizeBatches(delivery_date);
 
-    console.log(`[${requestId}] [BATCH_OPT] ✅ Created ${result.batches_created} batches for ${result.total_orders} orders`);
+      console.log(`[${requestId}] [BATCH_OPT] ✅ Created ${result.batches_created} batches for ${result.total_orders} orders`);
 
-    return new Response(
-      JSON.stringify(result),
-      { 
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
+      return new Response(
+        JSON.stringify(result),
+        { 
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    });
+    
+    // Execute with admin auth check
+    return await adminAuthHandler(req, { supabase });
 
   } catch (error) {
     console.error(`[${requestId}] [BATCH_OPT] ❌ Error:`, error);
