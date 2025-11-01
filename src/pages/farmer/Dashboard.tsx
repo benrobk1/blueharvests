@@ -318,9 +318,6 @@ const FarmerDashboard = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 space-y-8">
-        {/* Stripe Connect Status Banner */}
-        <StripeConnectSimple variant="banner" />
-
         {/* Weekly Inventory Review */}
         {farmProfile?.id && <WeeklyInventoryReview farmProfileId={farmProfile.id} />}
 
