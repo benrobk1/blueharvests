@@ -6,23 +6,31 @@ const corsHeaders = {
 /**
  * Error Handling Middleware
  * Catches unhandled errors and returns structured error responses
- * Logs errors for debugging
+ * Logs errors for debugging and captures to Sentry if configured
  */
-export function withErrorHandling<T>(
+export function withErrorHandling<T extends { requestId?: string }>(
   handler: (req: Request, ctx: T) => Promise<Response>
 ) {
   return async (req: Request, ctx: T): Promise<Response> => {
     try {
       return await handler(req, ctx);
     } catch (error) {
-      console.error('Unhandled error in edge function:', error);
+      const requestId = ctx.requestId || 'unknown';
+      console.error(`[${requestId}] Unhandled error in edge function:`, error);
       
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       const errorStack = error instanceof Error ? error.stack : undefined;
       
       // Log stack trace for debugging
       if (errorStack) {
-        console.error('Stack trace:', errorStack);
+        console.error(`[${requestId}] Stack trace:`, errorStack);
+      }
+      
+      // Capture to Sentry if configured (disabled by default)
+      if (Deno.env.get('SENTRY_DSN')) {
+        // TODO: Integrate Sentry Deno SDK
+        // Sentry.captureException(error, { tags: { requestId } });
+        console.log(`[${requestId}] Error would be captured to Sentry (SENTRY_DSN configured)`);
       }
       
       return new Response(

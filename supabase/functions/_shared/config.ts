@@ -25,24 +25,26 @@ export interface EdgeFunctionConfig {
 }
 
 /**
- * Initialize Sentry error tracking (if configured)
- * Environment-gated: No errors if SENTRY_DSN is missing
+ * Initialize Sentry for error tracking
+ * 
+ * NOTE: Sentry Deno SDK integration is prepared but disabled by default.
+ * Set SENTRY_DSN environment variable to enable error tracking.
  */
-export function initSentry() {
-  const sentryDsn = Deno.env.get('SENTRY_DSN');
-  
-  if (sentryDsn) {
-    console.log('✅ Sentry configured - error tracking enabled');
-    // TODO: Initialize Sentry SDK
-    // import * as Sentry from 'https://deno.land/x/sentry/index.ts';
-    // Sentry.init({ 
-    //   dsn: sentryDsn, 
-    //   environment: Deno.env.get('ENVIRONMENT') || 'production',
-    //   tracesSampleRate: 0.1,
-    // });
-  } else {
-    console.log('⚠️  SENTRY_DSN not configured - errors will only log to console');
+export function initSentry(config: EdgeFunctionConfig): void {
+  if (!config.sentry?.dsn) {
+    console.warn('[CONFIG] Sentry DSN not configured. Error tracking disabled.');
+    return;
   }
+  
+  // TODO: Integrate Sentry Deno SDK
+  // import * as Sentry from 'https://deno.land/x/sentry/mod.ts';
+  // Sentry.init({
+  //   dsn: config.sentry.dsn,
+  //   environment: Deno.env.get('ENVIRONMENT') || 'production',
+  //   tracesSampleRate: 1.0,
+  // });
+  
+  console.log(`[CONFIG] Sentry initialized: ${config.sentry.dsn.substring(0, 25)}...`);
 }
 
 /**

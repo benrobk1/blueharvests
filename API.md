@@ -2,6 +2,8 @@
 
 Complete reference for all Supabase Edge Functions in the Blue Harvests platform.
 
+**Shared Contracts**: All request/response schemas are defined in `src/contracts/` and shared between frontend and backend via Deno-compatible re-exports in `supabase/functions/_shared/contracts/`. This ensures type safety and eliminates drift.
+
 ---
 
 ## Table of Contents

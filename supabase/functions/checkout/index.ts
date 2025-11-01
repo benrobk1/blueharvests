@@ -1,19 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { loadConfig } from '../_shared/config.ts';
 import { checkRateLimit } from '../_shared/rateLimiter.ts';
 import { CheckoutService, CheckoutError } from '../_shared/services/CheckoutService.ts';
-
-// Replicate contract schema for edge function validation
-const CheckoutRequestSchema = z.object({
-  cart_id: z.string().uuid({ message: "Invalid cart ID" }),
-  delivery_date: z.string().datetime({ message: "Invalid delivery date format" }),
-  use_credits: z.boolean().default(false),
-  payment_method_id: z.string().optional(),
-  tip_amount: z.number().min(0, { message: "Tip amount must be positive" }).default(0),
-});
+import { CheckoutRequestSchema } from '../_shared/contracts/checkout.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

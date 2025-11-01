@@ -1,0 +1,10 @@
+/**
+ * SHARED CONTRACTS - BARREL EXPORT
+ * 
+ * Single import point for all Deno-compatible contracts.
+ * Used by edge functions to ensure front-back consistency.
+ */
+
+export * from './checkout.ts';
+export * from './batching.ts';
+export * from './payouts.ts';

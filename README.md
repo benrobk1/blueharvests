@@ -4,6 +4,8 @@
 
 **Project URL**: https://lovable.dev/projects/eeae09ce-f16e-41fa-a46e-2dadc2102e6c
 
+[![CI Status](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions)
+
 ---
 
 ## ⚡ Happy Path (30 Seconds)
