@@ -271,38 +271,48 @@ const FarmerDashboard = () => {
     <div className="min-h-screen bg-gradient-earth">
       <header className="bg-white border-b shadow-soft">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">{farmProfile?.farm_name || 'My Farm'}</h1>
-            <p className="text-sm text-muted-foreground">You keep 90% of all sales</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => window.location.href = '/farmer/profile'}>
-              <User className="h-4 w-4 mr-2" />
-              Profile
-            </Button>
+          {/* Row 1: Farm name and Stripe */}
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">{farmProfile?.farm_name || 'My Farm'}</h1>
+              <p className="text-sm text-muted-foreground">You keep 90% of all sales</p>
+            </div>
             <StripeConnectSimple variant="button" />
-            {isLeadFarmer && (
-              <>
-                <Button variant="outline" onClick={() => window.location.href = '/farmer/customer-analytics'}>
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  Analytics
-                </Button>
-                <Button variant="outline" onClick={() => window.location.href = '/farmer/affiliated-farmers'}>
-                  <User className="h-4 w-4 mr-2" />
-                  Affiliated Farmers
-                </Button>
-              </>
-            )}
-            <Button variant="outline" onClick={() => setIsBulkEditOpen(true)}>
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Bulk Import/Edit
-            </Button>
-            <Button onClick={() => setIsAddingProduct(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Product
-            </Button>
           </div>
+          
+          {/* Row 2: Action buttons with visual hierarchy */}
+          <div className="flex items-center justify-between gap-2">
+            {/* Left side: Navigation buttons */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => window.location.href = '/farmer/profile'}>
+                <User className="h-4 w-4 mr-2" />
+                Profile
+              </Button>
+              {isLeadFarmer && (
+                <>
+                  <Button variant="outline" size="sm" onClick={() => window.location.href = '/farmer/customer-analytics'}>
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Analytics
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => window.location.href = '/farmer/affiliated-farmers'}>
+                    <User className="h-4 w-4 mr-2" />
+                    Affiliated Farmers
+                  </Button>
+                </>
+              )}
+            </div>
+            
+            {/* Right side: Primary actions */}
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setIsBulkEditOpen(true)}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Bulk Import/Edit
+              </Button>
+              <Button onClick={() => setIsAddingProduct(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Product
+              </Button>
+            </div>
           </div>
         </div>
       </header>
@@ -552,6 +562,16 @@ const FarmerDashboard = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BulkEditDialog
+        open={isBulkEditOpen}
+        onOpenChange={setIsBulkEditOpen}
+        farmProfileId={farmProfile?.id || ''}
+        products={products || []}
+        onComplete={() => {
+          queryClient.invalidateQueries({ queryKey: ['farmer-products'] });
+        }}
+      />
     </div>
   );
 };
