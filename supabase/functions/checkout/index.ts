@@ -20,9 +20,10 @@ serve(async (req) => {
     // Load config
     const config = loadConfig();
     
+    // Use anon key for user-scoped operations (RLS will enforce access control)
     const supabaseClient = createClient(
       config.supabase.url,
-      config.supabase.serviceRoleKey
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
     // Get user from JWT

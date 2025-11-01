@@ -92,16 +92,16 @@ const DriverDashboard = () => {
   });
 
   // Fetch active route
-  // Use privacy-protecting driver_batch_stops view to prevent premature address exposure
+  // Use privacy-protecting driver_batch_stops_secure view to prevent premature address exposure
   const { data: activeRoute, isLoading: routeLoading } = useQuery({
     queryKey: ['driver-active-route', user?.id],
     queryFn: async () => {
-      // Query driver_batch_stops view - addresses only visible when address_visible_at is set
+      // Query secure view - addresses masked until address_visible_at is set
       const { data: batch } = await supabase
         .from('delivery_batches')
         .select(`
           id,
-          batch_stops!inner (
+          driver_batch_stops_secure!inner (
             id,
             address,
             street_address,
@@ -110,9 +110,7 @@ const DriverDashboard = () => {
             status,
             sequence_number,
             address_visible_at,
-            orders!inner(
-              profiles!inner(full_name)
-            )
+            order_id
           )
         `)
         .eq('driver_id', user?.id)
@@ -121,15 +119,24 @@ const DriverDashboard = () => {
         .limit(1)
         .single();
 
-      return batch?.batch_stops
-        ?.sort((a, b) => a.sequence_number - b.sequence_number)
-        .map(stop => ({
+      if (!batch) return [];
+
+      // Get customer names separately (not in secure view)
+      const orderIds = batch.driver_batch_stops_secure?.map((s: any) => s.order_id) || [];
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('id, profiles!inner(full_name)')
+        .in('id', orderIds);
+
+      const orderMap = new Map(orders?.map(o => [o.id, o.profiles?.full_name]) || []);
+
+      return batch.driver_batch_stops_secure
+        ?.sort((a: any, b: any) => a.sequence_number - b.sequence_number)
+        .map((stop: any) => ({
           id: stop.id,
-          customer: stop.orders?.profiles?.full_name || 'Unknown',
-          // Show full address only if visible, otherwise show "Address locked"
-          address: stop.address_visible_at 
-            ? (stop.street_address || stop.address)
-            : 'Address unlocks as you complete deliveries',
+          customer: orderMap.get(stop.order_id) || 'Unknown',
+          // Address already masked by secure view if not visible
+          address: stop.street_address || stop.address,
           status: stop.status,
           addressVisible: !!stop.address_visible_at,
         })) || [];
@@ -145,9 +152,8 @@ const DriverDashboard = () => {
       todayStart.setHours(0, 0, 0, 0);
 
       const { data: todayStops } = await supabase
-        .from('batch_stops')
-        .select('id, status, delivery_batches!inner(driver_id)')
-        .eq('delivery_batches.driver_id', user?.id)
+        .from('driver_batch_stops_secure')
+        .select('id, status, delivery_batch_id')
         .gte('created_at', todayStart.toISOString());
 
       const deliveredToday = todayStops?.filter(s => s.status === 'delivered').length || 0;
@@ -166,9 +172,8 @@ const DriverDashboard = () => {
 
       // Calculate on-time percentage from completed stops
       const { data: completedStops } = await supabase
-        .from('batch_stops')
-        .select('estimated_arrival, actual_arrival, delivery_batches!inner(driver_id)')
-        .eq('delivery_batches.driver_id', user?.id)
+        .from('driver_batch_stops_secure')
+        .select('estimated_arrival, actual_arrival')
         .eq('status', 'delivered')
         .not('actual_arrival', 'is', null)
         .limit(100);

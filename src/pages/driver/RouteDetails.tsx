@@ -55,29 +55,14 @@ export default function RouteDetails() {
           batch_number,
           delivery_date,
           status,
-          batch_stops (
+          driver_batch_stops_secure!inner (
             id,
             address,
             status,
             sequence_number,
             estimated_arrival,
             notes,
-            orders!inner(
-              id,
-              box_code,
-              total_amount,
-              profiles!inner(
-                full_name,
-                phone
-              ),
-              order_items (
-                quantity,
-                products (
-                  name,
-                  unit
-                )
-              )
-            )
+            order_id
           )
         `
         )
@@ -89,8 +74,39 @@ export default function RouteDetails() {
 
       if (!data) return null;
 
+      // Get order details separately
+      const orderIds = data.driver_batch_stops_secure?.map((s: any) => s.order_id) || [];
+      const { data: orders } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          box_code,
+          total_amount,
+          profiles!inner(
+            full_name,
+            phone
+          ),
+          order_items (
+            quantity,
+            products (
+              name,
+              unit
+            )
+          )
+        `)
+        .in('id', orderIds);
+
+      // Create order map for lookup
+      const orderMap = new Map(orders?.map(o => [o.id, o]) || []);
+
+      // Merge stop data with order data
+      const stopsWithOrders = data.driver_batch_stops_secure?.map((stop: any) => ({
+        ...stop,
+        orders: orderMap.get(stop.order_id)
+      }));
+
       // Sort stops by sequence
-      const sortedStops = (data.batch_stops as any[])?.sort(
+      const sortedStops = stopsWithOrders?.sort(
         (a, b) => a.sequence_number - b.sequence_number
       );
 
