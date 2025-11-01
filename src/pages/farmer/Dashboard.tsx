@@ -153,7 +153,7 @@ export default function FarmerDashboard() {
               Your Collection Point
             </Button>
           )}
-          <Button variant="outline" onClick={() => navigate('/farmer/inventory')}>
+          <Button onClick={() => navigate('/farmer/inventory')}>
             <Boxes className="mr-2 h-4 w-4" />
             Manage Inventory
           </Button>
