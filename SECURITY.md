@@ -29,7 +29,7 @@ All tables have RLS enabled with strict policies:
 Sensitive functions require admin JWT verification:
 
 - `/optimize-delivery-batches` - Batch creation
-- `/process-payouts` - Financial operations  
+- `/process-payouts` - Financial operations
 - `/award-credits` - Credit system management
 - Returns **403 Forbidden** for non-admin users
 
@@ -45,6 +45,7 @@ Per-user rate limits enforced at edge function level:
 ## CORS Protection
 
 Sensitive admin endpoints restricted to allowed origins:
+
 - Production: `https://lovable.app`
 - Development: `http://localhost:5173`, `http://localhost:3000`
 
@@ -78,4 +79,4 @@ All secrets stored in Supabase Vault (never client-exposed):
 
 ## Security Contact
 
-For security concerns, please contact: security@blueharvests.net
+For security concerns, please contact:benjaminrk@blueharvests.net
