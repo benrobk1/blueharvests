@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Users, TrendingUp, Truck, Leaf, Search } from "lucide-react";
+import { ShoppingCart, Users, TrendingUp, Truck, Leaf, Search, Sprout } from "lucide-react";
 import logo from "@/assets/blue-harvests-logo.jpeg";
 
 const Index = () => {
@@ -11,8 +11,6 @@ const Index = () => {
     id: "consumer",
     title: "Shop from Farmers",
     description: "Access locally grown, organic produce delivered fresh to your door",
-    icon: Users,
-    color: "primary",
     route: "/auth/consumer",
   };
 
@@ -72,8 +70,8 @@ const Index = () => {
         {/* Consumer Section */}
         <Card className="p-8 hover:shadow-lift transition-all border-2 border-primary/20">
           <div className="flex items-center mb-4">
-            {consumerOption.icon}
-            <h2 className="text-3xl font-bold ml-3">{consumerOption.title}</h2>
+            <Users className="h-10 w-10 text-primary mr-3" />
+            <h2 className="text-3xl font-bold">{consumerOption.title}</h2>
           </div>
           <p className="text-muted-foreground text-lg mb-6">{consumerOption.description}</p>
           <Button 
@@ -118,6 +116,7 @@ const Index = () => {
             </div>
           </div>
         </div>
+      </div>
 
       {/* Value Proposition */}
       <div className="container mx-auto px-4 py-16 max-w-4xl">

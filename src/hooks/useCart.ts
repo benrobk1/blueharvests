@@ -3,10 +3,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
+interface CartItem {
+  id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  products: {
+    id: string;
+    name: string;
+    unit: string;
+    image_url: string | null;
+    available_quantity: number;
+    farm_profiles: {
+      id: string;
+      farm_name: string;
+    };
+  };
+}
+
 interface SavedCart {
   id: string;
   name: string;
-  items: CartItem[];
+  items: any[];
   created_at: string;
 }
 
@@ -199,7 +217,7 @@ export const useCart = () => {
   });
 
   // Saved carts functionality
-  const { data: savedCarts = [] } = useQuery({
+  const { data: savedCarts = [] } = useQuery<SavedCart[]>({
     queryKey: ['saved-carts', user?.id],
     queryFn: async () => {
       if (!user) return [];
@@ -210,7 +228,12 @@ export const useCart = () => {
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data;
+      return (data || []).map(cart => ({
+        id: cart.id,
+        name: cart.name,
+        items: Array.isArray(cart.items) ? cart.items : [],
+        created_at: cart.created_at,
+      }));
     },
     enabled: !!user,
   });
@@ -226,7 +249,7 @@ export const useCart = () => {
         .insert({
           consumer_id: user.id,
           name,
-          items: cart.items,
+          items: cart.items as any,
         });
 
       if (error) throw error;
@@ -272,11 +295,13 @@ export const useCart = () => {
         unit_price: item.unit_price,
       }));
 
-      const { error } = await supabase
-        .from('cart_items')
-        .insert(itemsToInsert);
+      if (itemsToInsert.length > 0) {
+        const { error } = await supabase
+          .from('cart_items')
+          .insert(itemsToInsert);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cart', user?.id] });

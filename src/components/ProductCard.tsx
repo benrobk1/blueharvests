@@ -10,7 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { PriceBreakdownDrawer } from './PriceBreakdownDrawer';
 import { LoadingButton } from './LoadingButton';
-import { calculateDistance } from '@/lib/distanceHelpers';
+import { calculateFarmToConsumerDistance } from '@/lib/distanceHelpers';
 import { FarmStoryModal } from './FarmStoryModal';
 import { useState } from 'react';
 
@@ -79,7 +79,7 @@ export const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
 
   // Calculate distance from farm
   const milesFromFarm = product.farm_profiles.location && profile?.zip_code
-    ? calculateDistance(product.farm_profiles.location, profile.zip_code)
+    ? calculateFarmToConsumerDistance(product.farm_profiles.location, profile.zip_code)
     : null;
 
   const handleAddToCart = async () => {
