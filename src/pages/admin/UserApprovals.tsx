@@ -32,6 +32,8 @@ interface UserProfile {
   rejected_reason: string | null;
   created_at: string;
   roles: string[];
+  terms_accepted_at: string | null;
+  privacy_accepted_at: string | null;
   // Farmer fields
   farm_name: string | null;
   street_address: string | null;
@@ -46,6 +48,8 @@ interface UserProfile {
   farm_size: string | null;
   produce_types: string | null;
   additional_info: string | null;
+  lead_farmer_name?: string;
+  lead_farmer_farm_name?: string;
   // Driver fields
   vehicle_type: string | null;
   vehicle_make: string | null;
@@ -67,7 +71,13 @@ const UserApprovals = () => {
     queryFn: async () => {
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+          *,
+          lead_farmer:collection_point_lead_farmer_id(
+            full_name,
+            farm_name
+          )
+        `)
         .in('approval_status', ['pending', 'rejected'])
         .order('created_at', { ascending: false });
 
@@ -84,6 +94,8 @@ const UserApprovals = () => {
           return {
             ...profile,
             roles: roles?.map((r) => r.role) || [],
+            lead_farmer_name: (profile as any).lead_farmer?.full_name,
+            lead_farmer_farm_name: (profile as any).lead_farmer?.farm_name,
           };
         })
       );
@@ -303,151 +315,210 @@ const UserApprovals = () => {
                     {getStatusBadge(user.approval_status)}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Phone:</span> {user.phone || 'N/A'}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Roles:</span>{' '}
-                      {user.roles.map(r => r.replace('_', ' ')).join(', ') || 'N/A'}
-                    </div>
-                    
-                    {/* Farmer-specific fields */}
-                    {(user.roles.includes('farmer') || user.roles.includes('lead_farmer')) && (
-                      <>
-                        <div>
-                          <span className="text-muted-foreground">Farm Name:</span> {user.farm_name || 'N/A'}
+                <CardContent className="space-y-6">
+                  {/* Contact Information */}
+                  <div>
+                    <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Contact Information</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Phone:</span> {user.phone || 'N/A'}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Applied:</span>{' '}
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </div>
+                      {user.acquisition_channel && (
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">How They Heard About Us:</span> {user.acquisition_channel}
                         </div>
-                        {user.street_address && (
-                          <div className="col-span-2">
-                            <span className="text-muted-foreground">Farm Address:</span> {user.street_address}
-                          </div>
-                        )}
-                        <div>
-                          <span className="text-muted-foreground">City/State/ZIP:</span> {[user.city, user.state, user.zip_code].filter(Boolean).join(', ') || 'N/A'}
-                        </div>
-                        {user.roles.includes('lead_farmer') && user.collection_point_address && (
-                          <div className="col-span-2">
-                            <span className="text-muted-foreground">Collection Point:</span> {user.collection_point_address}
-                          </div>
-                        )}
-                        {user.applied_role === 'farmer' && user.collection_point_lead_farmer_id && (
-                          <div className="col-span-2">
-                            <span className="text-muted-foreground">Lead Farmer / Drop-off Point:</span> {user.collection_point_lead_farmer_id}
-                          </div>
-                        )}
-                        <div>
-                          <span className="text-muted-foreground">Applied Role:</span> {user.applied_role?.replace('_', ' ') || 'farmer'}
-                        </div>
-                        {user.farm_size && (
-                          <div>
-                            <span className="text-muted-foreground">Farm Size:</span> {user.farm_size}
-                          </div>
-                        )}
-                        {user.produce_types && (
-                          <div className="col-span-2">
-                            <span className="text-muted-foreground">Produce Types:</span> 
-                            <div className="mt-1 space-y-1">
-                              {(() => {
-                                try {
-                                  const items = JSON.parse(user.produce_types);
-                                  return items.map((item: string, idx: number) => (
-                                    <div key={idx} className="text-sm">
-                                      • {item}
-                                    </div>
-                                  ));
-                                } catch {
-                                  return <div className="text-sm">{user.produce_types}</div>;
-                                }
-                              })()}
-                            </div>
-                          </div>
-                        )}
-                        {user.additional_info && (
-                          <div className="col-span-2">
-                            <span className="text-muted-foreground">Additional Info:</span> {user.additional_info}
-                          </div>
-                        )}
-                        {user.acquisition_channel && (
-                          <div>
-                            <span className="text-muted-foreground">Heard About Us:</span> {user.acquisition_channel}
-                          </div>
-                        )}
-                      </>
-                    )}
-                    
-                    {/* Driver-specific fields */}
-                    {user.roles.includes('driver') && (
-                      <>
-                        <div>
-                          <span className="text-muted-foreground">Vehicle:</span>{' '}
-                          {[user.vehicle_type, user.vehicle_make, user.vehicle_year].filter(Boolean).join(' ') || 'N/A'}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">License #:</span> {user.license_number || 'N/A'}
-                        </div>
-                        <div>
-                          <span className="text-muted-foreground">ZIP Code:</span> {user.zip_code || 'N/A'}
-                        </div>
-                        {user.delivery_days && user.delivery_days.length > 0 && (
-                          <div>
-                            <span className="text-muted-foreground">Availability:</span> {user.delivery_days.join(', ')}
-                          </div>
-                        )}
-                        {user.additional_info && (
-                          <div className="col-span-2">
-                            <span className="text-muted-foreground">Additional Info:</span> {user.additional_info}
-                          </div>
-                        )}
-                        {user.acquisition_channel && (
-                          <div>
-                            <span className="text-muted-foreground">Heard About Us:</span> {user.acquisition_channel}
-                          </div>
-                        )}
-                      </>
-                    )}
-                    
-                    <div>
-                      <span className="text-muted-foreground">Applied:</span>{' '}
-                      {new Date(user.created_at).toLocaleDateString()}
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {user.driver_license_url && (
-                      <a
-                        href={user.driver_license_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline flex items-center gap-1"
-                      >
-                        <FileText className="h-4 w-4" />
-                        Driver License
-                      </a>
-                    )}
-                    {user.insurance_url && (
-                      <a
-                        href={user.insurance_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline flex items-center gap-1"
-                      >
-                        <FileText className="h-4 w-4" />
-                        Insurance
-                      </a>
-                    )}
-                    {user.coi_url && (
-                      <a
-                        href={user.coi_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline flex items-center gap-1"
-                      >
-                        <FileText className="h-4 w-4" />
-                        COI
-                      </a>
-                    )}
+                  {/* Role & Application */}
+                  <div>
+                    <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Role & Application</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Applied Role:</span> {user.applied_role?.replace('_', ' ') || user.roles.map(r => r.replace('_', ' ')).join(', ') || 'N/A'}
+                      </div>
+                      {user.terms_accepted_at && (
+                        <div>
+                          <span className="text-muted-foreground">Terms Accepted:</span>{' '}
+                          {new Date(user.terms_accepted_at).toLocaleDateString()}
+                        </div>
+                      )}
+                      {user.privacy_accepted_at && (
+                        <div>
+                          <span className="text-muted-foreground">Privacy Accepted:</span>{' '}
+                          {new Date(user.privacy_accepted_at).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                    
+                  {/* Farmer-specific fields */}
+                  {(user.roles.includes('farmer') || user.roles.includes('lead_farmer')) && (
+                    <>
+                      {/* Farm Details */}
+                      <div>
+                        <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Farm Details</h3>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Farm Name:</span> {user.farm_name || 'N/A'}
+                          </div>
+                          {user.farm_size && (
+                            <div>
+                              <span className="text-muted-foreground">Farm Size:</span> {user.farm_size}
+                            </div>
+                          )}
+                          {user.produce_types && (
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Produce Types:</span> 
+                              <div className="mt-1 space-y-1">
+                                {(() => {
+                                  try {
+                                    const items = JSON.parse(user.produce_types);
+                                    return items.map((item: string, idx: number) => (
+                                      <div key={idx} className="text-sm">
+                                        • {item}
+                                      </div>
+                                    ));
+                                  } catch {
+                                    return <div className="text-sm">{user.produce_types}</div>;
+                                  }
+                                })()}
+                              </div>
+                            </div>
+                          )}
+                          {user.street_address && (
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Full Farm Address:</span>
+                              <div className="text-sm mt-1">
+                                {user.street_address}<br />
+                                {user.city}, {user.state} {user.zip_code}<br />
+                                {user.country || 'USA'}
+                              </div>
+                            </div>
+                          )}
+                          {user.additional_info && (
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Additional Information:</span>
+                              <div className="text-sm mt-1 whitespace-pre-wrap">{user.additional_info}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Lead Farmer Specific */}
+                      {user.roles.includes('lead_farmer') && (
+                        <div>
+                          <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Collection Point Details</h3>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            {user.collection_point_address && (
+                              <div className="col-span-2">
+                                <span className="text-muted-foreground">Collection Point Address:</span> {user.collection_point_address}
+                              </div>
+                            )}
+                            {user.delivery_days && user.delivery_days.length > 0 && (
+                              <div className="col-span-2">
+                                <span className="text-muted-foreground">Delivery Schedule:</span> {user.delivery_days.join(', ')}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Regular Farmer Specific */}
+                      {user.applied_role === 'farmer' && user.collection_point_lead_farmer_id && (
+                        <div>
+                          <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Drop-off Details</h3>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Lead Farmer / Drop-off Point:</span>{' '}
+                              {user.lead_farmer_farm_name && user.lead_farmer_name 
+                                ? `${user.lead_farmer_farm_name} (${user.lead_farmer_name})`
+                                : user.collection_point_lead_farmer_id}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                    
+                  {/* Driver-specific fields */}
+                  {user.roles.includes('driver') && (
+                    <>
+                      <div>
+                        <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Driver Details</h3>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Vehicle:</span>{' '}
+                            {[user.vehicle_type, user.vehicle_make, user.vehicle_year].filter(Boolean).join(' ') || 'N/A'}
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">License #:</span> {user.license_number || 'N/A'}
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">ZIP Code:</span> {user.zip_code || 'N/A'}
+                          </div>
+                          {user.delivery_days && user.delivery_days.length > 0 && (
+                            <div>
+                              <span className="text-muted-foreground">Availability:</span> {user.delivery_days.join(', ')}
+                            </div>
+                          )}
+                          {user.additional_info && (
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Additional Information:</span>
+                              <div className="text-sm mt-1 whitespace-pre-wrap">{user.additional_info}</div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Documents */}
+                  <div>
+                    <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Documents</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {user.driver_license_url && (
+                        <a
+                          href={user.driver_license_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Driver License
+                        </a>
+                      )}
+                      {user.insurance_url && (
+                        <a
+                          href={user.insurance_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Insurance
+                        </a>
+                      )}
+                      {user.coi_url && (
+                        <a
+                          href={user.coi_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline flex items-center gap-1"
+                        >
+                          <FileText className="h-4 w-4" />
+                          COI
+                        </a>
+                      )}
+                      {!user.driver_license_url && !user.insurance_url && !user.coi_url && (
+                        <span className="text-sm text-muted-foreground">No documents uploaded</span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="flex gap-2 pt-2">
@@ -532,11 +603,97 @@ const UserApprovals = () => {
                     {getStatusBadge(user.approval_status)}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-6">
                   <div className="p-3 bg-destructive/10 rounded-lg">
                     <p className="text-sm font-medium mb-1">Rejection Reason:</p>
                     <p className="text-sm text-muted-foreground">{user.rejected_reason}</p>
                   </div>
+
+                  {/* Contact Information */}
+                  <div>
+                    <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Contact Information</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Phone:</span> {user.phone || 'N/A'}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Applied:</span>{' '}
+                        {new Date(user.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Role & Application */}
+                  <div>
+                    <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Role & Application</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Applied Role:</span> {user.applied_role?.replace('_', ' ') || user.roles.map(r => r.replace('_', ' ')).join(', ') || 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Farmer-specific fields */}
+                  {(user.roles.includes('farmer') || user.roles.includes('lead_farmer')) && (
+                    <>
+                      {/* Farm Details */}
+                      <div>
+                        <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Farm Details</h3>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Farm Name:</span> {user.farm_name || 'N/A'}
+                          </div>
+                          {user.farm_size && (
+                            <div>
+                              <span className="text-muted-foreground">Farm Size:</span> {user.farm_size}
+                            </div>
+                          )}
+                          {user.street_address && (
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Full Farm Address:</span>
+                              <div className="text-sm mt-1">
+                                {user.street_address}<br />
+                                {user.city}, {user.state} {user.zip_code}<br />
+                                {user.country || 'USA'}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Regular Farmer Specific */}
+                      {user.applied_role === 'farmer' && user.collection_point_lead_farmer_id && (
+                        <div>
+                          <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Drop-off Details</h3>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="col-span-2">
+                              <span className="text-muted-foreground">Lead Farmer / Drop-off Point:</span>{' '}
+                              {user.lead_farmer_farm_name && user.lead_farmer_name 
+                                ? `${user.lead_farmer_farm_name} (${user.lead_farmer_name})`
+                                : user.collection_point_lead_farmer_id}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Driver-specific fields */}
+                  {user.roles.includes('driver') && (
+                    <div>
+                      <h3 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Driver Details</h3>
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Vehicle:</span>{' '}
+                          {[user.vehicle_type, user.vehicle_make, user.vehicle_year].filter(Boolean).join(' ') || 'N/A'}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">License #:</span> {user.license_number || 'N/A'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <Button
                     onClick={() => approveMutation.mutate(user.id)}
                     disabled={approveMutation.isPending}
