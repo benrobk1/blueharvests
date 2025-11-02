@@ -130,7 +130,7 @@ serve(async (req) => {
       { email: 'driver3@demo.com', password: DEMO_PASSWORD, full_name: 'James Wilson', roles: ['driver'], profile: { vehicle_type: 'Cargo Van', vehicle_make: 'Mercedes Sprinter' } },
     ];
 
-    // Add 37 consumers with full addresses and ZIP codes
+    // Add 96 consumers (48 active + 48 churned for 50% churn rate)
     const addresses = [
       { street: '101 Main St', city: 'Brooklyn', zip: '11201' },
       { street: '102 Oak Ave', city: 'Brooklyn', zip: '11201' },
@@ -147,32 +147,10 @@ serve(async (req) => {
       { street: '303 Kent Ave', city: 'Brooklyn', zip: '11206' },
       { street: '304 Wythe Ave', city: 'Brooklyn', zip: '11206' },
       { street: '305 Berry St', city: 'Brooklyn', zip: '11206' },
-      { street: '401 North 7th', city: 'Brooklyn', zip: '11211' },
-      { street: '402 North 8th', city: 'Brooklyn', zip: '11211' },
-      { street: '403 North 9th', city: 'Brooklyn', zip: '11211' },
-      { street: '404 North 10th', city: 'Brooklyn', zip: '11211' },
-      { street: '405 North 11th', city: 'Brooklyn', zip: '11211' },
-      { street: '501 Nassau Ave', city: 'Brooklyn', zip: '11222' },
-      { street: '502 McGuinness', city: 'Brooklyn', zip: '11222' },
-      { street: '503 Franklin St', city: 'Brooklyn', zip: '11222' },
-      { street: '504 West St', city: 'Brooklyn', zip: '11222' },
-      { street: '505 Calyer St', city: 'Brooklyn', zip: '11222' },
-      { street: '106 Broadway', city: 'Brooklyn', zip: '11201' },
-      { street: '107 Atlantic', city: 'Brooklyn', zip: '11201' },
-      { street: '206 Fulton St', city: 'Brooklyn', zip: '11205' },
-      { street: '207 DeKalb Ave', city: 'Brooklyn', zip: '11205' },
-      { street: '306 Lorimer St', city: 'Brooklyn', zip: '11206' },
-      { street: '307 Union Ave', city: 'Brooklyn', zip: '11206' },
-      { street: '406 Driggs Ave', city: 'Brooklyn', zip: '11211' },
-      { street: '407 Roebling', city: 'Brooklyn', zip: '11211' },
-      { street: '506 Meeker Ave', city: 'Brooklyn', zip: '11222' },
-      { street: '507 Kingsland', city: 'Brooklyn', zip: '11222' },
-      { street: '108 Clinton St', city: 'Brooklyn', zip: '11201' },
-      { street: '109 Henry St', city: 'Brooklyn', zip: '11201' },
     ];
 
-    for (let i = 1; i <= 37; i++) {
-      const addr = addresses[i - 1];
+    for (let i = 1; i <= 96; i++) {
+      const addr = addresses[i % 15];
       users.push({
         email: `consumer${i}@demo.com`,
         password: DEMO_PASSWORD,
@@ -351,19 +329,20 @@ serve(async (req) => {
       });
     }
 
-    // Step 6: Create historical orders (60 completed over last 3 months for analytics)
-    console.log('Creating historical orders...');
+    // Step 6: Create 1,025 orders total ($41,000 in sales, $40 AOV)
+    // 48 households last 30 days, 50% churn, 93% on-time, 37.2 orders/route
+    console.log('Creating orders...');
     const orderIds: string[] = [];
+    const now = new Date();
     
-    for (let i = 0; i < 60; i++) {
-      const consumerNum = (i % 37) + 1;
+    // Last 30 days: 48 active consumers, ~512 orders
+    for (let i = 0; i < 512; i++) {
+      const consumerNum = (i % 48) + 1;
       const consumerId = createdUserIds[`consumer${consumerNum}@demo.com`];
-      const daysAgo = Math.floor(Math.random() * 90) + 1; // 1-90 days ago for 3 months of data
-      const deliveryDate = new Date();
-      deliveryDate.setDate(deliveryDate.getDate() - daysAgo);
+      const daysAgo = Math.floor(Math.random() * 30);
+      const deliveryDate = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
       
-      // Random selection of 2-5 products, targeting $37 average
-      const numItems = Math.floor(Math.random() * 4) + 2;
+      const numItems = Math.floor(Math.random() * 3) + 2;
       const selectedProducts = productIds.sort(() => 0.5 - Math.random()).slice(0, numItems);
       
       let totalAmount = 0;
@@ -371,7 +350,7 @@ serve(async (req) => {
       
       for (const productId of selectedProducts) {
         const { data: product } = await supabase.from('products').select('price').eq('id', productId).single();
-        const quantity = Math.floor(Math.random() * 3) + 1;
+        const quantity = Math.floor(Math.random() * 2) + 1;
         const subtotal = product!.price * quantity;
         totalAmount += subtotal;
         
@@ -383,19 +362,15 @@ serve(async (req) => {
         });
       }
       
-      // Adjust to target ~$37 average order value
-      if (totalAmount < 25) totalAmount = 25 + Math.random() * 15;
-      totalAmount += 5.99; // delivery fee
-      const tipAmount = Math.floor(Math.random() * 10) + 2; // $2-$11
-      totalAmount += tipAmount;
+      // Target $40 AOV
+      totalAmount = 38 + Math.random() * 4; // $38-42
       
       const { data: order } = await supabase.from('orders').insert({
         consumer_id: consumerId,
         delivery_date: deliveryDate.toISOString().split('T')[0],
         total_amount: totalAmount,
-        tip_amount: tipAmount,
         status: 'delivered',
-        box_code: `B${Math.floor(i / 15) + 1}-${(i % 15) + 1}`
+        created_at: deliveryDate.toISOString()
       }).select().single();
       
       if (order) {

@@ -136,82 +136,46 @@ const LiveMap = () => {
                         </Badge>
                       </div>
 
-                      {/* SVG Map Visualization */}
-                      <svg
-                        viewBox="0 0 800 400"
-                        className="w-full h-64 bg-gradient-to-br from-primary/5 to-secondary/5 rounded-lg border"
-                      >
-                        {/* Grid background */}
-                        <defs>
-                          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="currentColor" strokeWidth="0.5" opacity="0.1" />
-                          </pattern>
-                        </defs>
-                        <rect width="800" height="400" fill="url(#grid)" />
-
-                        {/* Draw stops */}
+                      {/* Uber-style Map Visualization */}
+                      <div className="relative w-full h-64 bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-lg border overflow-hidden">
+                        {/* Driver icon (moving truck) */}
+                        {driverPos && (
+                          <div 
+                            className="absolute w-8 h-8 bg-earth rounded-full shadow-lg flex items-center justify-center transition-all duration-1000 z-20"
+                            style={{
+                              left: '45%',
+                              top: '45%',
+                              animation: 'pulse 2s ease-in-out infinite'
+                            }}
+                          >
+                            <Truck className="h-5 w-5 text-white" />
+                          </div>
+                        )}
+                        
+                        {/* Drop-off location pins */}
                         {batch.stops.map((stop: any, idx: number) => {
-                          const x = 100 + (idx % 10) * 60 + Math.random() * 20;
-                          const y = 50 + Math.floor(idx / 10) * 80 + Math.random() * 30;
-
+                          const x = 15 + (idx % 8) * 11;
+                          const y = 15 + Math.floor(idx / 8) * 25 + (Math.random() * 5);
+                          
                           return (
-                            <g key={stop.id}>
-                              <circle
-                                cx={x}
-                                cy={y}
-                                r="8"
-                                fill={
-                                  stop.status === 'delivered'
-                                    ? 'hsl(var(--success))'
+                            <div
+                              key={stop.id}
+                              className="absolute transition-all duration-500"
+                              style={{ left: `${x}%`, top: `${y}%` }}
+                            >
+                              <MapPin 
+                                className={`h-6 w-6 ${
+                                  stop.status === 'delivered' 
+                                    ? 'text-success fill-success/20' 
                                     : stop.status === 'in_progress'
-                                    ? 'hsl(var(--primary))'
-                                    : 'hsl(var(--muted))'
-                                }
-                                opacity={stop.status === 'pending' ? 0.5 : 1}
+                                    ? 'text-primary fill-primary/20 animate-bounce'
+                                    : 'text-muted-foreground fill-muted/20'
+                                }`}
                               />
-                              <text
-                                x={x}
-                                y={y + 3}
-                                textAnchor="middle"
-                                fontSize="10"
-                                fill="white"
-                                fontWeight="bold"
-                              >
-                                {stop.sequence_number}
-                              </text>
-                            </g>
+                            </div>
                           );
                         })}
-
-                        {/* Draw driver position */}
-                        {driverPos && (
-                          <g>
-                            <circle
-                              cx={300 + Math.random() * 200}
-                              cy={200 + Math.random() * 100}
-                              r="12"
-                              fill="hsl(var(--earth))"
-                              stroke="white"
-                              strokeWidth="2"
-                            >
-                              <animate
-                                attributeName="opacity"
-                                values="1;0.6;1"
-                                dur="2s"
-                                repeatCount="indefinite"
-                              />
-                            </circle>
-                            <text
-                              x={300 + Math.random() * 200}
-                              y={205 + Math.random() * 100}
-                              textAnchor="middle"
-                              fontSize="16"
-                            >
-                              🚚
-                            </text>
-                          </g>
-                        )}
-                      </svg>
+                      </div>
 
                       {/* Legend */}
                       <div className="flex items-center gap-4 mt-4 text-xs">

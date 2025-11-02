@@ -88,11 +88,18 @@ const FarmProfileView = () => {
         .eq("orders.status", "delivered");
 
       if (orderItems) {
-        const totalSales = orderItems.reduce((sum, item) => sum + Number(item.subtotal), 0);
+        // Calculate from payouts instead of order_items for accurate farmer revenue
+        const { data: farmerPayouts } = await supabase
+          .from('payouts')
+          .select('amount, order_id')
+          .eq('recipient_type', 'farmer')
+          .in('order_id', Array.from(new Set(orderItems.map(item => item.order_id))));
+
+        const totalSales = farmerPayouts?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
         const uniqueOrders = new Set(orderItems.map(item => item.order_id));
         const totalOrders = uniqueOrders.size;
-        // Estimate families fed (assuming 1 order feeds 1 family for ~3 meals)
-        const familiesFed = Math.floor(totalOrders * 3);
+        // Estimate meals served: 1,895 meals / 1,025 orders ≈ 1.85 meals per order
+        const familiesFed = Math.floor(totalOrders * 1.85);
 
         setMetrics({ totalSales, totalOrders, familiesFed });
       }
