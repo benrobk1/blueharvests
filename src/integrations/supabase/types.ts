@@ -56,6 +56,36 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_invitations: {
+        Row: {
+          created_at: string | null
+          email: string
+          expires_at: string
+          id: string
+          invitation_token: string
+          invited_by: string | null
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          expires_at: string
+          id?: string
+          invitation_token: string
+          invited_by?: string | null
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          expires_at?: string
+          id?: string
+          invitation_token?: string
+          invited_by?: string | null
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       approval_history: {
         Row: {
           approved_by: string | null
@@ -1704,6 +1734,7 @@ export type Database = {
       }
     }
     Functions: {
+      cleanup_expired_invitations: { Args: never; Returns: undefined }
       cleanup_old_rate_limits: { Args: never; Returns: undefined }
       generate_box_code: {
         Args: { p_batch_id: string; p_stop_sequence: number }

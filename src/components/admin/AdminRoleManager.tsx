@@ -44,11 +44,21 @@ export const AdminRoleManager = () => {
         .from('profiles')
         .select('id, full_name')
         .eq('email', userEmail)
-        .single();
+        .maybeSingle();
 
-      if (profileError) throw new Error('User not found');
+      // If user doesn't exist, send invitation instead
+      if (!profile) {
+        const { data, error } = await supabase.functions.invoke('invite-admin', {
+          body: { email: userEmail },
+        });
 
-      // Check if already admin
+        if (error) throw error;
+        if (data.error) throw new Error(data.error);
+
+        return { full_name: userEmail, isInvitation: true };
+      }
+
+      // User exists - check if already admin
       const { data: existing } = await supabase
         .from('user_roles')
         .select('id')
@@ -72,13 +82,20 @@ export const AdminRoleManager = () => {
         _new_value: { role: 'admin' },
       });
       
-      return profile;
+      return { ...profile, isInvitation: false };
     },
-    onSuccess: (profile) => {
-      toast({
-        title: 'Admin role assigned',
-        description: `${profile.full_name} is now an administrator`,
-      });
+    onSuccess: (profile: any) => {
+      if (profile.isInvitation) {
+        toast({
+          title: 'Invitation sent',
+          description: `An invitation email has been sent to ${profile.full_name}`,
+        });
+      } else {
+        toast({
+          title: 'Admin role assigned',
+          description: `${profile.full_name} is now an administrator`,
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['admins'] });
       setEmail("");
     },

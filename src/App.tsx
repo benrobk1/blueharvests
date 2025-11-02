@@ -12,6 +12,7 @@ import ConsumerAuth from "./pages/auth/ConsumerAuth";
 import DriverAuth from "./pages/auth/DriverAuth";
 import FarmerAuth from "./pages/auth/FarmerAuth";
 import AdminAuth from "./pages/auth/AdminAuth";
+import AcceptInvitation from "./pages/admin/AcceptInvitation";
 import Shop from "./pages/consumer/Shop";
 import Checkout from "./pages/consumer/Checkout";
 import DriverDashboard from "./pages/driver/Dashboard";
@@ -249,6 +250,8 @@ const AppContent = () => {
               <TaxDocuments />
             </RoleGate>
           } />
+          
+          <Route path="/admin/accept-invitation" element={<AcceptInvitation />} />
           
           <Route path="/farm/:farmId" element={<FarmProfileView />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
