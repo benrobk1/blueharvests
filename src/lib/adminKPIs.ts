@@ -17,38 +17,44 @@ export async function fetchKPIs(demoModeActive: boolean = false): Promise<KPIDat
   const sixtyDaysAgo = new Date();
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-  // Build query to filter based on demo mode
-  const buildOrderQuery = (query: any) => {
-    if (demoModeActive) {
-      // When demo mode is ON, ONLY show demo users
-      return query.in('consumer_id', `(
-        SELECT id FROM profiles WHERE email LIKE '%@demo.com'
-      )`);
-    } else {
-      // When demo mode is OFF, exclude demo users
-      return query.not('consumer_id', 'in', `(
-        SELECT id FROM profiles WHERE email LIKE '%@demo.com'
-      )`);
-    }
-  };
+  // Step 1: Get demo/non-demo profile IDs
+  let demoFilterIds: string[] = [];
+  if (demoModeActive) {
+    const { data: demoProfiles } = await supabase
+      .from('profiles')
+      .select('id')
+      .ilike('email', '%@demo.com');
+    demoFilterIds = demoProfiles?.map(p => p.id) || [];
+  } else {
+    const { data: allProfiles } = await supabase
+      .from('profiles')
+      .select('id, email');
+    demoFilterIds = allProfiles?.filter(p => !p.email.endsWith('@demo.com')).map(p => p.id) || [];
+  }
+
+  if (demoFilterIds.length === 0) {
+    // No matching profiles, return zeros
+    return {
+      households: 0, householdsTrend: 0, aov: 0, onTimePercent: 0,
+      farmerShare: 0, driverHourly: 0, ordersPerRoute: 0, churnRate: 0,
+    };
+  }
 
   // Households: Distinct consumers with delivered orders in last 30 days
-  let recentOrdersQuery = supabase
+  const { data: recentOrders } = await supabase
     .from('orders')
     .select('consumer_id, status, created_at')
     .eq('status', 'delivered')
-    .gte('created_at', thirtyDaysAgo.toISOString());
-  
-  const { data: recentOrders } = await buildOrderQuery(recentOrdersQuery);
+    .gte('created_at', thirtyDaysAgo.toISOString())
+    .in('consumer_id', demoFilterIds);
 
-  let priorOrdersQuery = supabase
+  const { data: priorOrders } = await supabase
     .from('orders')
     .select('consumer_id')
     .eq('status', 'delivered')
     .gte('created_at', sixtyDaysAgo.toISOString())
-    .lt('created_at', thirtyDaysAgo.toISOString());
-    
-  const { data: priorOrders } = await buildOrderQuery(priorOrdersQuery);
+    .lt('created_at', thirtyDaysAgo.toISOString())
+    .in('consumer_id', demoFilterIds);
 
   const households = new Set(recentOrders?.map(o => o.consumer_id) || []).size;
   const priorHouseholds = new Set(priorOrders?.map(o => o.consumer_id) || []).size;
@@ -62,22 +68,20 @@ export async function fetchKPIs(demoModeActive: boolean = false): Promise<KPIDat
   const lastMonthEnd = new Date();
   lastMonthEnd.setDate(1); // First day of current month
   
-  let lastMonthOrdersQuery = supabase
+  const { data: lastMonthOrders } = await supabase
     .from('orders')
     .select('consumer_id')
     .eq('status', 'delivered')
     .gte('created_at', lastMonthStart.toISOString())
-    .lt('created_at', lastMonthEnd.toISOString());
-    
-  const { data: lastMonthOrders } = await buildOrderQuery(lastMonthOrdersQuery);
+    .lt('created_at', lastMonthEnd.toISOString())
+    .in('consumer_id', demoFilterIds);
   
-  let currentMonthOrdersQuery = supabase
+  const { data: currentMonthOrders } = await supabase
     .from('orders')
     .select('consumer_id')
     .eq('status', 'delivered')
-    .gte('created_at', lastMonthEnd.toISOString());
-    
-  const { data: currentMonthOrders } = await buildOrderQuery(currentMonthOrdersQuery);
+    .gte('created_at', lastMonthEnd.toISOString())
+    .in('consumer_id', demoFilterIds);
   
   const lastMonthSet = new Set(lastMonthOrders?.map(o => o.consumer_id) || []);
   const currentMonthSet = new Set(currentMonthOrders?.map(o => o.consumer_id) || []);
@@ -91,22 +95,23 @@ export async function fetchKPIs(demoModeActive: boolean = false): Promise<KPIDat
     : 0;
 
   // AOV: Average Order Value
-  let orderTotalsQuery = supabase
+  const { data: orderTotals } = await supabase
     .from('orders')
-    .select('total_amount')
-    .gte('created_at', thirtyDaysAgo.toISOString());
-    
-  const { data: orderTotals } = await buildOrderQuery(orderTotalsQuery);
+    .select('total_amount, id')
+    .gte('created_at', thirtyDaysAgo.toISOString())
+    .in('consumer_id', demoFilterIds);
 
   const totalRevenue = orderTotals?.reduce((sum, o) => sum + Number(o.total_amount), 0) || 0;
   const aov = orderTotals && orderTotals.length > 0 ? totalRevenue / orderTotals.length : 0;
+  const demoOrderIds = orderTotals?.map(o => o.id) || [];
 
   // On-Time Delivery %
   const { data: completedStops } = await supabase
     .from('batch_stops')
-    .select('estimated_arrival, actual_arrival, status')
+    .select('estimated_arrival, actual_arrival, status, order_id')
     .eq('status', 'delivered')
-    .gte('created_at', thirtyDaysAgo.toISOString());
+    .gte('created_at', thirtyDaysAgo.toISOString())
+    .in('order_id', demoOrderIds.length > 0 ? demoOrderIds : ['00000000-0000-0000-0000-000000000000']);
 
   const onTimeCount = completedStops?.filter(stop => {
     if (!stop.estimated_arrival || !stop.actual_arrival) return false;
@@ -121,7 +126,8 @@ export async function fetchKPIs(demoModeActive: boolean = false): Promise<KPIDat
   const { data: payouts } = await supabase
     .from('payouts')
     .select('amount, recipient_type, order_id')
-    .gte('created_at', thirtyDaysAgo.toISOString());
+    .gte('created_at', thirtyDaysAgo.toISOString())
+    .in('order_id', demoOrderIds.length > 0 ? demoOrderIds : ['00000000-0000-0000-0000-000000000000']);
 
   const farmerPayouts = payouts?.filter(p => p.recipient_type === 'farmer')
     .reduce((sum, p) => sum + Number(p.amount), 0) || 0;
@@ -139,7 +145,8 @@ export async function fetchKPIs(demoModeActive: boolean = false): Promise<KPIDat
       )
     `)
     .eq('recipient_type', 'driver')
-    .gte('created_at', thirtyDaysAgo.toISOString());
+    .gte('created_at', thirtyDaysAgo.toISOString())
+    .in('order_id', demoOrderIds.length > 0 ? demoOrderIds : ['00000000-0000-0000-0000-000000000000']);
 
   const totalDriverPay = driverPayoutData?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
 
@@ -156,8 +163,9 @@ export async function fetchKPIs(demoModeActive: boolean = false): Promise<KPIDat
   // Orders per Route (Density)
   const { data: batchStops } = await supabase
     .from('batch_stops')
-    .select('delivery_batch_id')
-    .gte('created_at', thirtyDaysAgo.toISOString());
+    .select('delivery_batch_id, order_id')
+    .gte('created_at', thirtyDaysAgo.toISOString())
+    .in('order_id', demoOrderIds.length > 0 ? demoOrderIds : ['00000000-0000-0000-0000-000000000000']);
 
   const batchStopCounts = batchStops?.reduce((acc, stop) => {
     acc[stop.delivery_batch_id] = (acc[stop.delivery_batch_id] || 0) + 1;

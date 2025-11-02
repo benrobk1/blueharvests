@@ -8,6 +8,7 @@ import { DemoModeProvider, useDemoMode } from "@/contexts/DemoModeContext";
 import { RoleGate } from "@/components/RoleGate";
 import { DemoModeBanner } from "@/components/admin/DemoModeBanner";
 import { InstallPromptToast } from "@/components/InstallPromptToast";
+import React from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import ConsumerAuth from "./pages/auth/ConsumerAuth";
@@ -254,6 +255,13 @@ const AppContent = () => {
           <Route path="/admin/tax-documents" element={
             <RoleGate roles={['admin']}>
               <TaxDocuments />
+            </RoleGate>
+          } />
+          
+          <Route path="/demo/live-map" element={
+            <RoleGate roles={['admin']}>
+              {/* Dynamic import to keep bundle size small */}
+              {React.createElement(React.lazy(() => import('./pages/demo/LiveMap')))}
             </RoleGate>
           } />
           

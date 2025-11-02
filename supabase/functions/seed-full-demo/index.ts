@@ -94,8 +94,32 @@ serve(async (req) => {
     
     const users: DemoUser[] = [
       { email: 'admin@demo.com', password: DEMO_PASSWORD, full_name: 'Demo Admin', roles: ['admin'] },
-      { email: 'leadfarmer@demo.com', password: DEMO_PASSWORD, full_name: 'Sarah Johnson', roles: ['lead_farmer'], profile: { farm_name: 'Valley Collection Point', collection_point_address: '123 Farm Road, Hudson Valley, NY 10001' } },
-      { email: 'farmer1@demo.com', password: DEMO_PASSWORD, full_name: 'Mike Thompson', roles: ['farmer'], profile: { farm_name: 'Thompson Family Farm', location: 'Hudson Valley, NY', description: 'Organic vegetables and fruits' } },
+      { 
+        email: 'leadfarmer@demo.com', 
+        password: DEMO_PASSWORD, 
+        full_name: 'Sarah Johnson', 
+        roles: ['lead_farmer'], 
+        profile: { 
+          farm_name: 'Valley Collection Point', 
+          collection_point_address: '123 Farm Road, Hudson Valley, NY 10001',
+          street_address: '123 Farm Road',
+          city: 'Hudson Valley',
+          state: 'NY',
+          zip_code: '10001'
+        } 
+      },
+      { 
+        email: 'farmer1@demo.com', 
+        password: DEMO_PASSWORD, 
+        full_name: 'Mike Thompson', 
+        roles: ['farmer'], 
+        profile: { 
+          farm_name: 'Thompson Family Farm', 
+          location: 'Hudson Valley, NY', 
+          description: 'Organic vegetables and fruits',
+          bio: 'We traded our city shoes for muddy boots and haven\'t stopped smiling since. Every tomato with a funny nose becomes a mascot before it becomes dinner.'
+        } 
+      },
       { email: 'farmer2@demo.com', password: DEMO_PASSWORD, full_name: 'Lisa Chen', roles: ['farmer'], profile: { farm_name: 'Chen Organic Gardens', location: 'Catskills, NY', description: 'Asian vegetables and herbs' } },
       { email: 'farmer3@demo.com', password: DEMO_PASSWORD, full_name: 'Carlos Rodriguez', roles: ['farmer'], profile: { farm_name: 'Rodriguez Dairy', location: 'Finger Lakes, NY', description: 'Fresh dairy and cheese' } },
       { email: 'farmer4@demo.com', password: DEMO_PASSWORD, full_name: 'Emily White', roles: ['farmer'], profile: { farm_name: 'White Acres', location: 'Adirondacks, NY', description: 'Free-range eggs and poultry' } },
@@ -106,19 +130,63 @@ serve(async (req) => {
       { email: 'driver3@demo.com', password: DEMO_PASSWORD, full_name: 'James Wilson', roles: ['driver'], profile: { vehicle_type: 'Cargo Van', vehicle_make: 'Mercedes Sprinter' } },
     ];
 
-    // Add 12 consumers
-    for (let i = 1; i <= 12; i++) {
+    // Add 37 consumers with full addresses and ZIP codes
+    const addresses = [
+      { street: '101 Main St', city: 'Brooklyn', zip: '11201' },
+      { street: '102 Oak Ave', city: 'Brooklyn', zip: '11201' },
+      { street: '103 Elm St', city: 'Brooklyn', zip: '11201' },
+      { street: '104 Pine Rd', city: 'Brooklyn', zip: '11201' },
+      { street: '105 Maple Dr', city: 'Brooklyn', zip: '11201' },
+      { street: '201 Park Ave', city: 'Brooklyn', zip: '11205' },
+      { street: '202 Court St', city: 'Brooklyn', zip: '11205' },
+      { street: '203 Smith St', city: 'Brooklyn', zip: '11205' },
+      { street: '204 Jay St', city: 'Brooklyn', zip: '11205' },
+      { street: '205 Hoyt St', city: 'Brooklyn', zip: '11205' },
+      { street: '301 Bedford Ave', city: 'Brooklyn', zip: '11206' },
+      { street: '302 Grand St', city: 'Brooklyn', zip: '11206' },
+      { street: '303 Kent Ave', city: 'Brooklyn', zip: '11206' },
+      { street: '304 Wythe Ave', city: 'Brooklyn', zip: '11206' },
+      { street: '305 Berry St', city: 'Brooklyn', zip: '11206' },
+      { street: '401 North 7th', city: 'Brooklyn', zip: '11211' },
+      { street: '402 North 8th', city: 'Brooklyn', zip: '11211' },
+      { street: '403 North 9th', city: 'Brooklyn', zip: '11211' },
+      { street: '404 North 10th', city: 'Brooklyn', zip: '11211' },
+      { street: '405 North 11th', city: 'Brooklyn', zip: '11211' },
+      { street: '501 Nassau Ave', city: 'Brooklyn', zip: '11222' },
+      { street: '502 McGuinness', city: 'Brooklyn', zip: '11222' },
+      { street: '503 Franklin St', city: 'Brooklyn', zip: '11222' },
+      { street: '504 West St', city: 'Brooklyn', zip: '11222' },
+      { street: '505 Calyer St', city: 'Brooklyn', zip: '11222' },
+      { street: '106 Broadway', city: 'Brooklyn', zip: '11201' },
+      { street: '107 Atlantic', city: 'Brooklyn', zip: '11201' },
+      { street: '206 Fulton St', city: 'Brooklyn', zip: '11205' },
+      { street: '207 DeKalb Ave', city: 'Brooklyn', zip: '11205' },
+      { street: '306 Lorimer St', city: 'Brooklyn', zip: '11206' },
+      { street: '307 Union Ave', city: 'Brooklyn', zip: '11206' },
+      { street: '406 Driggs Ave', city: 'Brooklyn', zip: '11211' },
+      { street: '407 Roebling', city: 'Brooklyn', zip: '11211' },
+      { street: '506 Meeker Ave', city: 'Brooklyn', zip: '11222' },
+      { street: '507 Kingsland', city: 'Brooklyn', zip: '11222' },
+      { street: '108 Clinton St', city: 'Brooklyn', zip: '11201' },
+      { street: '109 Henry St', city: 'Brooklyn', zip: '11201' },
+    ];
+
+    for (let i = 1; i <= 37; i++) {
+      const addr = addresses[i - 1];
       users.push({
         email: `consumer${i}@demo.com`,
         password: DEMO_PASSWORD,
         full_name: `Consumer ${i}`,
         roles: ['consumer'],
         profile: {
-          street_address: `${100 + i} Main St`,
-          city: 'New York',
+          street_address: addr.street,
+          city: addr.city,
           state: 'NY',
-          zip_code: i <= 4 ? '10001' : i <= 8 ? '10002' : '10003',
+          zip_code: addr.zip,
           phone: `555-010${i.toString().padStart(2, '0')}`,
+          delivery_address: `${addr.street}, ${addr.city}, NY ${addr.zip}`,
+          terms_accepted_at: new Date().toISOString(),
+          privacy_accepted_at: new Date().toISOString(),
         }
       });
     }
@@ -175,7 +243,8 @@ serve(async (req) => {
         farmer_id: userId,
         farm_name: user.profile?.farm_name,
         location: user.profile?.location,
-        description: user.profile?.description
+        description: user.profile?.description,
+        bio: user.profile?.bio || null
       }).select().single();
 
       if (farmProfile) {
@@ -263,14 +332,14 @@ serve(async (req) => {
       });
     }
 
-    // Step 5: Create market configs
+    // Step 5: Create market configs for all demo ZIP codes
     console.log('Creating market configs...');
     const marketConfigs = [
-      { zip_code: '10001', delivery_fee: 5.99, minimum_order: 25, delivery_days: ['Wednesday', 'Saturday'] },
-      { zip_code: '10002', delivery_fee: 6.99, minimum_order: 30, delivery_days: ['Wednesday', 'Saturday'] },
-      { zip_code: '10003', delivery_fee: 7.99, minimum_order: 35, delivery_days: ['Wednesday', 'Saturday'] },
-      { zip_code: '10010', delivery_fee: 8.99, minimum_order: 30, delivery_days: ['Wednesday', 'Saturday'] },
-      { zip_code: '10011', delivery_fee: 9.99, minimum_order: 35, delivery_days: ['Wednesday', 'Saturday'] },
+      { zip_code: '11201', delivery_fee: 5.99, minimum_order: 25, delivery_days: ['Wednesday', 'Saturday'] },
+      { zip_code: '11205', delivery_fee: 5.99, minimum_order: 25, delivery_days: ['Wednesday', 'Saturday'] },
+      { zip_code: '11206', delivery_fee: 5.99, minimum_order: 25, delivery_days: ['Wednesday', 'Saturday'] },
+      { zip_code: '11211', delivery_fee: 5.99, minimum_order: 25, delivery_days: ['Wednesday', 'Saturday'] },
+      { zip_code: '11222', delivery_fee: 5.99, minimum_order: 25, delivery_days: ['Wednesday', 'Saturday'] },
     ];
 
     for (const config of marketConfigs) {
@@ -282,18 +351,18 @@ serve(async (req) => {
       });
     }
 
-    // Step 6: Create historical orders (30 completed)
+    // Step 6: Create historical orders (60 completed over last 3 months for analytics)
     console.log('Creating historical orders...');
     const orderIds: string[] = [];
     
-    for (let i = 0; i < 30; i++) {
-      const consumerNum = (i % 12) + 1;
+    for (let i = 0; i < 60; i++) {
+      const consumerNum = (i % 37) + 1;
       const consumerId = createdUserIds[`consumer${consumerNum}@demo.com`];
-      const daysAgo = Math.floor(Math.random() * 14) + 1; // 1-14 days ago
+      const daysAgo = Math.floor(Math.random() * 90) + 1; // 1-90 days ago for 3 months of data
       const deliveryDate = new Date();
       deliveryDate.setDate(deliveryDate.getDate() - daysAgo);
       
-      // Random selection of 2-5 products
+      // Random selection of 2-5 products, targeting $37 average
       const numItems = Math.floor(Math.random() * 4) + 2;
       const selectedProducts = productIds.sort(() => 0.5 - Math.random()).slice(0, numItems);
       
@@ -314,6 +383,8 @@ serve(async (req) => {
         });
       }
       
+      // Adjust to target ~$37 average order value
+      if (totalAmount < 25) totalAmount = 25 + Math.random() * 15;
       totalAmount += 5.99; // delivery fee
       const tipAmount = Math.floor(Math.random() * 10) + 2; // $2-$11
       totalAmount += tipAmount;
@@ -394,37 +465,67 @@ serve(async (req) => {
     console.log('Creating delivery batches...');
     const today = new Date().toISOString().split('T')[0];
     
-    // Batch 1: 37 stops for driver1
+    // Batch 1: Exactly 37 stops for driver1 with demo addresses
     const { data: batch1 } = await supabase.from('delivery_batches').insert({
       lead_farmer_id: leadFarmerId,
       driver_id: createdUserIds['driver1@demo.com'],
       delivery_date: today,
       batch_number: 1,
       estimated_duration_minutes: 450,
-      zip_codes: ['10001', '10002'],
+      zip_codes: ['11201', '11205', '11206', '11211', '11222'],
       status: 'in_progress'
     }).select().single();
 
     if (batch1) {
-      // Create 37 stops (use first 37 completed orders)
-      for (let i = 0; i < Math.min(37, orderIds.length); i++) {
-        const orderId = orderIds[i];
-        const status = i < 10 ? 'delivered' : i < 15 ? 'in_progress' : 'pending';
-        const addressVisible = i < 18; // First 18 visible
+      const now = new Date();
+      // Create exactly 37 stops using consumer addresses
+      for (let i = 0; i < 37; i++) {
+        const consumerNum = i + 1;
+        const consumerId = createdUserIds[`consumer${consumerNum}@demo.com`];
+        const addr = addresses[i];
+        const status = i < 10 ? 'delivered' : i < 12 ? 'in_progress' : 'pending';
+        const addressVisible = i < 15; // First 15 visible
+        
+        // Create order for this stop if not enough historical orders
+        let orderId = orderIds[i];
+        if (!orderId) {
+          const selectedProducts = productIds.sort(() => 0.5 - Math.random()).slice(0, 3);
+          let amount = 0;
+          for (const pid of selectedProducts) {
+            const { data: p } = await supabase.from('products').select('price').eq('id', pid).single();
+            amount += Number(p!.price) * 2;
+          }
+          amount += 5.99 + 5; // delivery + tip
+          
+          const { data: newOrder } = await supabase.from('orders').insert({
+            consumer_id: consumerId,
+            delivery_date: today,
+            total_amount: amount,
+            tip_amount: 5,
+            status: 'pending',
+            box_code: `B1-${i + 1}`
+          }).select().single();
+          orderId = newOrder!.id;
+          orderIds.push(orderId);
+        }
+        
+        // Stagger estimated arrival every 10 minutes
+        const estimatedArrival = new Date(now.getTime() + (i * 10 * 60 * 1000));
         
         await supabase.from('batch_stops').insert({
           delivery_batch_id: batch1.id,
           order_id: orderId,
           sequence_number: i + 1,
-          address: `${100 + i} Main St, New York, NY 10001`,
-          street_address: `${100 + i} Main St`,
-          city: 'New York',
+          address: `${addr.street}, ${addr.city}, NY ${addr.zip}`,
+          street_address: addr.street,
+          city: addr.city,
           state: 'NY',
-          zip_code: i < 20 ? '10001' : '10002',
+          zip_code: addr.zip,
           status,
           address_visible_at: addressVisible ? new Date().toISOString() : null,
-          latitude: 40.7128 + (Math.random() * 0.1),
-          longitude: -74.0060 + (Math.random() * 0.1)
+          estimated_arrival: estimatedArrival.toISOString(),
+          latitude: 40.6782 + (Math.random() * 0.05),
+          longitude: -73.9442 + (Math.random() * 0.05)
         });
       }
     }
@@ -461,7 +562,7 @@ serve(async (req) => {
       }
     }
 
-    // Step 9: Create delivery ratings and tips
+    // Step 9: Create delivery ratings
     console.log('Creating ratings...');
     const driver1Id = createdUserIds['driver1@demo.com'];
     const driver2Id = createdUserIds['driver2@demo.com'];
@@ -473,20 +574,20 @@ serve(async (req) => {
       { rating: 5, feedback: 'Great experience!' },
       { rating: 5, feedback: 'Will order again!' },
       { rating: 4, feedback: 'Nice delivery.' },
+      { rating: 5, feedback: 'Always on time!' },
+      { rating: 5, feedback: 'Best delivery service!' },
     ];
     
-    for (let i = 0; i < 25; i++) {
-      if (i < orderIds.length) {
-        const driverId = i % 2 === 0 ? driver1Id : driver2Id;
-        const rating = ratings[i % ratings.length];
-        
-        await supabase.from('delivery_ratings').insert({
-          order_id: orderIds[i],
-          driver_id: driverId,
-          rating: rating.rating,
-          feedback: rating.feedback
-        });
-      }
+    for (let i = 0; i < Math.min(30, orderIds.length); i++) {
+      const driverId = i % 2 === 0 ? driver1Id : driver2Id;
+      const rating = ratings[i % ratings.length];
+      
+      await supabase.from('delivery_ratings').insert({
+        order_id: orderIds[i],
+        driver_id: driverId,
+        rating: rating.rating,
+        feedback: rating.feedback
+      });
     }
 
     // Step 10: Create credits and referrals
@@ -603,23 +704,39 @@ serve(async (req) => {
       }
     ]);
 
-    // Step 14: Create payouts
+    // Step 14: Create payouts for farmers and drivers over last 30 days
     console.log('Creating payouts...');
-    for (let i = 0; i < 15; i++) {
-      if (i < orderIds.length) {
-        const orderId = orderIds[i];
-        const farmerEmail = `farmer${(i % 6) + 1}@demo.com`;
-        const farmerId = createdUserIds[farmerEmail];
-        
-        await supabase.from('payouts').insert({
-          order_id: orderId,
-          recipient_id: farmerId,
-          recipient_type: 'farmer',
-          amount: 50 + (i * 10),
-          status: i < 10 ? 'completed' : 'pending',
-          completed_at: i < 10 ? new Date().toISOString() : null
-        });
-      }
+    for (let i = 0; i < Math.min(40, orderIds.length); i++) {
+      const orderId = orderIds[i];
+      const farmerEmail = `farmer${(i % 6) + 1}@demo.com`;
+      const farmerId = createdUserIds[farmerEmail];
+      const driverId = i % 2 === 0 ? driver1Id : driver2Id;
+      
+      const daysAgo = Math.floor(Math.random() * 30);
+      const payoutDate = new Date();
+      payoutDate.setDate(payoutDate.getDate() - daysAgo);
+      
+      // Farmer payout
+      await supabase.from('payouts').insert({
+        order_id: orderId,
+        recipient_id: farmerId,
+        recipient_type: 'farmer',
+        amount: 25 + (Math.random() * 30),
+        status: 'completed',
+        completed_at: payoutDate.toISOString(),
+        created_at: payoutDate.toISOString()
+      });
+      
+      // Driver payout
+      await supabase.from('payouts').insert({
+        order_id: orderId,
+        recipient_id: driverId,
+        recipient_type: 'driver',
+        amount: 15 + (Math.random() * 10),
+        status: 'completed',
+        completed_at: payoutDate.toISOString(),
+        created_at: payoutDate.toISOString()
+      });
     }
 
     console.log('Demo data seeding completed successfully!');
@@ -630,10 +747,12 @@ serve(async (req) => {
       summary: {
         users_created: users.length,
         products_created: productIds.length,
-        orders_created: 38,
+        orders_created: orderIds.length,
         batches_created: 2,
-        ratings_created: 25,
-        payouts_created: 15
+        ratings_created: 30,
+        payouts_created: 80,
+        credits_awarded: 45,
+        subscriptions_created: 3
       }
     }), {
       status: 200,

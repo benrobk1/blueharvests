@@ -229,20 +229,21 @@ const AdminDashboard = () => {
         </Link>
 
         {/* Live Delivery Tracking */}
-        <Card className="border-2">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Live Delivery Tracking</CardTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {metrics?.activeDeliveries || 0} drivers currently on route
-              </p>
-            </div>
-            <Badge variant="default" className="bg-success">
-              <MapPin className="h-3 w-3 mr-1" />
-              Live
-            </Badge>
-          </CardHeader>
-          <CardContent>
+        <Link to={isDemoMode ? "/demo/live-map" : "#"} className={!isDemoMode ? "pointer-events-none" : ""}>
+          <Card className="border-2 hover:shadow-md transition-shadow cursor-pointer">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Live Delivery Tracking</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {metrics?.activeDeliveries || 0} drivers currently on route
+                </p>
+              </div>
+              <Badge variant="default" className="bg-success">
+                <MapPin className="h-3 w-3 mr-1" />
+                Live
+              </Badge>
+            </CardHeader>
+            <CardContent>
             {driversLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 w-full" />)}
@@ -274,6 +275,7 @@ const AdminDashboard = () => {
             )}
           </CardContent>
         </Card>
+        </Link>
 
         {/* Recent Activity */}
         <div className="grid gap-6 lg:grid-cols-2">

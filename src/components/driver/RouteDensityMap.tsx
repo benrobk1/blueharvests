@@ -131,13 +131,6 @@ export const RouteDensityMap = ({ batchId }: RouteDensityMapProps) => {
               <p className="text-3xl font-bold text-foreground">{totalCount}</p>
               <span className="text-sm text-muted-foreground">stops</span>
             </div>
-            <p className="text-xs text-muted-foreground">Target: 35-40 stops</p>
-            {densityStatus === 'excellent' && (
-              <Badge variant="default" className="bg-success">Optimal</Badge>
-            )}
-            {densityStatus === 'warning' && (
-              <Badge variant="outline" className="text-warning">Below Target</Badge>
-            )}
           </div>
 
           <div className="space-y-1">
@@ -151,14 +144,6 @@ export const RouteDensityMap = ({ batchId }: RouteDensityMapProps) => {
             </p>
           </div>
         </div>
-
-        {/* Info alert */}
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            High-density routes = better earnings. Target: $28/hr average
-          </AlertDescription>
-        </Alert>
       </CardContent>
     </Card>
   );

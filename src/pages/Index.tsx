@@ -38,13 +38,6 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-earth">
       {/* Demo Mode Banner appears here when active via App.tsx */}
-      {isDemoMode && (
-        <div className="bg-primary/5 border-b border-primary/10 py-2">
-          <p className="text-center text-sm text-muted-foreground">
-            👆 Use the quick login buttons above to switch between demo accounts instantly
-          </p>
-        </div>
-      )}
       
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-12">

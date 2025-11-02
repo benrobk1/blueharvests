@@ -7,18 +7,62 @@ import { formatMoney } from '@/lib/formatMoney';
 import { DollarSign, TrendingUp, Users, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { useDemoMode } from '@/contexts/DemoModeContext';
 
 const COLORS = ['#10b981', '#3b82f6'];
 
 const AnalyticsAndFinancials = () => {
   const navigate = useNavigate();
+  const { isDemoMode } = useDemoMode();
+  
   const { data, isLoading } = useQuery({
-    queryKey: ['analytics-financials'],
+    queryKey: ['analytics-financials', isDemoMode],
     queryFn: async () => {
-      const { data: profiles } = await supabase.from('profiles').select('id, acquisition_channel, created_at');
-      const { data: orders } = await supabase.from('orders').select('consumer_id, total_amount, created_at, status').eq('status', 'delivered');
-      const { data: payouts } = await supabase.from('payouts').select('amount, status, recipient_type, created_at');
-      const { data: fees } = await supabase.from('transaction_fees').select('amount, fee_type');
+      // Step 1: Get demo/non-demo profile IDs
+      let filterIds: string[] = [];
+      if (isDemoMode) {
+        const { data: demoProfiles } = await supabase
+          .from('profiles')
+          .select('id')
+          .ilike('email', '%@demo.com');
+        filterIds = demoProfiles?.map(p => p.id) || [];
+      } else {
+        const { data: allProfiles } = await supabase
+          .from('profiles')
+          .select('id, email');
+        filterIds = allProfiles?.filter(p => !p.email.endsWith('@demo.com')).map(p => p.id) || [];
+      }
+
+      if (filterIds.length === 0) {
+        return {
+          totalRevenue: 0, totalPayouts: 0, platformFees: 0, netProfit: 0, avgLTV: 0, monthlyActiveCustomers: 0,
+          monthlyTrends: [], payoutBreakdown: [], cacByChannel: [], ordersCount: 0, totalCustomers: 0
+        };
+      }
+
+      // Step 2: Fetch filtered data
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, acquisition_channel, created_at')
+        .in('id', filterIds);
+        
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('consumer_id, total_amount, created_at, status, id')
+        .eq('status', 'delivered')
+        .in('consumer_id', filterIds);
+        
+      const orderIds = orders?.map(o => o.id) || [];
+      
+      const { data: payouts } = await supabase
+        .from('payouts')
+        .select('amount, status, recipient_type, created_at, order_id')
+        .in('order_id', orderIds.length > 0 ? orderIds : ['00000000-0000-0000-0000-000000000000']);
+        
+      const { data: fees } = await supabase
+        .from('transaction_fees')
+        .select('amount, fee_type, order_id')
+        .in('order_id', orderIds.length > 0 ? orderIds : ['00000000-0000-0000-0000-000000000000']);
 
       const totalRevenue = orders?.reduce((sum, o) => sum + Number(o.total_amount), 0) || 0;
       const totalPayouts = payouts?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
