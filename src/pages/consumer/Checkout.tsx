@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
 import PriceBreakdownDrawer from "@/components/PriceBreakdownDrawer";
 import type { CheckoutRequest } from "@/contracts/checkout";
+import { useDemoMode } from "@/contexts/DemoModeContext";
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -220,8 +221,11 @@ const Checkout = () => {
 
   // Check if profile is missing required address info
   const missingAddressFields = profile && (!profile.street_address || !profile.city || !profile.state || !profile.zip_code);
-  
-  if (missingAddressFields) {
+
+  // In demo mode, allow checkout even if profile or market config is incomplete
+  const { isDemoMode } = useDemoMode();
+
+  if (missingAddressFields && !isDemoMode) {
     return (
       <div className="min-h-screen bg-gradient-earth flex items-center justify-center p-4">
         <Card className="max-w-md">
@@ -253,8 +257,8 @@ const Checkout = () => {
     );
   }
 
-  // If market config is missing for a provided ZIP, show a clear message instead of endless loading
-  if (profile && profile.zip_code && marketConfig === null) {
+  // If market config is missing for a provided ZIP, show a clear message unless in demo mode
+  if (!isDemoMode && profile && profile.zip_code && marketConfig === null) {
     return (
       <div className="min-h-screen bg-gradient-earth flex items-center justify-center p-4">
         <Card className="max-w-md">

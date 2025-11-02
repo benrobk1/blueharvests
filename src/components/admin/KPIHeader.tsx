@@ -79,6 +79,15 @@ export const KPIHeader = () => {
 
   if (!kpis) return null;
 
+  const display = isDemoMode ? {
+    ...kpis,
+    households: 48,
+    churnRate: 50,
+    onTimePercent: 93,
+    ordersPerRoute: 37.2,
+    aov: 40,
+  } : kpis;
+
   const getOnTimeStatus = (percent: number) => {
     if (percent >= 95) return 'excellent';
     if (percent >= 90) return 'good';
@@ -104,45 +113,45 @@ export const KPIHeader = () => {
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <KPIMetric
             label="Households"
-            value={kpis.households}
+            value={display.households}
             icon={<Users className="h-4 w-4" />}
-            trend={kpis.householdsTrend}
+            trend={display.householdsTrend}
           />
           
           <KPIMetric
             label="AOV"
-            value={formatMoney(kpis.aov)}
+            value={formatMoney(display.aov)}
             icon={<DollarSign className="h-4 w-4" />}
             target="$35-50"
           />
           
           <KPIMetric
             label="Customer LTV"
-            value={formatMoney(kpis.aov * 12 * 2.5)}
+            value={formatMoney(display.aov * 12 * 2.5)}
             icon={<Heart className="h-4 w-4" />}
             comparison="2.5yr avg"
           />
           
           <KPIMetric
             label="Monthly Churn"
-            value={`${kpis.churnRate}%`}
+            value={`${display.churnRate}%`}
             icon={<UserMinus className="h-4 w-4" />}
-            status={kpis.churnRate < 5 ? "excellent" : kpis.churnRate < 10 ? "good" : "warning"}
+            status={display.churnRate < 5 ? "excellent" : display.churnRate < 10 ? "good" : "warning"}
           />
           
           <KPIMetric
             label="On-Time"
-            value={`${kpis.onTimePercent}%`}
+            value={`${display.onTimePercent}%`}
             icon={<CheckCircle className="h-4 w-4" />}
-            status={getOnTimeStatus(kpis.onTimePercent)}
+            status={getOnTimeStatus(display.onTimePercent)}
           />
           
           <KPIMetric
             label="Orders/Route"
-            value={kpis.ordersPerRoute}
+            value={display.ordersPerRoute}
             icon={<Package className="h-4 w-4" />}
             target="35-40"
-            status={getDensityStatus(kpis.ordersPerRoute)}
+            status={getDensityStatus(display.ordersPerRoute)}
           />
         </div>
       </div>

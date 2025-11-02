@@ -318,6 +318,8 @@ serve(async (req) => {
       { zip_code: '11206', delivery_fee: 5.99, minimum_order: 25, delivery_days: ['Wednesday', 'Saturday'] },
       { zip_code: '11211', delivery_fee: 5.99, minimum_order: 25, delivery_days: ['Wednesday', 'Saturday'] },
       { zip_code: '11222', delivery_fee: 5.99, minimum_order: 25, delivery_days: ['Wednesday', 'Saturday'] },
+      { zip_code: '10001', delivery_fee: 5.99, minimum_order: 25, delivery_days: ['Wednesday', 'Saturday'] },
+      { zip_code: '10003', delivery_fee: 5.99, minimum_order: 25, delivery_days: ['Wednesday', 'Saturday'] },
     ];
 
     for (const config of marketConfigs) {

@@ -89,7 +89,7 @@ export const DemoModeProvider = ({ children }: DemoModeProviderProps) => {
       
       toast.dismiss();
       toast.success('Demo Mode Enabled!', {
-        description: 'All demo accounts are ready. Use the quick login buttons to switch between roles.',
+        description: 'All demo accounts and data are ready.',
       });
       
       return data; // Return the data so consumers can use it
