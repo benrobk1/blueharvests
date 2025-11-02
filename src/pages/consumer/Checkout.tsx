@@ -40,6 +40,8 @@ const Checkout = () => {
   const [showDateError, setShowDateError] = useState(false);
   const [showTermsError, setShowTermsError] = useState(false);
 
+  const { isDemoMode } = useDemoMode();
+
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
@@ -221,9 +223,6 @@ const Checkout = () => {
 
   // Check if profile is missing required address info
   const missingAddressFields = profile && (!profile.street_address || !profile.city || !profile.state || !profile.zip_code);
-
-  // In demo mode, allow checkout even if profile or market config is incomplete
-  const { isDemoMode } = useDemoMode();
 
   if (missingAddressFields && !isDemoMode) {
     return (
