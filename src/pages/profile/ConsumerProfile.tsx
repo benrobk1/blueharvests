@@ -20,6 +20,7 @@ const ConsumerProfile = () => {
     email: "",
     phone: "",
     street_address: "",
+    address_line_2: "",
     city: "",
     state: "",
     zip_code: "",
@@ -56,6 +57,7 @@ const ConsumerProfile = () => {
         email: data.email || "",
         phone: data.phone || "",
         street_address: data.street_address || "",
+        address_line_2: data.address_line_2 || "",
         city: data.city || "",
         state: data.state || "",
         zip_code: data.zip_code || "",
@@ -71,7 +73,12 @@ const ConsumerProfile = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const fullAddress = `${profile.street_address}, ${profile.city}, ${profile.state} ${profile.zip_code}`;
+    const addressParts = [profile.street_address];
+    if (profile.address_line_2) {
+      addressParts.push(profile.address_line_2);
+    }
+    addressParts.push(`${profile.city}, ${profile.state} ${profile.zip_code}`);
+    const fullAddress = addressParts.join(", ");
 
     const { error } = await supabase
       .from("profiles")
@@ -79,6 +86,7 @@ const ConsumerProfile = () => {
         full_name: profile.full_name,
         phone: profile.phone,
         street_address: profile.street_address,
+        address_line_2: profile.address_line_2,
         city: profile.city,
         state: profile.state,
         zip_code: profile.zip_code,
@@ -180,8 +188,18 @@ const ConsumerProfile = () => {
                   id="street_address"
                   value={profile.street_address}
                   onChange={(e) => setProfile({ ...profile, street_address: e.target.value })}
-                  placeholder="123 Main St, Apt 4B"
+                  placeholder="123 Main St"
                   required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address_line_2">Apartment, Suite, Unit (Optional)</Label>
+                <Input
+                  id="address_line_2"
+                  value={profile.address_line_2}
+                  onChange={(e) => setProfile({ ...profile, address_line_2: e.target.value })}
+                  placeholder="Apt 4B, Unit 202, etc."
                 />
               </div>
 

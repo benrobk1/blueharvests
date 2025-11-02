@@ -1092,6 +1092,7 @@ export type Database = {
         Row: {
           acquisition_channel: string | null
           additional_info: string | null
+          address_line_2: string | null
           applied_role: string | null
           approval_status: string | null
           approved_at: string | null
@@ -1143,6 +1144,7 @@ export type Database = {
         Insert: {
           acquisition_channel?: string | null
           additional_info?: string | null
+          address_line_2?: string | null
           applied_role?: string | null
           approval_status?: string | null
           approved_at?: string | null
@@ -1194,6 +1196,7 @@ export type Database = {
         Update: {
           acquisition_channel?: string | null
           additional_info?: string | null
+          address_line_2?: string | null
           applied_role?: string | null
           approval_status?: string | null
           approved_at?: string | null

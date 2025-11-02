@@ -219,7 +219,9 @@ const Checkout = () => {
   };
 
   // Check if profile is missing required address info
-  if (profile && !profile.zip_code) {
+  const missingAddressFields = profile && (!profile.street_address || !profile.city || !profile.state || !profile.zip_code);
+  
+  if (missingAddressFields) {
     return (
       <div className="min-h-screen bg-gradient-earth flex items-center justify-center p-4">
         <Card className="max-w-md">
@@ -231,8 +233,14 @@ const Checkout = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-muted-foreground">
-              Please add your delivery address and ZIP code before placing an order.
+              Please complete your full delivery address before placing an order:
             </p>
+            <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
+              {!profile?.street_address && <li>Street address</li>}
+              {!profile?.city && <li>City</li>}
+              {!profile?.state && <li>State</li>}
+              {!profile?.zip_code && <li>ZIP code</li>}
+            </ul>
             <Button onClick={() => navigate('/consumer/profile')} className="w-full">
               Go to Profile
             </Button>
@@ -358,8 +366,13 @@ const Checkout = () => {
               <CardContent className="space-y-4">
                 <div>
                   <p className="font-medium">{profile?.full_name}</p>
-                  <p className="text-muted-foreground">{profile?.delivery_address}</p>
-                  <p className="text-muted-foreground">ZIP: {profile?.zip_code}</p>
+                  <p className="text-muted-foreground">{profile?.street_address}</p>
+                  {profile?.address_line_2 && (
+                    <p className="text-muted-foreground">{profile.address_line_2}</p>
+                  )}
+                  <p className="text-muted-foreground">
+                    {profile?.city}, {profile?.state} {profile?.zip_code}
+                  </p>
                 </div>
                 <Button variant="outline" onClick={() => navigate('/consumer/profile')}>
                   Change Address
