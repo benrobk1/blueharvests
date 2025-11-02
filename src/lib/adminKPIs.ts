@@ -17,14 +17,19 @@ export async function fetchKPIs(demoModeActive: boolean = false): Promise<KPIDat
   const sixtyDaysAgo = new Date();
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-  // Build query to filter demo users if not in demo mode
+  // Build query to filter based on demo mode
   const buildOrderQuery = (query: any) => {
-    if (!demoModeActive) {
+    if (demoModeActive) {
+      // When demo mode is ON, ONLY show demo users
+      return query.in('consumer_id', `(
+        SELECT id FROM profiles WHERE email LIKE '%@demo.com'
+      )`);
+    } else {
+      // When demo mode is OFF, exclude demo users
       return query.not('consumer_id', 'in', `(
         SELECT id FROM profiles WHERE email LIKE '%@demo.com'
       )`);
     }
-    return query;
   };
 
   // Households: Distinct consumers with delivered orders in last 30 days
