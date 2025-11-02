@@ -7,7 +7,7 @@ export const pwaConfig = VitePWA({
     name: 'Blue Harvests',
     short_name: 'Blue Harvests',
     description: 'Local farm to table marketplace with delivery logistics',
-    theme_color: '#22c55e',
+    theme_color: '#4a9da8',
     background_color: '#ffffff',
     display: 'standalone',
     start_url: '/',
