@@ -140,7 +140,18 @@ const AdminDashboard = () => {
         description: "This will take 30-60 seconds. All demo accounts and data will be ready...",
       });
 
-      const { data, error } = await supabase.functions.invoke('seed-full-demo');
+      // Get the current session to ensure auth token is fresh
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error('No active session. Please log in again.');
+      }
+
+      const { data, error } = await supabase.functions.invoke('seed-full-demo', {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
       
       if (error) throw error;
       
