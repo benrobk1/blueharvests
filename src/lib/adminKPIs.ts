@@ -8,37 +8,90 @@ export interface KPIData {
   farmerShare: number;
   driverHourly: number;
   ordersPerRoute: number;
+  churnRate: number;
 }
 
-export async function fetchKPIs(): Promise<KPIData> {
+export async function fetchKPIs(demoModeActive: boolean = false): Promise<KPIData> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const sixtyDaysAgo = new Date();
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
+  // Build query to filter demo users if not in demo mode
+  const buildOrderQuery = (query: any) => {
+    if (!demoModeActive) {
+      return query.not('consumer_id', 'in', `(
+        SELECT id FROM profiles WHERE email LIKE '%@demo.com'
+      )`);
+    }
+    return query;
+  };
+
   // Households: Distinct consumers with delivered orders in last 30 days
-  const { data: recentOrders } = await supabase
+  let recentOrdersQuery = supabase
     .from('orders')
     .select('consumer_id, status, created_at')
     .eq('status', 'delivered')
     .gte('created_at', thirtyDaysAgo.toISOString());
+  
+  const { data: recentOrders } = await buildOrderQuery(recentOrdersQuery);
 
-  const { data: priorOrders } = await supabase
+  let priorOrdersQuery = supabase
     .from('orders')
     .select('consumer_id')
     .eq('status', 'delivered')
     .gte('created_at', sixtyDaysAgo.toISOString())
     .lt('created_at', thirtyDaysAgo.toISOString());
+    
+  const { data: priorOrders } = await buildOrderQuery(priorOrdersQuery);
 
   const households = new Set(recentOrders?.map(o => o.consumer_id) || []).size;
   const priorHouseholds = new Set(priorOrders?.map(o => o.consumer_id) || []).size;
   const householdsTrend = priorHouseholds > 0 ? ((households - priorHouseholds) / priorHouseholds) * 100 : 0;
 
+  // Monthly Churn: Calculate consumers who ordered last month but not this month
+  const lastMonthStart = new Date();
+  lastMonthStart.setDate(1); // First day of current month
+  lastMonthStart.setMonth(lastMonthStart.getMonth() - 1); // First day of last month
+  
+  const lastMonthEnd = new Date();
+  lastMonthEnd.setDate(1); // First day of current month
+  
+  let lastMonthOrdersQuery = supabase
+    .from('orders')
+    .select('consumer_id')
+    .eq('status', 'delivered')
+    .gte('created_at', lastMonthStart.toISOString())
+    .lt('created_at', lastMonthEnd.toISOString());
+    
+  const { data: lastMonthOrders } = await buildOrderQuery(lastMonthOrdersQuery);
+  
+  let currentMonthOrdersQuery = supabase
+    .from('orders')
+    .select('consumer_id')
+    .eq('status', 'delivered')
+    .gte('created_at', lastMonthEnd.toISOString());
+    
+  const { data: currentMonthOrders } = await buildOrderQuery(currentMonthOrdersQuery);
+  
+  const lastMonthSet = new Set(lastMonthOrders?.map(o => o.consumer_id) || []);
+  const currentMonthSet = new Set(currentMonthOrders?.map(o => o.consumer_id) || []);
+  
+  const lostCustomers = Array.from(lastMonthSet).filter(
+    id => !currentMonthSet.has(id)
+  ).length;
+  
+  const churnRate = lastMonthSet.size > 0 
+    ? (lostCustomers / lastMonthSet.size) * 100 
+    : 0;
+
   // AOV: Average Order Value
-  const { data: orderTotals } = await supabase
+  let orderTotalsQuery = supabase
     .from('orders')
     .select('total_amount')
     .gte('created_at', thirtyDaysAgo.toISOString());
+    
+  const { data: orderTotals } = await buildOrderQuery(orderTotalsQuery);
 
   const totalRevenue = orderTotals?.reduce((sum, o) => sum + Number(o.total_amount), 0) || 0;
   const aov = orderTotals && orderTotals.length > 0 ? totalRevenue / orderTotals.length : 0;
@@ -119,5 +172,6 @@ export async function fetchKPIs(): Promise<KPIData> {
     farmerShare: Number(farmerShare.toFixed(1)),
     driverHourly: Number(driverHourly.toFixed(2)),
     ordersPerRoute: Number(ordersPerRoute.toFixed(1)),
+    churnRate: Number(churnRate.toFixed(1)),
   };
 }

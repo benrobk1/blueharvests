@@ -4,6 +4,7 @@ import { Users, DollarSign, CheckCircle, Sprout, TrendingUp, Package, Heart, Use
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatMoney } from '@/lib/formatMoney';
 import { cn } from '@/lib/utils';
+import { useDemoMode } from '@/contexts/DemoModeContext';
 
 interface KPIMetricProps {
   label: string;
@@ -54,9 +55,11 @@ const KPIMetric = ({ label, value, icon, trend, target, comparison, status }: KP
 };
 
 export const KPIHeader = () => {
+  const { isDemoMode } = useDemoMode();
+  
   const { data: kpis, isLoading } = useQuery({
-    queryKey: ['admin-kpis'],
-    queryFn: fetchKPIs,
+    queryKey: ['admin-kpis', isDemoMode],
+    queryFn: () => fetchKPIs(isDemoMode),
     refetchInterval: 30000, // Update every 30 seconds
   });
 
@@ -90,6 +93,13 @@ export const KPIHeader = () => {
 
   return (
     <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border-b shadow-sm">
+      {isDemoMode && (
+        <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-1 text-center">
+          <p className="text-xs text-yellow-700 dark:text-yellow-500">
+            📊 Showing demo data metrics
+          </p>
+        </div>
+      )}
       <div className="container mx-auto px-4 py-3">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <KPIMetric
@@ -115,9 +125,9 @@ export const KPIHeader = () => {
           
           <KPIMetric
             label="Monthly Churn"
-            value="2.3%"
+            value={`${kpis.churnRate}%`}
             icon={<UserMinus className="h-4 w-4" />}
-            status="excellent"
+            status={kpis.churnRate < 5 ? "excellent" : kpis.churnRate < 10 ? "good" : "warning"}
           />
           
           <KPIMetric
