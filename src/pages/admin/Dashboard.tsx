@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Truck, Sprout, DollarSign, TrendingUp, MapPin, FileText, Database, Loader2 } from "lucide-react";
-import { DemoModeBanner } from "@/components/admin/DemoModeBanner";
 import { DemoDataStatus } from "@/components/admin/DemoDataStatus";
+import { useDemoMode } from "@/contexts/DemoModeContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [isSeeding, setIsSeeding] = useState(false);
+  const { isDemoMode, enableDemoMode } = useDemoMode();
   const [demoStats, setDemoStats] = useState<any>(null);
   
   // Fetch metrics
@@ -132,28 +132,9 @@ const AdminDashboard = () => {
     },
   });
 
-  const handleSeedDemoData = async () => {
+  const handleEnableDemoMode = async () => {
     try {
-      setIsSeeding(true);
-      toast({
-        title: "Creating Demo Data",
-        description: "This will take 30-60 seconds. All demo accounts and data will be ready...",
-      });
-
-      // Get the current session to ensure auth token is fresh
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        throw new Error('No active session. Please log in again.');
-      }
-
-      const { data, error } = await supabase.functions.invoke('seed-full-demo', {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-      
-      if (error) throw error;
+      const data = await enableDemoMode();
       
       // Set the demo stats for the status card
       setDemoStats({
@@ -165,55 +146,22 @@ const AdminDashboard = () => {
         subscriptionsCreated: data.summary?.subscriptions_created || 0,
       });
       
-      toast({
-        title: "Demo Data Loaded! 🎬",
-        description: "All accounts ready for YC demo. Use Quick Login buttons to switch between users.",
-      });
-      
       // Refetch all data
       refetch();
     } catch (error) {
-      console.error('Error seeding demo data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create demo data. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSeeding(false);
+      console.error('Error enabling demo mode:', error);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-earth">
-      <DemoModeBanner />
+      {/* DemoModeBanner now rendered globally in App.tsx when isDemoMode is true */}
       <header className="bg-white border-b shadow-soft">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Management Portal</h1>
               <p className="text-sm text-muted-foreground">Real-time business intelligence and operations</p>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="default" 
-                size="sm" 
-                onClick={handleSeedDemoData}
-                disabled={isSeeding}
-                className="bg-gradient-to-r from-primary to-primary/80"
-              >
-                {isSeeding ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Seeding Demo...
-                  </>
-                ) : (
-                  <>
-                    <Database className="h-4 w-4 mr-2" />
-                    Seed Full Demo
-                  </>
-                )}
-              </Button>
             </div>
           </div>
           <div className="grid gap-2 md:grid-cols-6 lg:grid-cols-12 mt-4">
@@ -237,6 +185,28 @@ const AdminDashboard = () => {
       <KPIHeader />
 
       <main className="container mx-auto px-4 py-8 space-y-8">
+        {/* Enable Demo Mode Card */}
+        {!isDemoMode && (
+          <Card className="p-6 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-semibold mb-2">🎬 Zero-Typing Demo Mode</h3>
+                <p className="text-sm text-muted-foreground">
+                  Enable demo mode to pre-load all accounts and data. Perfect for YC presentations and demos.
+                </p>
+              </div>
+              <Button
+                onClick={handleEnableDemoMode}
+                size="lg"
+                className="shrink-0"
+              >
+                <Database className="h-4 w-4 mr-2" />
+                Enable Demo Mode
+              </Button>
+            </div>
+          </Card>
+        )}
+        
         {/* Demo Stats Card */}
         {demoStats && <DemoDataStatus stats={demoStats} />}
         

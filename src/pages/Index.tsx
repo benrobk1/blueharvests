@@ -3,9 +3,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Users, TrendingUp, Truck, Leaf, Search, Sprout } from "lucide-react";
 import logo from "@/assets/blue-harvests-logo.jpeg";
+import { useDemoMode } from "@/contexts/DemoModeContext";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { isDemoMode } = useDemoMode();
 
   const consumerOption = {
     id: "consumer",
@@ -35,6 +37,15 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-earth">
+      {/* Demo Mode Banner appears here when active via App.tsx */}
+      {isDemoMode && (
+        <div className="bg-primary/5 border-b border-primary/10 py-2">
+          <p className="text-center text-sm text-muted-foreground">
+            👆 Use the quick login buttons above to switch between demo accounts instantly
+          </p>
+        </div>
+      )}
+      
       {/* Hero Section */}
       <div className="container mx-auto px-4 py-12">
         <div className="flex flex-col items-center text-center max-w-4xl mx-auto mb-16">

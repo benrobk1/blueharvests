@@ -4,7 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { DemoModeProvider, useDemoMode } from "@/contexts/DemoModeContext";
 import { RoleGate } from "@/components/RoleGate";
+import { DemoModeBanner } from "@/components/admin/DemoModeBanner";
 import { InstallPromptToast } from "@/components/InstallPromptToast";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -68,9 +70,11 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AuthProvider>
-            <AppContent />
-          </AuthProvider>
+          <DemoModeProvider>
+            <AuthProvider>
+              <AppContent />
+            </AuthProvider>
+          </DemoModeProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
@@ -80,9 +84,11 @@ const App = () => {
 const AppContent = () => {
   const location = useLocation();
   const isConsumerRoute = location.pathname.startsWith('/consumer/');
+  const { isDemoMode } = useDemoMode();
 
   return (
     <>
+      {isDemoMode && <DemoModeBanner />}
       <CookieConsent />
       <InstallPromptToast />
       <Routes>
