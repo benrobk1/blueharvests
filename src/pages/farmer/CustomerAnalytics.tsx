@@ -7,8 +7,8 @@ import { ArrowLeft, MapPin, TrendingUp, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatMoney } from '@/lib/formatMoney';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useDemoMode } from '@/contexts/DemoModeContext';
+import CustomerMap from '@/components/farmer/CustomerMap';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))'];
 
@@ -273,25 +273,7 @@ export default function CustomerAnalytics() {
         </CardHeader>
         <CardContent>
           {displayZipData && Array.isArray(displayZipData) && displayZipData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={displayZipData.slice(0, 10)}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="zip_code" />
-                <YAxis yAxisId="left" orientation="left" stroke="hsl(var(--primary))" />
-                <YAxis yAxisId="right" orientation="right" stroke="hsl(var(--secondary))" />
-                <Tooltip 
-                  formatter={(value: any) => {
-                    if (typeof value === 'number' && value > 100) {
-                      return formatMoney(value);
-                    }
-                    return value;
-                  }}
-                />
-                <Legend />
-                <Bar yAxisId="left" dataKey="order_count" fill="hsl(var(--primary))" name="Orders" />
-                <Bar yAxisId="right" dataKey="total_revenue" fill="hsl(var(--secondary))" name="Revenue ($)" />
-              </BarChart>
-            </ResponsiveContainer>
+            <CustomerMap zipData={displayZipData} />
           ) : (
             <div className="flex items-center justify-center h-64 text-muted-foreground">
               No order data available yet
