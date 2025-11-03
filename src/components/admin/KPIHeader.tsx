@@ -127,7 +127,7 @@ export const KPIHeader = () => {
           
           <KPIMetric
             label="Customer LTV"
-            value={formatMoney(display.aov * 12 * 2.5)}
+            value={formatMoney(isDemoMode ? 240 : display.aov * 12 * 2.5)}
             icon={<Heart className="h-4 w-4" />}
             comparison="2.5yr avg"
           />
