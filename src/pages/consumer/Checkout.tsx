@@ -47,6 +47,44 @@ const Checkout = () => {
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
+      // In demo mode, provide mock profile if query fails
+      if (isDemoMode) {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', user!.id)
+            .single();
+
+          if (error) {
+            // Return mock profile for demo mode
+            return {
+              id: user!.id,
+              full_name: 'Demo Consumer',
+              street_address: '123 Demo Street',
+              address_line_2: null,
+              city: 'Demo City',
+              state: 'CA',
+              zip_code: '90210',
+              phone: '555-0123',
+            };
+          }
+          return data;
+        } catch {
+          // Return mock profile for demo mode
+          return {
+            id: user!.id,
+            full_name: 'Demo Consumer',
+            street_address: '123 Demo Street',
+            address_line_2: null,
+            city: 'Demo City',
+            state: 'CA',
+            zip_code: '90210',
+            phone: '555-0123',
+          };
+        }
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -79,6 +117,37 @@ const Checkout = () => {
   const { data: marketConfig } = useQuery({
     queryKey: ['market-config', profile?.zip_code],
     queryFn: async () => {
+      // In demo mode, provide mock market config if query fails
+      if (isDemoMode) {
+        try {
+          const { data, error } = await supabase
+            .from('market_configs')
+            .select('*')
+            .eq('zip_code', profile!.zip_code)
+            .eq('active', true)
+            .maybeSingle();
+
+          if (error || !data) {
+            // Return mock market config for demo mode
+            return {
+              zip_code: profile!.zip_code,
+              delivery_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+              cutoff_time: '23:59:00',
+              active: true,
+            };
+          }
+          return data;
+        } catch {
+          // Return mock market config for demo mode
+          return {
+            zip_code: profile!.zip_code,
+            delivery_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+            cutoff_time: '23:59:00',
+            active: true,
+          };
+        }
+      }
+
       const { data, error } = await supabase
         .from('market_configs')
         .select('*')
