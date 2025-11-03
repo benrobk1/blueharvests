@@ -249,13 +249,6 @@ const DriverAuth = () => {
               
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
-                  {isDemoMode && (
-                    <Alert>
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Demo Mode Active</AlertTitle>
-                      <AlertDescription>Demo credentials are pre-filled. Just click "Login"!</AlertDescription>
-                    </Alert>
-                  )}
                   {formError && (
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />

@@ -133,13 +133,6 @@ const AdminAuth = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={isSignUp ? handleSignUp : handleLogin} className="space-y-4">
-              {isDemoMode && !isSignUp && (
-                <Alert>
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Demo Mode Active</AlertTitle>
-                  <AlertDescription>Demo credentials are pre-filled. Just click "Access Portal"!</AlertDescription>
-                </Alert>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="adminEmail">Admin Email</Label>
                 <Input 
