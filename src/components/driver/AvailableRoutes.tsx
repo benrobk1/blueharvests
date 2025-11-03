@@ -24,7 +24,7 @@ export function AvailableRoutes() {
         `)
         .eq('status', 'pending')
         .is('driver_id', null)
-        .gte('delivery_date', new Date().toISOString())
+        .gte('delivery_date', new Date().toISOString().split('T')[0])
         .order('delivery_date', { ascending: true });
       
       return data;

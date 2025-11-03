@@ -15,6 +15,7 @@ import { Progress } from "@/components/ui/progress";
 import { getRatingDisplay, MINIMUM_REVIEWS_THRESHOLD } from "@/lib/ratingHelpers";
 import { StripeConnectStatusBanner } from "@/components/StripeConnectStatusBanner";
 import { calculateEstimatedExpenses } from "@/lib/driverEarningsHelpers";
+import { FLAT_DELIVERY_FEE } from "@/lib/deliveryFeeHelpers";
 import { RouteDensityMap } from "@/components/driver/RouteDensityMap";
 import { useNavigate } from "react-router-dom";
 import { User } from "lucide-react";
@@ -324,6 +325,14 @@ const DriverDashboard = () => {
       });
     }
   };
+  // Derived display values for Today's Earnings (use demo estimates when no real payouts today)
+  const activeStopsCount = activeRoute?.length || 0;
+  const usingFallbackToday = (earnings?.today.total || 0) === 0 && activeStopsCount > 0;
+  const todayGross = usingFallbackToday ? activeStopsCount * FLAT_DELIVERY_FEE : (earnings?.today.total || 0);
+  const todayTips = usingFallbackToday ? 0 : (earnings?.today.tips || 0);
+  const todayDeliveryFees = todayGross - todayTips;
+  const expenseStops = usingFallbackToday ? activeStopsCount : (stats?.deliveries || 0);
+  const todayExpenses = calculateEstimatedExpenses(expenseStops);
 
   return (
     <div className="min-h-screen bg-gradient-earth">
@@ -444,16 +453,16 @@ const DriverDashboard = () => {
               <div className="space-y-2">
                 <div className="text-sm text-muted-foreground">Gross Earnings</div>
                 <div className="text-2xl font-bold text-foreground">
-                  {formatMoney(earnings?.today.total || 0)}
+                  {formatMoney(todayGross)}
                 </div>
                 <div className="text-xs space-y-1">
                   <div className="flex justify-between">
                     <span>Delivery Fees:</span>
-                    <span>{formatMoney(earnings?.today.deliveryFees || 0)}</span>
+                    <span>{formatMoney(todayDeliveryFees)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Tips:</span>
-                    <span className="text-green-600">{formatMoney(earnings?.today.tips || 0)}</span>
+                    <span className="text-green-600">{formatMoney(todayTips)}</span>
                   </div>
                 </div>
               </div>
@@ -461,22 +470,19 @@ const DriverDashboard = () => {
               <div className="space-y-2 border-l pl-4">
                 <div className="text-sm text-muted-foreground">Estimated Expenses</div>
                 <div className="text-2xl font-bold text-destructive">
-                  -{formatMoney((() => {
-                    const expenses = calculateEstimatedExpenses(stats?.deliveries || 0);
-                    return expenses.total;
-                  })())}
+                  -{formatMoney(todayExpenses.total)}
                 </div>
                 <div className="text-xs space-y-1 text-muted-foreground">
                   <div className="flex justify-between">
                     <span>Fuel (est.):</span>
-                    <span>-{formatMoney(calculateEstimatedExpenses(stats?.deliveries || 0).fuel)}</span>
+                    <span>-{formatMoney(todayExpenses.fuel)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Tolls (est.):</span>
-                    <span>-{formatMoney(calculateEstimatedExpenses(stats?.deliveries || 0).tolls)}</span>
+                    <span>-{formatMoney(todayExpenses.tolls)}</span>
                   </div>
                   <div className="text-[10px] mt-2 italic">
-                    Based on {stats?.deliveries || 0} stops, avg 30mi route
+                    Based on {expenseStops} stops, avg 30mi route
                   </div>
                 </div>
               </div>
@@ -488,7 +494,7 @@ const DriverDashboard = () => {
               <div>
                 <div className="text-sm text-muted-foreground">Net Payout (Est.)</div>
                 <div className="text-3xl font-bold text-green-700 dark:text-green-400">
-                  {formatMoney(Math.max(0, (earnings?.today.total || 0) - calculateEstimatedExpenses(stats?.deliveries || 0).total))}
+                  {formatMoney(Math.max(0, todayGross - todayExpenses.total))}
                 </div>
               </div>
               <TrendingUp className="h-8 w-8 text-green-600" />
@@ -534,7 +540,7 @@ const DriverDashboard = () => {
                 <Skeleton className="h-10 w-24" />
               ) : (
                 <>
-                  <div className="text-3xl font-bold text-foreground">{formatMoney(earnings?.month.total || 0)}</div>
+                  <div className="text-3xl font-bold text-foreground">{formatMoney((earnings?.month.total || 0) + (earnings?.month.tips || 0))}</div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {monthlyBatches || 0} deliveries | {formatMoney(earnings?.month.tips || 0)} tips
                   </p>
