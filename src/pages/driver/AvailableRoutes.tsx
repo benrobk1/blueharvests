@@ -7,28 +7,10 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Package, MapPin, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 
 export default function AvailableRoutes() {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { isDemoMode, claimDemoRoute } = useDemoMode();
-  
-  // Demo batch data
-  const demoBatch = {
-    id: 'demo-batch-8',
-    batch_number: 8,
-    delivery_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
-    status: 'pending',
-    batch_stops: [{ count: 40 }],
-    batch_metadata: [{
-      collection_point_address: '456 Farm Road, Milton, NY 12547',
-      estimated_route_hours: 6.5
-    }],
-    profiles: {
-      full_name: 'Thompson Family Farm'
-    }
-  };
   
   const { data: availableBatches, refetch } = useQuery({
     queryKey: ['available-routes'],
@@ -58,22 +40,9 @@ export default function AvailableRoutes() {
       console.log('Available batches result:', data);
       return data;
     },
-    enabled: !isDemoMode, // Don't fetch real data in demo mode
   });
-
-  // Show demo data if in demo mode, otherwise show real data
-  const displayBatches = isDemoMode ? [demoBatch] : availableBatches;
   
   const handleClaimRoute = async (batchId: string) => {
-    if (isDemoMode) {
-      claimDemoRoute();
-      toast({
-        title: 'Route Claimed!',
-        description: 'Check your dashboard to see your active route.',
-      });
-      navigate('/driver/dashboard');
-      return;
-    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     
@@ -125,7 +94,7 @@ export default function AvailableRoutes() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!displayBatches || displayBatches.length === 0 ? (
+            {!availableBatches || availableBatches.length === 0 ? (
               <div className="text-center py-12">
                 <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">
@@ -133,7 +102,7 @@ export default function AvailableRoutes() {
                 </p>
               </div>
             ) : (
-              displayBatches.map((batch) => (
+              availableBatches.map((batch) => (
                 <div 
                   key={batch.id} 
                   className="p-6 border rounded-lg hover:border-primary transition-colors bg-card space-y-4"

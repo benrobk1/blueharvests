@@ -19,56 +19,11 @@ import { FLAT_DELIVERY_FEE } from "@/lib/deliveryFeeHelpers";
 import { RouteDensityMap } from "@/components/driver/RouteDensityMap";
 import { useNavigate } from "react-router-dom";
 import { User } from "lucide-react";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 
 const DriverDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { isDemoMode, claimedDemoRoute } = useDemoMode();
-
-  console.log('Driver Dashboard: isDemoMode =', isDemoMode);
-  console.log('Driver Dashboard: user =', user);
-
-  // Demo data for claimed route (starts at 2:30 PM)
-  const demoActiveRoute = claimedDemoRoute ? [
-    { id: '0', customer: 'Thompson Family Farm', address: '456 Farm Road, Milton, NY 12547', status: 'pending', addressVisible: true, isCollectionPoint: true, started_at: new Date(new Date().setHours(14, 30, 0, 0)).toISOString() },
-    { id: '1', customer: 'Alice Johnson', address: '123 Main St, Brooklyn, NY 11201', status: 'delivered', addressVisible: true },
-    { id: '2', customer: 'Bob Smith', address: '456 Oak Ave, Brooklyn, NY 11201', status: 'delivered', addressVisible: true },
-    { id: '3', customer: 'Carol Davis', address: '789 Pine Rd, Brooklyn, NY 11201', status: 'in_progress', addressVisible: true },
-    { id: '4', customer: 'David Wilson', address: '321 Elm St, Williamsburg, NY 11211', status: 'pending', addressVisible: true },
-    { id: '5', customer: 'Emma Brown', address: '654 Maple Dr, Williamsburg, NY 11211', status: 'pending', addressVisible: true },
-  ] : null;
-
-  const demoEarnings = claimedDemoRoute ? {
-    today: { 
-      total: 315,
-      tips: 15,
-      deliveryFees: 300
-    },
-    week: { total: 0, tips: 0, deliveryFees: 0 },
-    month: { total: 300, tips: 16, deliveryFees: 300 }, // 40 deliveries
-  } : {
-    today: { total: 0, tips: 0, deliveryFees: 0 },
-    week: { total: 0, tips: 0, deliveryFees: 0 },
-    month: { total: 0, tips: 0, deliveryFees: 0 },
-  };
-
-  const demoStats = claimedDemoRoute ? {
-    deliveries: 40,
-    rating: '4.8',
-    totalRatings: 18,
-    onTime: 95,
-  } : {
-    deliveries: 0,
-    rating: '0.0',
-    totalRatings: 0,
-    onTime: 0,
-  };
-
-  const demoActiveBatch = claimedDemoRoute ? { id: 'demo-batch-8' } : null;
-
-  const demoMonthlyBatches = claimedDemoRoute ? 40 : 0;
 
   // Fetch earnings from delivery fees and tips
   const { data: earnings, isLoading: earningsLoading } = useQuery({
@@ -134,7 +89,7 @@ const DriverDashboard = () => {
         month: { total: monthTotal, tips: monthTips, deliveryFees: monthTotal - monthTips },
       };
     },
-    enabled: !!user?.id && !isDemoMode,
+    enabled: !!user?.id,
   });
 
   // Fetch active route
@@ -187,7 +142,7 @@ const DriverDashboard = () => {
           addressVisible: !!stop.address_visible_at,
         })) || [];
     },
-    enabled: !!user?.id && !isDemoMode,
+    enabled: !!user?.id,
   });
 
   // Fetch stats and ratings
@@ -249,7 +204,7 @@ const DriverDashboard = () => {
         onTime: onTimePercentage,
       };
     },
-    enabled: !!user?.id && !isDemoMode,
+    enabled: !!user?.id,
   });
 
   // Fetch active batch ID for route density map
@@ -266,7 +221,7 @@ const DriverDashboard = () => {
         .maybeSingle();
       return data;
     },
-    enabled: !!user?.id && !isDemoMode,
+    enabled: !!user?.id,
   });
 
   // Fetch monthly completed batches count
@@ -285,7 +240,7 @@ const DriverDashboard = () => {
       
       return count || 0;
     },
-    enabled: !!user?.id && !isDemoMode,
+    enabled: !!user?.id,
   });
 
   const handlePrintManifest = async (batchId: string) => {

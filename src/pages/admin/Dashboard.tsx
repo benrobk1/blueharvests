@@ -1,29 +1,17 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Truck, Sprout, DollarSign, TrendingUp, MapPin, FileText, Database, Loader2 } from "lucide-react";
-import { DemoDataStatus } from "@/components/admin/DemoDataStatus";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
-import { CreditsManager } from "@/components/admin/CreditsManager";
-import { AdminRoleManager } from "@/components/admin/AdminRoleManager";
 import { KPIHeader } from "@/components/admin/KPIHeader";
-import { FarmAffiliationManager } from "@/components/admin/FarmAffiliationManager";
-import { TaxDocumentGenerator } from "@/components/admin/TaxDocumentGenerator";
-import { useToast } from "@/hooks/use-toast";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const { isDemoMode, enableDemoMode } = useDemoMode();
-  const [demoStats, setDemoStats] = useState<any>(null);
   
   // Fetch metrics
   const { data: metrics, isLoading: metricsLoading, refetch } = useQuery({
@@ -132,30 +120,8 @@ const AdminDashboard = () => {
     },
   });
 
-  const handleEnableDemoMode = async () => {
-    try {
-      const data = await enableDemoMode();
-      
-      // Set the demo stats for the status card
-      setDemoStats({
-        usersCreated: data.summary?.users_created || 0,
-        ordersGenerated: data.summary?.orders_created || 0,
-        batchesCreated: data.summary?.batches_created || 0,
-        productsCreated: data.summary?.products_created || 0,
-        creditsAwarded: data.summary?.credits_awarded || 0,
-        subscriptionsCreated: data.summary?.subscriptions_created || 0,
-      });
-      
-      // Refetch all data
-      refetch();
-    } catch (error) {
-      console.error('Error enabling demo mode:', error);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-earth">
-      {/* DemoModeBanner now rendered globally in App.tsx when isDemoMode is true */}
       <header className="bg-white border-b shadow-soft">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -185,31 +151,6 @@ const AdminDashboard = () => {
       <KPIHeader />
 
       <main className="container mx-auto px-4 py-8 space-y-8">
-        {/* Enable Demo Mode Card */}
-        {!isDemoMode && (
-          <Card className="p-6 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-2">🎬 Zero-Typing Demo Mode</h3>
-                <p className="text-sm text-muted-foreground">
-                  Enable demo mode to pre-load all accounts and data. Perfect for YC presentations and demos.
-                </p>
-              </div>
-              <Button
-                onClick={handleEnableDemoMode}
-                size="lg"
-                className="shrink-0"
-              >
-                <Database className="h-4 w-4 mr-2" />
-                Enable Demo Mode
-              </Button>
-            </div>
-          </Card>
-        )}
-        
-        {/* Demo Stats Card */}
-        {demoStats && <DemoDataStatus stats={demoStats} />}
-        
         {/* Pending Approvals - Single Card */}
         <Link to="/admin/approvals">
           <Card className="border-2 hover:shadow-md transition-shadow cursor-pointer">
@@ -229,8 +170,7 @@ const AdminDashboard = () => {
         </Link>
 
         {/* Live Delivery Tracking */}
-        <Link to={isDemoMode ? "/demo/live-map" : "#"} className={!isDemoMode ? "pointer-events-none" : ""}>
-          <Card className="border-2 hover:shadow-md transition-shadow cursor-pointer">
+        <Card className="border-2 hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Live Delivery Tracking</CardTitle>
@@ -275,7 +215,6 @@ const AdminDashboard = () => {
             )}
           </CardContent>
         </Card>
-        </Link>
 
         {/* Recent Activity */}
         <div className="grid gap-6 lg:grid-cols-2">

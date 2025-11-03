@@ -4,7 +4,6 @@ import { Users, DollarSign, CheckCircle, Sprout, TrendingUp, Package, Heart, Use
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatMoney } from '@/lib/formatMoney';
 import { cn } from '@/lib/utils';
-import { useDemoMode } from '@/contexts/DemoModeContext';
 
 interface KPIMetricProps {
   label: string;
@@ -55,11 +54,9 @@ const KPIMetric = ({ label, value, icon, trend, target, comparison, status }: KP
 };
 
 export const KPIHeader = () => {
-  const { isDemoMode } = useDemoMode();
-  
   const { data: kpis, isLoading } = useQuery({
-    queryKey: ['admin-kpis', isDemoMode],
-    queryFn: () => fetchKPIs(isDemoMode),
+    queryKey: ['admin-kpis'],
+    queryFn: () => fetchKPIs(),
     refetchInterval: 30000, // Update every 30 seconds
   });
 
@@ -79,15 +76,6 @@ export const KPIHeader = () => {
 
   if (!kpis) return null;
 
-  const display = isDemoMode ? {
-    ...kpis,
-    households: 48,
-    churnRate: 50,
-    onTimePercent: 93,
-    ordersPerRoute: 37.2,
-    aov: 40,
-  } : kpis;
-
   const getOnTimeStatus = (percent: number) => {
     if (percent >= 95) return 'excellent';
     if (percent >= 90) return 'good';
@@ -102,56 +90,49 @@ export const KPIHeader = () => {
 
   return (
     <div className="bg-gradient-to-r from-primary/10 to-secondary/10 border-b shadow-sm">
-      {isDemoMode && (
-        <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-1 text-center">
-          <p className="text-xs text-yellow-700 dark:text-yellow-500">
-            📊 Showing demo data metrics
-          </p>
-        </div>
-      )}
       <div className="container mx-auto px-4 py-3">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <KPIMetric
             label="Households"
-            value={display.households}
+            value={kpis.households}
             icon={<Users className="h-4 w-4" />}
-            trend={display.householdsTrend}
+            trend={kpis.householdsTrend}
           />
           
           <KPIMetric
             label="AOV"
-            value={formatMoney(display.aov)}
+            value={formatMoney(kpis.aov)}
             icon={<DollarSign className="h-4 w-4" />}
             target="$35-50"
           />
           
           <KPIMetric
             label="Customer LTV"
-            value={formatMoney(isDemoMode ? 240 : display.aov * 12 * 2.5)}
+            value={formatMoney(kpis.aov * 12 * 2.5)}
             icon={<Heart className="h-4 w-4" />}
             comparison="2.5yr avg"
           />
           
           <KPIMetric
             label="Monthly Churn"
-            value={`${display.churnRate}%`}
+            value={`${kpis.churnRate}%`}
             icon={<UserMinus className="h-4 w-4" />}
-            status={display.churnRate < 5 ? "excellent" : display.churnRate < 10 ? "good" : "warning"}
+            status={kpis.churnRate < 5 ? "excellent" : kpis.churnRate < 10 ? "good" : "warning"}
           />
           
           <KPIMetric
             label="On-Time"
-            value={`${display.onTimePercent}%`}
+            value={`${kpis.onTimePercent}%`}
             icon={<CheckCircle className="h-4 w-4" />}
-            status={getOnTimeStatus(display.onTimePercent)}
+            status={getOnTimeStatus(kpis.onTimePercent)}
           />
           
           <KPIMetric
             label="Orders/Route"
-            value={display.ordersPerRoute}
+            value={kpis.ordersPerRoute}
             icon={<Package className="h-4 w-4" />}
             target="35-40"
-            status={getDensityStatus(display.ordersPerRoute)}
+            status={getDensityStatus(kpis.ordersPerRoute)}
           />
         </div>
       </div>

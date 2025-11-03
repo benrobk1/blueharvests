@@ -23,7 +23,6 @@ import { Separator } from "@/components/ui/separator";
 import { Link } from "react-router-dom";
 import PriceBreakdownDrawer from "@/components/PriceBreakdownDrawer";
 import type { CheckoutRequest } from "@/contracts/checkout";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 import { DELIVERY_FEE_USD } from "@/config/constants";
 
 const Checkout = () => {
@@ -42,25 +41,9 @@ const Checkout = () => {
   const [showDateError, setShowDateError] = useState(false);
   const [showTermsError, setShowTermsError] = useState(false);
 
-  const { isDemoMode } = useDemoMode();
-
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
-      // In demo mode, return mock profile immediately
-      if (isDemoMode) {
-        return {
-          id: user!.id,
-          full_name: 'Demo Consumer',
-          street_address: '123 Demo Street',
-          address_line_2: null,
-          city: 'Demo City',
-          state: 'CA',
-          zip_code: '11201',
-          phone: '555-0123',
-        };
-      }
-
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -93,16 +76,6 @@ const Checkout = () => {
   const { data: marketConfig } = useQuery({
     queryKey: ['market-config', profile?.zip_code],
     queryFn: async () => {
-      // In demo mode, return mock config immediately
-      if (isDemoMode) {
-        return {
-          zip_code: profile!.zip_code,
-          delivery_days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-          cutoff_time: '23:59:00',
-          active: true,
-        };
-      }
-
       const { data, error } = await supabase
         .from('market_configs')
         .select('*')
@@ -191,7 +164,6 @@ const Checkout = () => {
         delivery_date: deliveryDateTime,
         use_credits: useCredits,
         tip_amount: tipAmount,
-        is_demo_mode: isDemoMode,
       };
 
       const { data, error } = await supabase.functions.invoke('checkout', {
@@ -258,7 +230,7 @@ const Checkout = () => {
   // Check if profile is missing required address info
   const missingAddressFields = profile && (!profile.street_address || !profile.city || !profile.state || !profile.zip_code);
 
-  if (missingAddressFields && !isDemoMode) {
+  if (missingAddressFields) {
     return (
       <div className="min-h-screen bg-gradient-earth flex items-center justify-center p-4">
         <Card className="max-w-md">
@@ -290,8 +262,8 @@ const Checkout = () => {
     );
   }
 
-  // If market config is missing for a provided ZIP, show a clear message unless in demo mode
-  if (!isDemoMode && profile && profile.zip_code && marketConfig === null) {
+  // If market config is missing for a provided ZIP, show a clear message
+  if (profile && profile.zip_code && marketConfig === null) {
     return (
       <div className="min-h-screen bg-gradient-earth flex items-center justify-center p-4">
         <Card className="max-w-md">

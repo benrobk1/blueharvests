@@ -8,7 +8,6 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, BarChart3, Shield, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Invalid email address");
@@ -17,7 +16,6 @@ const passwordSchema = z.string().min(6, "Password must be at least 6 characters
 const AdminAuth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { isDemoMode } = useDemoMode();
   const [isLoading, setIsLoading] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
 
@@ -139,8 +137,7 @@ const AdminAuth = () => {
                   id="adminEmail"
                   name="email"
                   type="email" 
-                  placeholder="admin@blueharvests.com" 
-                  defaultValue={isDemoMode && !isSignUp ? "admin@demo.com" : ""}
+                  placeholder="admin@blueharvests.com"
                   required 
                 />
               </div>
@@ -150,8 +147,7 @@ const AdminAuth = () => {
                   id="adminPassword"
                   name="password"
                   type="password" 
-                  placeholder="••••••••" 
-                  defaultValue={isDemoMode && !isSignUp ? "demo123456" : ""}
+                  placeholder="••••••••"
                   required 
                 />
               </div>

@@ -8,7 +8,6 @@ import { ArrowLeft, MapPin, TrendingUp, Users, ChevronDown } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatMoney } from '@/lib/formatMoney';
-import { useDemoMode } from '@/contexts/DemoModeContext';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))'];
 
@@ -35,7 +34,6 @@ const DEMO_ZIP_DATA = [
 export default function CustomerAnalytics() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { isDemoMode } = useDemoMode();
 
   // Check if user is a lead farmer
   const { data: userRoles } = useQuery({
@@ -177,10 +175,7 @@ export default function CustomerAnalytics() {
     enabled: !!user?.id,
   });
 
-  // Use demo data if in demo mode and no real data
-  const displayZipData = isDemoMode && (!zipCodeData || zipCodeData.length === 0) 
-    ? DEMO_ZIP_DATA 
-    : zipCodeData || [];
+  const displayZipData = zipCodeData || [];
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['customer-summary', user?.id, displayZipData],

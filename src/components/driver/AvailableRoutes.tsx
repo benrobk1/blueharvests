@@ -6,29 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { format, differenceInHours } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Package } from "lucide-react";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 import { useState, useMemo } from "react";
 
 export function AvailableRoutes() {
   const { toast } = useToast();
-  const { isDemoMode, claimDemoRoute } = useDemoMode();
   const [claimedRoutes, setClaimedRoutes] = useState<Set<string>>(new Set());
-  
-  // Demo batch data
-  const demoBatch = {
-    id: 'demo-batch-8',
-    batch_number: 8,
-    delivery_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
-    status: 'pending',
-    batch_stops: [{ count: 40 }],
-    batch_metadata: [{
-      collection_point_address: '456 Farm Road, Milton, NY 12547',
-      estimated_route_hours: 6.5
-    }],
-    profiles: {
-      full_name: 'Thompson Family Farm'
-    }
-  };
 
   // Fetch driver profile for sorting preferences
   const { data: driverProfile } = useQuery({
@@ -45,7 +27,6 @@ export function AvailableRoutes() {
       
       return data;
     },
-    enabled: !isDemoMode,
   });
 
   const { data: availableBatches, refetch } = useQuery({
@@ -74,17 +55,15 @@ export function AvailableRoutes() {
       
       return data;
     },
-    enabled: !isDemoMode, // Don't fetch real data in demo mode
   });
 
   // Sort batches by driver's available days and collection point proximity
   const sortedBatches = useMemo(() => {
-    const batches = isDemoMode ? [demoBatch] : availableBatches;
-    if (!batches) return [];
+    if (!availableBatches) return [];
 
-    return [...batches].sort((a: any, b: any) => {
-      // In demo mode or if no driver profile, use default sorting
-      if (isDemoMode || !driverProfile?.delivery_days) {
+    return [...availableBatches].sort((a: any, b: any) => {
+      // If no driver profile, use default sorting
+      if (!driverProfile?.delivery_days) {
         return new Date(a.delivery_date).getTime() - new Date(b.delivery_date).getTime();
       }
 
@@ -116,21 +95,9 @@ export function AvailableRoutes() {
       // Finally sort by date
       return new Date(a.delivery_date).getTime() - new Date(b.delivery_date).getTime();
     });
-  }, [isDemoMode, availableBatches, demoBatch, driverProfile]);
+  }, [availableBatches, driverProfile]);
 
-  // Show sorted data
-  const displayBatches = sortedBatches;
-  
   const handleClaimRoute = async (batchId: string, deliveryDate: string) => {
-    if (isDemoMode) {
-      setClaimedRoutes(prev => new Set(prev).add(batchId));
-      claimDemoRoute();
-      toast({
-        title: 'Route Claimed!',
-        description: 'Routes claimed within 48 hours of delivery cannot be unclaimed.',
-      });
-      return;
-    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     
@@ -172,12 +139,12 @@ export function AvailableRoutes() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {!displayBatches || displayBatches.length === 0 ? (
+        {!sortedBatches || sortedBatches.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
             No available routes at this time. Check back later for new delivery batches.
           </p>
         ) : (
-          displayBatches.map((batch: any) => (
+          sortedBatches.map((batch: any) => (
             <div key={batch.id} className="p-6 border rounded-lg hover:border-primary transition-colors bg-card space-y-4">
               <div className="flex items-center justify-between">
                 <div className="space-y-2">
@@ -196,7 +163,7 @@ export function AvailableRoutes() {
                   </div>
                   <div className="ml-15 space-y-1">
                     <p className="text-sm font-medium text-foreground">
-                      {batch.lead_farmer_profile?.full_name || batch.profiles?.full_name || 'Collection Point'}
+                      {batch.lead_farmer_profile?.full_name || 'Collection Point'}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {batch.batch_metadata?.[0]?.collection_point_address || 'Address not available'}

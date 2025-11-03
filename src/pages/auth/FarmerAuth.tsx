@@ -11,7 +11,6 @@ import { ArrowLeft, Sprout, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 import { z } from "zod";
 import { getAuthErrorMessage } from "@/lib/authErrors";
 
@@ -22,7 +21,6 @@ const FarmerAuth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { roles } = useAuth();
-  const { isDemoMode } = useDemoMode();
   const [isLoading, setIsLoading] = useState(false);
   const [farmerType, setFarmerType] = useState<"lead" | "regular">("regular");
   const [formError, setFormError] = useState<{ title: string; description: string } | null>(null);
@@ -330,8 +328,7 @@ const FarmerAuth = () => {
                       id="email" 
                       name="email" 
                       type="email" 
-                      placeholder="you@example.com" 
-                      defaultValue={isDemoMode ? "farmer1@demo.com" : ""}
+                      placeholder="you@example.com"
                       required 
                       onBlur={(e) => validateEmail(e.target.value)}
                       className={emailError ? 'border-destructive' : ''}
@@ -344,8 +341,7 @@ const FarmerAuth = () => {
                       id="password" 
                       name="password" 
                       type="password" 
-                      placeholder="••••••••" 
-                      defaultValue={isDemoMode ? "demo123456" : ""}
+                      placeholder="••••••••"
                       required 
                       onChange={(e) => validatePassword(e.target.value)}
                       className={passwordError ? 'border-destructive' : ''}

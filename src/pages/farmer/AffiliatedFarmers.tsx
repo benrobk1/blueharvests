@@ -7,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Phone, Mail, MapPin, Package, ExternalLink, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useDemoMode } from '@/contexts/DemoModeContext';
 
 // Demo data for collection point
 const DEMO_COLLECTION_POINT = {
@@ -66,7 +65,6 @@ const DEMO_AFFILIATED_FARMERS = [
 export default function AffiliatedFarmers() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { isDemoMode } = useDemoMode();
 
   const { data: collectionPoint, isLoading: collectionPointLoading } = useQuery({
     queryKey: ['collection-point', user?.id],
@@ -78,7 +76,7 @@ export default function AffiliatedFarmers() {
         .single();
       return data;
     },
-    enabled: !!user?.id && !isDemoMode,
+    enabled: !!user?.id,
   });
 
   const { data: affiliatedFarmers, isLoading } = useQuery({
@@ -139,11 +137,11 @@ export default function AffiliatedFarmers() {
 
       return farmsWithProducts;
     },
-    enabled: !!user?.id && !isDemoMode,
+    enabled: !!user?.id,
   });
 
-  const displayCollectionPoint = isDemoMode ? DEMO_COLLECTION_POINT : collectionPoint;
-  const displayFarmers = isDemoMode ? DEMO_AFFILIATED_FARMERS : affiliatedFarmers;
+  const displayCollectionPoint = collectionPoint;
+  const displayFarmers = affiliatedFarmers;
 
   if (isLoading || collectionPointLoading) {
     return (
