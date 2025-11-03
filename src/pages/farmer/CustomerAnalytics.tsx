@@ -233,7 +233,7 @@ export default function CustomerAnalytics() {
           <CardContent>
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
-              <div className="text-3xl font-bold">{summary?.totalCustomers || 0}</div>
+              <div className="text-2xl font-bold">{summary?.totalCustomers || 0}</div>
             </div>
           </CardContent>
         </Card>
@@ -245,7 +245,7 @@ export default function CustomerAnalytics() {
           <CardContent>
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <div className="text-3xl font-bold">{summary?.totalOrders || 0}</div>
+              <div className="text-2xl font-bold">{summary?.totalOrders || 0}</div>
             </div>
           </CardContent>
         </Card>
@@ -255,7 +255,7 @@ export default function CustomerAnalytics() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{formatMoney(summary?.totalRevenue || 0)}</div>
+            <div className="text-2xl font-bold">{formatMoney(summary?.totalRevenue || 0)}</div>
           </CardContent>
         </Card>
 
@@ -264,7 +264,7 @@ export default function CustomerAnalytics() {
             <CardTitle className="text-sm font-medium text-muted-foreground">Avg Order Value</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{formatMoney(summary?.avgOrderValue || 0)}</div>
+            <div className="text-2xl font-bold">{formatMoney(summary?.avgOrderValue || 0)}</div>
           </CardContent>
         </Card>
 
@@ -275,7 +275,7 @@ export default function CustomerAnalytics() {
           <CardContent>
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-green-500" />
-              <div className="text-3xl font-bold text-green-600">90%</div>
+              <div className="text-2xl font-bold text-green-600">90%</div>
             </div>
             <p className="text-xs text-muted-foreground mt-1">of listed price</p>
           </CardContent>
