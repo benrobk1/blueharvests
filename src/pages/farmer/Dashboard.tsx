@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useQueries } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useDemoMode } from '@/contexts/DemoModeContext';
 import { formatMoney } from '@/lib/formatMoney';
 import { DollarSign, Package, TrendingUp, Users, FileText, Boxes } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +17,7 @@ import { NextOrderCutoffCard } from '@/components/farmer/NextOrderCutoffCard';
 
 export default function FarmerDashboard() {
   const { user } = useAuth();
+  const { isDemoMode } = useDemoMode();
   const navigate = useNavigate();
 
   // Parallel queries for better performance
@@ -159,7 +161,7 @@ export default function FarmerDashboard() {
           <Button variant="outline" onClick={() => navigate('/farmer/customer-analytics')}>
             Analytics
           </Button>
-          {isLeadFarmer && (
+          {(isLeadFarmer || isDemoMode) && (
             <Button variant="outline" onClick={() => navigate('/farmer/affiliated-farmers')}>
               <Users className="mr-2 h-4 w-4" />
               Affiliated Farmers
