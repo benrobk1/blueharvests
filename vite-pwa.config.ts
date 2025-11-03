@@ -33,7 +33,7 @@ export const pwaConfig = VitePWA({
     orientation: 'portrait-primary',
   },
   workbox: {
-    maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB
+    maximumFileSizeToCacheInBytes: 7 * 1024 * 1024, // 7 MB (increased for mapbox-gl)
     globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
     runtimeCaching: [
       {
