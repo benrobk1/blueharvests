@@ -46,8 +46,8 @@ const DriverDashboard = () => {
       tips: Math.round(5 * FLAT_DELIVERY_FEE * 0.05), // 5% of delivery fees for 5 stops
       deliveryFees: 284 - Math.round(5 * FLAT_DELIVERY_FEE * 0.05)
     },
-    week: { total: 1240, tips: 180, deliveryFees: 1060 },
-    month: { total: 5200, tips: 750, deliveryFees: 4450 },
+    week: { total: 292, tips: 42, deliveryFees: 250 },
+    month: { total: 579, tips: 84, deliveryFees: 495 },
   } : null;
 
   const demoStats = claimedDemoRoute ? {
@@ -598,7 +598,7 @@ const DriverDashboard = () => {
                 {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
               </div>
             ) : (
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="flex items-center gap-3">
                   <div className="h-12 w-12 rounded-full bg-warning/10 flex items-center justify-center">
                     <Star className="h-6 w-6 text-warning" />
@@ -643,15 +643,6 @@ const DriverDashboard = () => {
                   <div>
                     <div className="text-2xl font-bold text-foreground">{displayStats?.onTime || 0}%</div>
                     <div className="text-sm text-muted-foreground">On-Time Delivery</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Package className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-foreground">{displayStats?.deliveries || 0}</div>
-                    <div className="text-sm text-muted-foreground">Today's Deliveries</div>
                   </div>
                 </div>
               </div>
