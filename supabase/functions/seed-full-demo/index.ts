@@ -609,11 +609,10 @@ serve(async (req) => {
       }
     }
 
-    // Create an available batch (unclaimed) for tomorrow with 39 stops
-    console.log('Creating available batch for demo...');
-    const tomorrowForBatch = new Date();
-    tomorrowForBatch.setDate(tomorrowForBatch.getDate() + 1);
-    const tomorrowForBatchStr = tomorrowForBatch.toISOString().split('T')[0];
+    // Create an in-progress batch for today with 39 stops (John Driver)
+    console.log('Creating in-progress batch for demo...');
+    const todayForBatch = new Date();
+    const todayForBatchStr = todayForBatch.toISOString().split('T')[0];
     
     // Brooklyn addresses for delivery batch (only 2 ZIP codes)
     const brooklynAddresses = [
@@ -641,16 +640,28 @@ serve(async (req) => {
     
     const { data: availableBatch } = await supabase.from('delivery_batches').insert({
       lead_farmer_id: leadFarmerId,
-      driver_id: null, // No driver assigned - available to claim
-      delivery_date: tomorrowForBatchStr,
+      driver_id: createdUserIds['driver1@demo.com'], // Assigned to John Driver
+      delivery_date: todayForBatchStr,
       batch_number: 7,
       estimated_duration_minutes: 39 * 10, // 390 minutes = 6.5 hours
       zip_codes: ['11201', '11211'],
-      status: 'pending'
+      status: 'in_progress'
     }).select().single();
 
-    // Create 39 pending stops for the available batch
+    // Create 39 stops for the in-progress batch
     if (availableBatch) {
+      // Create batch metadata
+      await supabase.from('batch_metadata').insert({
+        delivery_batch_id: availableBatch.id,
+        collection_point_id: leadFarmerId,
+        collection_point_address: '456 Farm Road, Milton, NY 12547',
+        order_count: 39,
+        is_subsidized: false,
+        estimated_route_hours: 6.5,
+        original_zip_codes: ['11201', '11211'],
+        merged_zips: ['11201', '11211']
+      });
+
       for (let i = 0; i < 39; i++) {
         const consumerNum = (i % 48) + 1;
         const consumerId = createdUserIds[`consumer${consumerNum}@demo.com`];
@@ -678,10 +689,10 @@ serve(async (req) => {
         
         const { data: order } = await supabase.from('orders').insert({
           consumer_id: consumerId,
-          delivery_date: tomorrowForBatchStr,
+          delivery_date: todayForBatchStr,
           total_amount: totalAmount,
           tip_amount: 0,
-          status: 'pending'
+          status: i < 20 ? 'delivered' : 'pending'
         }).select().single();
         
         if (order) {
@@ -693,7 +704,20 @@ serve(async (req) => {
           }
           
           // Create batch stop
-          const estimatedArrival = new Date(tomorrowForBatch.getTime() + i * 10 * 60 * 1000);
+          const estimatedArrival = new Date(todayForBatch.getTime() + i * 10 * 60 * 1000);
+          
+          // First 20 delivered, one in progress, rest pending
+          let status: string;
+          let actualArrival: Date | null = null;
+          
+          if (i < 20) {
+            status = 'delivered';
+            actualArrival = new Date(estimatedArrival.getTime() - Math.random() * 5 * 60 * 1000);
+          } else if (i === 20) {
+            status = 'in_progress';
+          } else {
+            status = 'pending';
+          }
           
           await supabase.from('batch_stops').insert({
             delivery_batch_id: availableBatch.id,
@@ -704,10 +728,10 @@ serve(async (req) => {
             city: addr.city,
             state: 'NY',
             zip_code: addr.zip,
-            status: 'pending',
-            address_visible_at: null,
+            status,
+            address_visible_at: i < 24 ? new Date().toISOString() : null,
             estimated_arrival: estimatedArrival.toISOString(),
-            actual_arrival: null,
+            actual_arrival: actualArrival?.toISOString() || null,
             latitude: 40.6782 + (Math.random() * 0.05),
             longitude: -73.9442 + (Math.random() * 0.05)
           });

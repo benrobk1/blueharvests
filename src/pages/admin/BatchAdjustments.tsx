@@ -127,9 +127,6 @@ const BatchAdjustments = () => {
         <div>
           <h1 className="text-3xl font-bold">Batch Adjustments</h1>
           <p className="text-muted-foreground">Manually adjust delivery batches and reassign drivers</p>
-          <p className="text-sm text-muted-foreground mt-2">
-            Order batches are automatically grouped with AI by zip code, location, and delivery window for optimal routing efficiency.
-          </p>
         </div>
       </div>
 
@@ -197,7 +194,7 @@ const BatchAdjustments = () => {
                         <div>
                           <p className="text-muted-foreground flex items-center gap-1">
                             <DollarSign className="h-3 w-3" />
-                            Estimated Payout
+                            Payout
                           </p>
                           <p className="font-medium">${((batch.batch_stops?.length || 0) * 7.5).toFixed(2)}</p>
                         </div>
