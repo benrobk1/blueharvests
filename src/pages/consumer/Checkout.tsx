@@ -562,12 +562,18 @@ const Checkout = () => {
                     <span>{formatMoney(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Delivery Fee</span>
+                    <span className="flex items-center gap-1">
+                      Delivery Fee
+                      <span className="text-xs text-muted-foreground">(100% to driver)</span>
+                    </span>
                     <span>{formatMoney(deliveryFee)}</span>
                   </div>
                   {tipAmount > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span>Driver Tip</span>
+                      <span className="flex items-center gap-1">
+                        Driver Tip
+                        <span className="text-xs text-muted-foreground">(100% to driver)</span>
+                      </span>
                       <span>{formatMoney(tipAmount)}</span>
                     </div>
                   )}

@@ -25,15 +25,14 @@ const PriceBreakdownDrawer = ({
   farmName,
   isCheckout = false 
 }: PriceBreakdownDrawerProps) => {
-  // REVENUE MODEL: 88/2/10 split with flat delivery fee
+  // REVENUE MODEL: 88/2/10 split (product price only)
   // - 88% to farmer (significantly higher than traditional grocery ~10-15%)
   // - 2% to lead farmer (coordination fee)
   // - 10% platform fee (operations, support, infrastructure)
-  // - $7.50 flat delivery fee (goes to driver, not percentage-based)
+  // Note: Delivery fee ($7.50) is separate and goes 100% to driver
   const farmerShare = price * 0.88;
   const leadFarmerShare = price * 0.02;
   const platformFee = price * 0.10;
-  const deliveryFee = 7.50; // Flat fee per order
 
   return (
     <Drawer>
@@ -82,24 +81,18 @@ const PriceBreakdownDrawer = ({
             
             <Separator />
             
-            {/* Delivery Fee - Flat $7.50 */}
-            <div className="flex justify-between items-center text-sm px-3 py-2 bg-blue-50 dark:bg-blue-950 rounded-lg">
-              <span className="font-medium">Delivery fee (goes to driver)</span>
-              <span className="font-medium">{formatMoney(deliveryFee)}</span>
-            </div>
-            
-            {/* Total */}
-            <div className="flex justify-between items-center text-lg font-bold pt-2 border-t">
-              <span>Your Total</span>
-              <span>{formatMoney(price + deliveryFee)}</span>
+            {/* Product Total */}
+            <div className="flex justify-between items-center text-lg font-bold pt-2">
+              <span>Product Price</span>
+              <span>{formatMoney(price)}</span>
             </div>
           </div>
 
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              The $7.50 delivery fee goes directly to your driver. 
-              Farmers receive 88% of product price (vs 10-15% at grocery stores).
+              Farmers receive 88% of product price (vs 10-15% at grocery stores). 
+              Delivery fee is separate and added at checkout.
             </AlertDescription>
           </Alert>
         </div>
