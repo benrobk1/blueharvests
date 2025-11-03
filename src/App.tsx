@@ -265,14 +265,16 @@ const AppContent = () => {
           } />
           
           <Route path="/demo/live-map" element={
-            <RoleGate roles={['admin']}>
+            <RoleGate roles={isDemoMode ? ['admin', 'farmer', 'lead_farmer', 'driver'] : ['admin']}>
               {/* Dynamic import to keep bundle size small */}
               {React.createElement(React.lazy(() => import('./pages/demo/LiveMap')))}
             </RoleGate>
           } />
           
           <Route path="/demo/live-orders" element={
-            React.createElement(React.lazy(() => import('./pages/demo/LiveOrderStatus')))
+            <RoleGate roles={isDemoMode ? ['admin', 'farmer', 'lead_farmer', 'driver', 'consumer'] : ['admin']}>
+              {React.createElement(React.lazy(() => import('./pages/demo/LiveOrderStatus')))}
+            </RoleGate>
           } />
           
           <Route path="/admin/accept-invitation" element={<AcceptInvitation />} />
