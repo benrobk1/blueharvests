@@ -20,7 +20,14 @@ export default function AvailableRoutes() {
     batch_number: 8,
     delivery_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
     status: 'pending',
-    batch_stops: [{ count: 42 }]
+    batch_stops: [{ count: 40 }],
+    batch_metadata: [{
+      collection_point_address: '456 Farm Road, Milton, NY 12547',
+      estimated_route_hours: 6.5
+    }],
+    profiles: {
+      full_name: 'Thompson Family Farm'
+    }
   };
   
   const { data: availableBatches, refetch } = useQuery({
@@ -34,7 +41,14 @@ export default function AvailableRoutes() {
           batch_number,
           delivery_date,
           status,
-          batch_stops (count)
+          batch_stops (count),
+          batch_metadata (
+            collection_point_address,
+            estimated_route_hours
+          ),
+          profiles:lead_farmer_id (
+            full_name
+          )
         `)
         .eq('status', 'pending')
         .is('driver_id', null)
@@ -105,7 +119,7 @@ export default function AvailableRoutes() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Package className="h-5 w-5" />
-              Upcoming Batches
+              Available Routes
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -120,36 +134,44 @@ export default function AvailableRoutes() {
               displayBatches.map((batch) => (
                 <div 
                   key={batch.id} 
-                  className="flex items-center justify-between p-6 border rounded-lg hover:border-primary transition-colors bg-card"
+                  className="p-6 border rounded-lg hover:border-primary transition-colors bg-card space-y-4"
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-xl font-bold text-primary">#{batch.batch_number}</span>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-lg text-foreground">
-                          Batch #{batch.batch_number}
-                        </p>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                          <span className="text-xl font-bold text-primary">#{batch.batch_number}</span>
+                        </div>
+                        <div>
+                          <p className="font-semibold text-lg text-foreground">
+                            Batch #{batch.batch_number}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
                             {format(new Date(batch.delivery_date), 'EEEE, MMM dd, yyyy')}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
+                          </p>
+                        </div>
+                      </div>
+                      <div className="ml-15 space-y-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {batch.profiles?.full_name || 'Collection Point'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {batch.batch_metadata?.[0]?.collection_point_address || 'Address not available'}
+                        </p>
+                        <div className="flex items-center gap-4 mt-2">
+                          <Badge variant="secondary">
                             {batch.batch_stops?.[0]?.count || 0} stops
-                          </div>
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            Est. {batch.batch_metadata?.[0]?.estimated_route_hours || 0} hours
+                          </span>
                         </div>
                       </div>
                     </div>
-                    <Badge variant="secondary" className="mt-2">
-                      Available
-                    </Badge>
+                    <Button onClick={() => handleClaimRoute(batch.id)} size="lg">
+                      Claim Route
+                    </Button>
                   </div>
-                  <Button onClick={() => handleClaimRoute(batch.id)} size="lg">
-                    Claim Route
-                  </Button>
                 </div>
               ))
             )}

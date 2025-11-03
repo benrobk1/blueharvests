@@ -18,7 +18,14 @@ export function AvailableRoutes() {
     batch_number: 8,
     delivery_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
     status: 'pending',
-    batch_stops: [{ count: 42 }]
+    batch_stops: [{ count: 40 }],
+    batch_metadata: [{
+      collection_point_address: '456 Farm Road, Milton, NY 12547',
+      estimated_route_hours: 6.5
+    }],
+    profiles: {
+      full_name: 'Thompson Family Farm'
+    }
   };
 
   const { data: availableBatches, refetch } = useQuery({
@@ -31,7 +38,14 @@ export function AvailableRoutes() {
           batch_number,
           delivery_date,
           status,
-          batch_stops (count)
+          batch_stops (count),
+          batch_metadata (
+            collection_point_address,
+            estimated_route_hours
+          ),
+          profiles:lead_farmer_id (
+            full_name
+          )
         `)
         .eq('status', 'pending')
         .is('driver_id', null)
@@ -95,19 +109,43 @@ export function AvailableRoutes() {
           </p>
         ) : (
           displayBatches.map((batch) => (
-            <div key={batch.id} className="flex items-center justify-between p-4 border rounded-lg hover:border-primary transition-colors">
-              <div>
-                <p className="font-medium text-foreground">Batch #{batch.batch_number}</p>
-                <p className="text-sm text-muted-foreground">
-                  {format(new Date(batch.delivery_date), 'EEEE, MMM dd, yyyy')}
-                </p>
-                <Badge variant="secondary" className="mt-2">
-                  {batch.batch_stops?.[0]?.count || 0} stops
-                </Badge>
+            <div key={batch.id} className="p-6 border rounded-lg hover:border-primary transition-colors bg-card space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-xl font-bold text-primary">#{batch.batch_number}</span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-lg text-foreground">
+                        Batch #{batch.batch_number}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(batch.delivery_date), 'EEEE, MMM dd, yyyy')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="ml-15 space-y-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {batch.profiles?.full_name || 'Collection Point'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {batch.batch_metadata?.[0]?.collection_point_address || 'Address not available'}
+                    </p>
+                    <div className="flex items-center gap-4 mt-2">
+                      <Badge variant="secondary">
+                        {batch.batch_stops?.[0]?.count || 0} stops
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        Est. {batch.batch_metadata?.[0]?.estimated_route_hours || 0} hours
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <Button onClick={() => handleClaimRoute(batch.id)} size="lg">
+                  Claim Route
+                </Button>
               </div>
-              <Button onClick={() => handleClaimRoute(batch.id)}>
-                Claim Route
-              </Button>
             </div>
           ))
         )}
