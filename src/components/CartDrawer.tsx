@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShoppingCart, Minus, Plus, Trash2, Save, History } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
 import { formatMoney } from "@/lib/formatMoney";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { SaveCartDialog } from "@/components/SaveCartDialog";
 import { SavedCartsList } from "@/components/SavedCartsList";
 import CartItemSkeleton from "@/components/CartItemSkeleton";
@@ -145,11 +145,10 @@ export const CartDrawer = () => {
                     <Save className="h-4 w-4 mr-2" />
                     Save Cart
                   </Button>
-                  <Button 
-                    onClick={handleCheckout}
-                    disabled={cartTotal < 25}
-                  >
-                    {cartTotal < 25 ? `$${(25 - cartTotal).toFixed(2)} more` : 'Checkout'}
+                  <Button asChild disabled={cartTotal < 25}>
+                    <Link to="/consumer/checkout" onClick={() => setOpen(false)}>
+                      {cartTotal < 25 ? `$${(25 - cartTotal).toFixed(2)} more` : 'Checkout'}
+                    </Link>
                   </Button>
                 </div>
                 {cartTotal < 25 && (

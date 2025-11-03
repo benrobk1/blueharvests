@@ -95,7 +95,17 @@ const Checkout = () => {
       return data;
     },
     enabled: !!user,
-  });
+    initialData: isDemoMode ? {
+      id: user?.id || 'demo-user',
+      full_name: 'Demo Consumer',
+      street_address: '123 Demo Street',
+      address_line_2: null,
+      city: 'Demo City',
+      state: 'CA',
+      zip_code: '90210',
+      phone: '555-0123',
+    } : undefined,
+   });
 
   const { data: credits } = useQuery({
     queryKey: ['credits', user?.id],
@@ -159,7 +169,13 @@ const Checkout = () => {
       return data;
     },
     enabled: !!profile?.zip_code,
-  });
+    initialData: isDemoMode ? {
+      zip_code: (profile as any)?.zip_code || '90210',
+      delivery_days: ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],
+      cutoff_time: '23:59:00',
+      active: true,
+    } : undefined,
+   });
 
 
 // Generate available delivery dates (next 7 days)
