@@ -7,14 +7,19 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Package, MapPin, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useDemoMode } from "@/contexts/DemoModeContext";
 
 export default function AvailableRoutes() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isDemoMode } = useDemoMode();
+  
+  console.log('Available Routes: isDemoMode =', isDemoMode);
   
   const { data: availableBatches, refetch } = useQuery({
     queryKey: ['available-routes'],
     queryFn: async () => {
+      console.log('Fetching available routes...');
       const { data } = await supabase
         .from('delivery_batches')
         .select(`
@@ -29,6 +34,7 @@ export default function AvailableRoutes() {
         .gte('delivery_date', new Date().toISOString().split('T')[0])
         .order('delivery_date', { ascending: true });
       
+      console.log('Available batches result:', data);
       return data;
     },
   });
@@ -38,12 +44,9 @@ export default function AvailableRoutes() {
     if (!user) return;
     
     const { error } = await supabase
-      .from('delivery_batches')
-      .update({ 
-        driver_id: user.id,
-        status: 'assigned'
-      })
-      .eq('id', batchId);
+      .functions.invoke('claim-route', {
+        body: { batch_id: batchId },
+      });
     
     if (error) {
       toast({

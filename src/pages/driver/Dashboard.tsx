@@ -19,11 +19,16 @@ import { FLAT_DELIVERY_FEE } from "@/lib/deliveryFeeHelpers";
 import { RouteDensityMap } from "@/components/driver/RouteDensityMap";
 import { useNavigate } from "react-router-dom";
 import { User } from "lucide-react";
+import { useDemoMode } from "@/contexts/DemoModeContext";
 
 const DriverDashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { isDemoMode } = useDemoMode();
+
+  console.log('Driver Dashboard: isDemoMode =', isDemoMode);
+  console.log('Driver Dashboard: user =', user);
 
   // Fetch earnings from delivery fees and tips
   const { data: earnings, isLoading: earningsLoading } = useQuery({
