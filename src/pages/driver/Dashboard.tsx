@@ -325,19 +325,13 @@ const DriverDashboard = () => {
       });
     }
   };
-  // Derived display values for Today's Earnings (use demo estimates when no real payouts today)
-  const displayActiveRoute = isDemoMode ? demoActiveRoute : activeRoute;
-  const displayEarnings = isDemoMode ? demoEarnings : earnings;
-  const displayStats = isDemoMode ? demoStats : stats;
-  const displayActiveBatch = isDemoMode ? demoActiveBatch : activeBatch;
-  const displayMonthlyBatches = isDemoMode ? demoMonthlyBatches : monthlyBatches;
-
-  const activeStopsCount = displayActiveRoute?.filter((r: any) => !r.isCollectionPoint).length || 0;
-  const usingFallbackToday = (displayEarnings?.today.total || 0) === 0 && activeStopsCount > 0;
-  const todayGross = usingFallbackToday ? activeStopsCount * FLAT_DELIVERY_FEE : (displayEarnings?.today.total || 0);
-  const todayTips = usingFallbackToday ? Math.round(activeStopsCount * FLAT_DELIVERY_FEE * 0.05) : (displayEarnings?.today.tips || 0);
+  // Derived display values for Today's Earnings (use fallback estimates when no real payouts today)
+  const activeStopsCount = activeRoute?.filter((r: any) => !r.isCollectionPoint).length || 0;
+  const usingFallbackToday = (earnings?.today.total || 0) === 0 && activeStopsCount > 0;
+  const todayGross = usingFallbackToday ? activeStopsCount * FLAT_DELIVERY_FEE : (earnings?.today.total || 0);
+  const todayTips = usingFallbackToday ? Math.round(activeStopsCount * FLAT_DELIVERY_FEE * 0.05) : (earnings?.today.tips || 0);
   const todayDeliveryFees = todayGross - todayTips;
-  const expenseStops = usingFallbackToday ? activeStopsCount : (displayStats?.deliveries || 0);
+  const expenseStops = usingFallbackToday ? activeStopsCount : (stats?.deliveries || 0);
   const todayExpenses = calculateEstimatedExpenses(expenseStops);
 
   return (
@@ -348,7 +342,7 @@ const DriverDashboard = () => {
             <div>
               <h1 className="text-2xl font-bold text-foreground">Driver Dashboard</h1>
               <p className="text-sm text-muted-foreground">
-                Welcome back! You have {displayStats?.deliveries || 0} deliveries today
+                Welcome back! You have {stats?.deliveries || 0} deliveries today
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -400,20 +394,20 @@ const DriverDashboard = () => {
                 Active Route
               </CardTitle>
               <CardDescription>
-                {displayActiveRoute && displayActiveRoute.length > 0 ? 'In progress' : 'No active route'}
+                {activeRoute && activeRoute.length > 0 ? 'In progress' : 'No active route'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               {routeLoading ? (
                 <Skeleton className="h-20 w-full" />
-              ) : displayActiveRoute && displayActiveRoute.length > 0 ? (
+              ) : activeRoute && activeRoute.length > 0 ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">Next Stop</p>
-                      <p className="font-semibold">{displayActiveRoute[0].customer}</p>
+                      <p className="font-semibold">{activeRoute[0].customer}</p>
                     </div>
-                    <Badge variant="secondary">{displayActiveRoute.length} stops</Badge>
+                    <Badge variant="secondary">{activeRoute.length} stops</Badge>
                   </div>
                   <Button className="w-full" variant="default">
                     <Navigation className="h-4 w-4 mr-2" />
@@ -435,7 +429,7 @@ const DriverDashboard = () => {
         </div>
 
         {/* Route Density Map - Show if there's an active batch */}
-        {displayActiveBatch?.id ? (
+        {activeBatch?.id ? (
           <Card className="border-2">
             <CardHeader>
               <CardTitle>Route Overview</CardTitle>
@@ -444,7 +438,7 @@ const DriverDashboard = () => {
               <p className="text-sm text-muted-foreground">
                 Your route starts at 2:30 PM. Head to the collection point to pick up and scan orders, then follow GPS tracking for deliveries.
               </p>
-              <RouteDensityMap batchId={displayActiveBatch.id} />
+              <RouteDensityMap batchId={activeBatch.id} />
             </CardContent>
           </Card>
         ) : (
@@ -536,8 +530,8 @@ const DriverDashboard = () => {
                 <Skeleton className="h-10 w-24" />
               ) : (
                 <>
-                  <div className="text-3xl font-bold text-foreground">{formatMoney(displayEarnings?.week.total || 0)}</div>
-                  <p className="text-xs text-muted-foreground mt-1">Including {formatMoney(displayEarnings?.week.tips || 0)} in tips</p>
+                  <div className="text-3xl font-bold text-foreground">{formatMoney(earnings?.week.total || 0)}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Including {formatMoney(earnings?.week.tips || 0)} in tips</p>
                 </>
               )}
             </CardContent>
@@ -555,9 +549,9 @@ const DriverDashboard = () => {
                 <Skeleton className="h-10 w-24" />
               ) : (
                 <>
-                  <div className="text-3xl font-bold text-foreground">{formatMoney((displayEarnings?.month.total || 0) + (displayEarnings?.month.tips || 0))}</div>
+                  <div className="text-3xl font-bold text-foreground">{formatMoney((earnings?.month.total || 0) + (earnings?.month.tips || 0))}</div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {displayMonthlyBatches || 0} deliveries | {formatMoney(displayEarnings?.month.tips || 0)} tips
+                    {monthlyBatches || 0} deliveries | {formatMoney(earnings?.month.tips || 0)} tips
                   </p>
                 </>
               )}
@@ -584,8 +578,8 @@ const DriverDashboard = () => {
                   <div className="flex-1">
                     {(() => {
                       const ratingDisplay = getRatingDisplay(
-                        Number(displayStats?.rating || 0), 
-                        displayStats?.totalRatings || 0
+                        Number(stats?.rating || 0), 
+                        stats?.totalRatings || 0
                       );
                       
                       return ratingDisplay.show ? (
@@ -619,7 +613,7 @@ const DriverDashboard = () => {
                     <Clock className="h-6 w-6 text-success" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-foreground">{displayStats?.onTime || 0}%</div>
+                    <div className="text-2xl font-bold text-foreground">{stats?.onTime || 0}%</div>
                     <div className="text-sm text-muted-foreground">On-Time Delivery</div>
                   </div>
                 </div>

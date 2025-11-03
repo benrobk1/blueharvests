@@ -28,7 +28,7 @@ export default function AvailableRoutes() {
             collection_point_address,
             estimated_route_hours
           ),
-          profiles:lead_farmer_id (
+          lead_farmer_profile:profiles!lead_farmer_id (
             full_name
           )
         `)
@@ -124,7 +124,7 @@ export default function AvailableRoutes() {
                       </div>
                       <div className="ml-15 space-y-1">
                         <p className="text-sm font-medium text-foreground">
-                          {batch.profiles?.full_name || 'Collection Point'}
+                          {batch.lead_farmer_profile?.full_name || 'Collection Point'}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {batch.batch_metadata?.[0]?.collection_point_address || 'Address not available'}
