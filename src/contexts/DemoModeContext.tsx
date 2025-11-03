@@ -6,18 +6,24 @@ interface DemoModeContextType {
   isDemoMode: boolean;
   dataSeeded: boolean;
   currentDemoAccount: string | null;
+  claimedDemoRoute: boolean;
   enableDemoMode: () => Promise<any>;
   disableDemoMode: () => Promise<void>;
   setCurrentDemoAccount: (email: string) => void;
+  claimDemoRoute: () => void;
+  unclaimDemoRoute: () => void;
 }
 
 const DemoModeContext = createContext<DemoModeContextType>({
   isDemoMode: false,
   dataSeeded: false,
   currentDemoAccount: null,
+  claimedDemoRoute: false,
   enableDemoMode: async () => ({}),
   disableDemoMode: async () => {},
   setCurrentDemoAccount: () => {},
+  claimDemoRoute: () => {},
+  unclaimDemoRoute: () => {},
 });
 
 export const useDemoMode = () => {
@@ -39,12 +45,13 @@ const getInitialDemoMode = () => {
         enabled: parsed.enabled || false,
         dataSeeded: parsed.dataSeeded || false,
         lastAccount: parsed.lastAccount || null,
+        claimedRoute: parsed.claimedRoute || false,
       };
     }
   } catch (e) {
     console.error('Failed to parse demo mode state:', e);
   }
-  return { enabled: false, dataSeeded: false, lastAccount: null };
+  return { enabled: false, dataSeeded: false, lastAccount: null, claimedRoute: false };
 };
 
 export const DemoModeProvider = ({ children }: DemoModeProviderProps) => {
@@ -52,6 +59,7 @@ export const DemoModeProvider = ({ children }: DemoModeProviderProps) => {
   const [isDemoMode, setIsDemoMode] = useState(initialState.enabled);
   const [dataSeeded, setDataSeeded] = useState(initialState.dataSeeded);
   const [currentDemoAccount, setCurrentDemoAccount] = useState<string | null>(initialState.lastAccount);
+  const [claimedDemoRoute, setClaimedDemoRoute] = useState(initialState.claimedRoute);
 
   // Save demo mode state to localStorage whenever it changes
   useEffect(() => {
@@ -61,11 +69,12 @@ export const DemoModeProvider = ({ children }: DemoModeProviderProps) => {
         dataSeeded,
         enabledAt: new Date().toISOString(),
         lastAccount: currentDemoAccount,
+        claimedRoute: claimedDemoRoute,
       }));
     } else {
       localStorage.removeItem('demoMode');
     }
-  }, [isDemoMode, dataSeeded, currentDemoAccount]);
+  }, [isDemoMode, dataSeeded, currentDemoAccount, claimedDemoRoute]);
 
   const enableDemoMode = async () => {
     try {
@@ -145,10 +154,19 @@ export const DemoModeProvider = ({ children }: DemoModeProviderProps) => {
     } finally {
       setIsDemoMode(false);
       setCurrentDemoAccount(null);
+      setClaimedDemoRoute(false);
       
       // Sign out current user
       await supabase.auth.signOut();
     }
+  };
+
+  const claimDemoRoute = () => {
+    setClaimedDemoRoute(true);
+  };
+
+  const unclaimDemoRoute = () => {
+    setClaimedDemoRoute(false);
   };
 
   return (
@@ -157,9 +175,12 @@ export const DemoModeProvider = ({ children }: DemoModeProviderProps) => {
         isDemoMode,
         dataSeeded,
         currentDemoAccount,
+        claimedDemoRoute,
         enableDemoMode,
         disableDemoMode,
         setCurrentDemoAccount,
+        claimDemoRoute,
+        unclaimDemoRoute,
       }}
     >
       {children}

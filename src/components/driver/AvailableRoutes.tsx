@@ -10,7 +10,7 @@ import { useDemoMode } from "@/contexts/DemoModeContext";
 
 export function AvailableRoutes() {
   const { toast } = useToast();
-  const { isDemoMode } = useDemoMode();
+  const { isDemoMode, claimDemoRoute } = useDemoMode();
   
   // Demo batch data
   const demoBatch = {
@@ -62,9 +62,10 @@ export function AvailableRoutes() {
   
   const handleClaimRoute = async (batchId: string) => {
     if (isDemoMode) {
+      claimDemoRoute();
       toast({
-        title: 'Demo Mode',
-        description: 'In demo mode, route claiming is simulated. Sign up as a real driver to claim actual routes!',
+        title: 'Route Claimed!',
+        description: 'Check your dashboard to see your active route.',
       });
       return;
     }
