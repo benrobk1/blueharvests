@@ -8,15 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { Truck, Package, Calendar, ArrowLeft, ChevronDown, DollarSign, MapPin, RefreshCw, Loader2 } from 'lucide-react';
+import { Truck, Package, Calendar, ArrowLeft, ChevronDown, DollarSign, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useDemoMode } from '@/contexts/DemoModeContext';
 
 const BatchAdjustments = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { isDemoMode } = useDemoMode();
   const [selectedBatch, setSelectedBatch] = useState<string | null>(null);
-  const [isResetting, setIsResetting] = useState(false);
 
   const { data: batches, isLoading } = useQuery({
     queryKey: ['admin-batches'],
@@ -69,37 +70,27 @@ const BatchAdjustments = () => {
     },
   });
 
-  const handleResetDemoData = async () => {
-    if (!confirm('Reset demo data? This will delete all demo data and recreate batch #7 with 39 stops.')) {
-      return;
-    }
-
-    setIsResetting(true);
-    try {
-      // First reset demo data
-      const { error: resetError } = await supabase.functions.invoke('reset-demo-data');
-      if (resetError) throw resetError;
-
-      // Then seed new demo data
-      const { error: seedError } = await supabase.functions.invoke('seed-full-demo');
-      if (seedError) throw seedError;
-
-      toast({
-        title: "Demo data reset",
-        description: "Batch #7 has been created with 39 stops",
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['admin-batches'] });
-    } catch (error: any) {
-      console.error('Reset error:', error);
-      toast({
-        variant: "destructive",
-        title: "Failed to reset demo data",
-        description: error.message,
-      });
-    } finally {
-      setIsResetting(false);
-    }
+  // Demo batch data
+  const demoBatch = {
+    id: 'demo-batch-7',
+    batch_number: 7,
+    delivery_date: new Date().toISOString().split('T')[0],
+    status: 'in_progress',
+    driver_id: 'demo-driver-1',
+    zip_codes: ['11201', '11211'],
+    profiles: {
+      full_name: 'John Driver'
+    },
+    batch_stops: Array(39).fill(null).map((_, i) => ({
+      id: `stop-${i}`,
+      status: i < 20 ? 'delivered' : i === 20 ? 'in_progress' : 'pending'
+    })),
+    batch_metadata: [{
+      collection_point_address: '456 Farm Road, Milton, NY 12547',
+      order_count: 39,
+      estimated_route_hours: 6.5,
+      merged_zips: ['11201', '11211']
+    }]
   };
 
   const reassignMutation = useMutation({
@@ -151,47 +142,31 @@ const BatchAdjustments = () => {
     );
   }
 
+  // Show demo data if in demo mode, otherwise show real data
+  const displayBatches = isDemoMode ? [demoBatch] : batches;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" onClick={() => navigate('/admin/dashboard')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">Batch Adjustments</h1>
-            <p className="text-muted-foreground">Manually adjust delivery batches and reassign drivers</p>
-          </div>
-        </div>
-        <Button
-          onClick={handleResetDemoData}
-          disabled={isResetting}
-          variant="outline"
-        >
-          {isResetting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Resetting...
-            </>
-          ) : (
-            <>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Reset Demo Data
-            </>
-          )}
+      <div className="flex items-center gap-4">
+        <Button variant="outline" size="sm" onClick={() => navigate('/admin/dashboard')}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
         </Button>
+        <div>
+          <h1 className="text-3xl font-bold">Batch Adjustments</h1>
+          <p className="text-muted-foreground">Manually adjust delivery batches and reassign drivers</p>
+        </div>
       </div>
 
       <div className="space-y-4">
-        {batches && batches.length === 0 ? (
+        {displayBatches && displayBatches.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center text-muted-foreground">
               No delivery batches found
             </CardContent>
           </Card>
         ) : (
-          batches?.map((batch) => (
+          displayBatches?.map((batch) => (
             <Card key={batch.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">
