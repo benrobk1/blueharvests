@@ -171,8 +171,8 @@ const Checkout = () => {
       }
 
       // Call checkout edge function with validated contract payload
-      // Convert date string to ISO datetime format
-      const deliveryDateTime = new Date(selectedDate + 'T00:00:00').toISOString();
+      // Send a timezone-safe ISO date at noon UTC to avoid day shifts
+      const deliveryDateTime = `${selectedDate}T12:00:00Z`;
       
       const checkoutPayload: CheckoutRequest = {
         cart_id: cart.id,
