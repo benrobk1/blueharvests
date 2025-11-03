@@ -609,49 +609,49 @@ serve(async (req) => {
       }
     }
 
-    // Create an available batch (unclaimed) for tomorrow with 40 stops
+    // Create an available batch (unclaimed) for tomorrow with 39 stops
     console.log('Creating available batch for demo...');
     const tomorrowForBatch = new Date();
     tomorrowForBatch.setDate(tomorrowForBatch.getDate() + 1);
     const tomorrowForBatchStr = tomorrowForBatch.toISOString().split('T')[0];
     
-    // Brooklyn addresses for delivery batch
+    // Brooklyn addresses for delivery batch (only 2 ZIP codes)
     const brooklynAddresses = [
       { street: '123 Atlantic Ave', city: 'Brooklyn', zip: '11201' },
       { street: '456 Court St', city: 'Brooklyn', zip: '11201' },
       { street: '789 Smith St', city: 'Brooklyn', zip: '11201' },
       { street: '234 Fulton St', city: 'Brooklyn', zip: '11201' },
-      { street: '567 DeKalb Ave', city: 'Brooklyn', zip: '11205' },
-      { street: '890 Lafayette Ave', city: 'Brooklyn', zip: '11205' },
+      { street: '345 State St', city: 'Brooklyn', zip: '11201' },
+      { street: '567 Clinton St', city: 'Brooklyn', zip: '11201' },
+      { street: '678 Henry St', city: 'Brooklyn', zip: '11201' },
+      { street: '789 Hicks St', city: 'Brooklyn', zip: '11201' },
+      { street: '890 Montague St', city: 'Brooklyn', zip: '11201' },
+      { street: '901 Pierrepont St', city: 'Brooklyn', zip: '11201' },
       { street: '111 Bedford Ave', city: 'Brooklyn', zip: '11211' },
       { street: '222 Grand St', city: 'Brooklyn', zip: '11211' },
       { street: '333 Metropolitan Ave', city: 'Brooklyn', zip: '11211' },
       { street: '444 Driggs Ave', city: 'Brooklyn', zip: '11211' },
-      { street: '555 Lorimer St', city: 'Brooklyn', zip: '11206' },
-      { street: '666 Graham Ave', city: 'Brooklyn', zip: '11206' },
-      { street: '777 Manhattan Ave', city: 'Brooklyn', zip: '11222' },
-      { street: '888 Nassau Ave', city: 'Brooklyn', zip: '11222' },
-      { street: '999 Greenpoint Ave', city: 'Brooklyn', zip: '11222' },
-      { street: '101 Franklin St', city: 'Brooklyn', zip: '11222' },
-      { street: '202 Meserole Ave', city: 'Brooklyn', zip: '11222' },
-      { street: '303 India St', city: 'Brooklyn', zip: '11222' },
-      { street: '404 Huron St', city: 'Brooklyn', zip: '11222' },
-      { street: '505 Java St', city: 'Brooklyn', zip: '11222' },
+      { street: '555 Lorimer St', city: 'Brooklyn', zip: '11211' },
+      { street: '666 Graham Ave', city: 'Brooklyn', zip: '11211' },
+      { street: '777 Manhattan Ave', city: 'Brooklyn', zip: '11211' },
+      { street: '888 Nassau Ave', city: 'Brooklyn', zip: '11211' },
+      { street: '999 Greenpoint Ave', city: 'Brooklyn', zip: '11211' },
+      { street: '101 Franklin St', city: 'Brooklyn', zip: '11211' },
     ];
     
     const { data: availableBatch } = await supabase.from('delivery_batches').insert({
       lead_farmer_id: leadFarmerId,
       driver_id: null, // No driver assigned - available to claim
       delivery_date: tomorrowForBatchStr,
-      batch_number: 5,
-      estimated_duration_minutes: 40 * 10, // 400 minutes = 6.67 hours
-      zip_codes: ['11201', '11205', '11206', '11211', '11222'],
+      batch_number: 7,
+      estimated_duration_minutes: 39 * 10, // 390 minutes = 6.5 hours
+      zip_codes: ['11201', '11211'],
       status: 'pending'
     }).select().single();
 
-    // Create 40 pending stops for the available batch
+    // Create 39 pending stops for the available batch
     if (availableBatch) {
-      for (let i = 0; i < 40; i++) {
+      for (let i = 0; i < 39; i++) {
         const consumerNum = (i % 48) + 1;
         const consumerId = createdUserIds[`consumer${consumerNum}@demo.com`];
         const addr = brooklynAddresses[i % brooklynAddresses.length];

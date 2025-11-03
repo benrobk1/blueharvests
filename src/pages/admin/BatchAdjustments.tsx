@@ -6,8 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { Truck, Package, Calendar, ArrowLeft } from 'lucide-react';
+import { Truck, Package, Calendar, ArrowLeft, ChevronDown, DollarSign, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const BatchAdjustments = () => {
@@ -126,6 +127,9 @@ const BatchAdjustments = () => {
         <div>
           <h1 className="text-3xl font-bold">Batch Adjustments</h1>
           <p className="text-muted-foreground">Manually adjust delivery batches and reassign drivers</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Order batches are automatically grouped with AI by zip code, location, and delivery window for optimal routing efficiency.
+          </p>
         </div>
       </div>
 
@@ -154,34 +158,6 @@ const BatchAdjustments = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                {batch.batch_metadata && batch.batch_metadata.length > 0 && (
-                  <div className="mb-4 p-3 bg-muted/50 rounded-lg space-y-2">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">Collection Point</p>
-                      {batch.batch_metadata[0].is_subsidized && (
-                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
-                          Subsidized
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {batch.batch_metadata[0].collection_point_address || 'Not assigned'}
-                    </p>
-                    {batch.batch_metadata[0].merged_zips && batch.batch_metadata[0].merged_zips.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Merged ZIPs: {batch.batch_metadata[0].merged_zips.join(', ')}
-                      </p>
-                    )}
-                    {batch.batch_metadata[0].estimated_route_hours && (
-                      <p className="text-xs text-muted-foreground">
-                        Est. Route: {Number(batch.batch_metadata[0].estimated_route_hours).toFixed(1)} hours
-                      </p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Orders: {batch.batch_metadata[0].order_count}
-                    </p>
-                  </div>
-                )}
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-muted-foreground flex items-center gap-1">
@@ -202,7 +178,74 @@ const BatchAdjustments = () => {
                   </div>
                 </div>
 
-                {batch.status !== 'completed' && (
+                {/* Driver Information Dropdown */}
+                {batch.driver_id && (
+                  <Collapsible className="pt-4 border-t">
+                    <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <Truck className="h-4 w-4" />
+                        <span className="font-medium">Driver Information & Payout</span>
+                      </div>
+                      <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-3 space-y-2">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Driver Name</p>
+                          <p className="font-medium">{batch.profiles?.full_name || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground flex items-center gap-1">
+                            <DollarSign className="h-3 w-3" />
+                            Estimated Payout
+                          </p>
+                          <p className="font-medium">${((batch.batch_stops?.length || 0) * 7.5).toFixed(2)}</p>
+                        </div>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                {/* Collection Point Dropdown */}
+                {batch.batch_metadata && batch.batch_metadata.length > 0 && (
+                  <Collapsible className="pt-4 border-t">
+                    <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        <span className="font-medium">Collection Point Details</span>
+                      </div>
+                      <ChevronDown className="h-4 w-4 transition-transform duration-200 data-[state=open]:rotate-180" />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="pt-3 space-y-2">
+                      <div className="space-y-3 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Address</p>
+                          <p className="font-medium">{batch.batch_metadata[0].collection_point_address || 'N/A'}</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-muted-foreground">Total Orders</p>
+                            <p className="font-medium">{batch.batch_metadata[0].order_count}</p>
+                          </div>
+                          {batch.batch_metadata[0].estimated_route_hours && (
+                            <div>
+                              <p className="text-muted-foreground">Est. Route Time</p>
+                              <p className="font-medium">{Number(batch.batch_metadata[0].estimated_route_hours).toFixed(1)} hours</p>
+                            </div>
+                          )}
+                        </div>
+                        {batch.batch_metadata[0].merged_zips && batch.batch_metadata[0].merged_zips.length > 0 && (
+                          <div>
+                            <p className="text-muted-foreground">Merged ZIP Codes</p>
+                            <p className="font-medium">{batch.batch_metadata[0].merged_zips.join(', ')}</p>
+                          </div>
+                        )}
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+
+                {batch.status !== 'completed' && !batch.driver_id && (
                   <div className="pt-4 border-t space-y-3">
                     <Label>Reassign Driver</Label>
                     <div className="flex gap-2">
