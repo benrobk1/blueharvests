@@ -47,11 +47,11 @@ const DriverDashboard = () => {
       deliveryFees: 284 - Math.round(5 * FLAT_DELIVERY_FEE * 0.05)
     },
     week: { total: 292, tips: 42, deliveryFees: 250 },
-    month: { total: 579, tips: 84, deliveryFees: 495 },
+    month: { total: 415.50, tips: 15.50, deliveryFees: 400 }, // 40 deliveries * $10
   } : null;
 
   const demoStats = claimedDemoRoute ? {
-    deliveries: 2,
+    deliveries: 40,
     rating: '4.8',
     totalRatings: 18,
     onTime: 95,
