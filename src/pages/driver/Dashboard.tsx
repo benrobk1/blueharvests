@@ -68,7 +68,7 @@ const DriverDashboard = () => {
 
   const demoActiveBatch = claimedDemoRoute ? { id: 'demo-batch-8' } : null;
 
-  const demoMonthlyBatches = claimedDemoRoute ? 12 : 0;
+  const demoMonthlyBatches = claimedDemoRoute ? 40 : 0;
 
   // Fetch earnings from delivery fees and tips
   const { data: earnings, isLoading: earningsLoading } = useQuery({
