@@ -196,7 +196,7 @@ const BatchAdjustments = () => {
                             <DollarSign className="h-3 w-3" />
                             Payout
                           </p>
-                          <p className="font-medium">${((batch.batch_stops?.length || 0) * 7.5).toFixed(2)}</p>
+                          <p className="font-medium">${((batch.batch_stops?.length || 0) * 7.28).toFixed(2)}</p>
                         </div>
                       </div>
                     </CollapsibleContent>
