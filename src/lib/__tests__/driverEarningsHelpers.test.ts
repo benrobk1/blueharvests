@@ -6,8 +6,8 @@ describe('calculateEstimatedExpenses', () => {
     const expenses = calculateEstimatedExpenses(10, 30); // 10 stops, 30 miles
     // 30 miles / 20 MPG * $3.50 = $5.25
     expect(expenses.fuel).toBe(5.25);
-    expect(expenses.tolls).toBe(5.00); // 10 stops > 5
-    expect(expenses.total).toBe(10.25);
+    expect(expenses.tolls).toBe(50.00); // Flat $50 tolls
+    expect(expenses.total).toBe(55.25);
   });
 
   it('uses default distance calculation when not provided', () => {
@@ -15,52 +15,52 @@ describe('calculateEstimatedExpenses', () => {
     // 8 stops * 3mi/stop = 24 miles
     // 24 / 20 MPG * $3.50 = $4.20
     expect(expenses.fuel).toBe(4.20);
-    expect(expenses.tolls).toBe(5.00);
-    expect(expenses.total).toBe(9.20);
+    expect(expenses.tolls).toBe(50.00);
+    expect(expenses.total).toBe(54.20);
   });
 
-  it('adds tolls for routes > 5 stops', () => {
+  it('applies flat tolls for all routes', () => {
     const expenses = calculateEstimatedExpenses(8, 24);
-    expect(expenses.tolls).toBe(5.00);
+    expect(expenses.tolls).toBe(50.00);
   });
 
-  it('no tolls for small routes (<= 5 stops)', () => {
+  it('applies tolls even for small routes', () => {
     const expenses = calculateEstimatedExpenses(3, 9);
-    expect(expenses.tolls).toBe(0);
+    expect(expenses.tolls).toBe(50.00);
     // 9 miles / 20 MPG * $3.50 = $1.575 → $1.58
     expect(expenses.fuel).toBe(1.58);
-    expect(expenses.total).toBe(1.58); // Fuel only
+    expect(expenses.total).toBe(51.58); // Fuel + tolls
   });
 
   it('handles single delivery', () => {
     const expenses = calculateEstimatedExpenses(1, 3);
     // 3mi / 20 * 3.50 = $0.525 → $0.53
     expect(expenses.fuel).toBe(0.53);
-    expect(expenses.tolls).toBe(0);
-    expect(expenses.total).toBe(0.53);
+    expect(expenses.tolls).toBe(50.00);
+    expect(expenses.total).toBe(50.53);
   });
 
-  it('handles boundary case at 5 stops', () => {
+  it('applies flat tolls regardless of stop count', () => {
     const expenses5 = calculateEstimatedExpenses(5, 15);
-    expect(expenses5.tolls).toBe(0); // Exactly 5 stops, no tolls
+    expect(expenses5.tolls).toBe(50.00); // Flat rate applies
     
     const expenses6 = calculateEstimatedExpenses(6, 18);
-    expect(expenses6.tolls).toBe(5.00); // 6 stops, tolls apply
+    expect(expenses6.tolls).toBe(50.00); // Same flat rate
   });
 
   it('handles zero distance edge case', () => {
     const expenses = calculateEstimatedExpenses(5, 0);
     expect(expenses.fuel).toBe(0);
-    expect(expenses.tolls).toBe(0);
-    expect(expenses.total).toBe(0);
+    expect(expenses.tolls).toBe(50.00);
+    expect(expenses.total).toBe(50.00);
   });
 
   it('calculates expenses for large routes', () => {
     const expenses = calculateEstimatedExpenses(20, 60);
     // 60 miles / 20 MPG * $3.50 = $10.50
     expect(expenses.fuel).toBe(10.50);
-    expect(expenses.tolls).toBe(5.00);
-    expect(expenses.total).toBe(15.50);
+    expect(expenses.tolls).toBe(50.00);
+    expect(expenses.total).toBe(60.50);
   });
 
   it('verifies fuel cost formula accuracy', () => {

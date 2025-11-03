@@ -12,11 +12,11 @@ export function calculateEstimatedExpenses(
   // - 30 miles average route (or use actual distance)
   // - $3.50/gallon gas
   // - 20 MPG vehicle efficiency
-  // - $5 tolls per day for NYC bridges (only if significant route)
+  // - $50 tolls per day for NYC bridges
   
   const miles = totalDistance || (deliveryCount * 3); // ~3mi per stop avg
   const fuelCost = (miles / 20) * 3.50;
-  const tollsCost = deliveryCount > 5 ? 5.00 : 0; // Only charge tolls for larger routes
+  const tollsCost = 50.00; // Flat rate for NYC area tolls
   
   return {
     fuel: Number(fuelCost.toFixed(2)),

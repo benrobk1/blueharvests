@@ -55,6 +55,14 @@ export default function RouteDetails() {
           batch_number,
           delivery_date,
           status,
+          lead_farmer_id,
+          batch_metadata!inner(
+            collection_point_address
+          ),
+          profiles:lead_farmer_id(
+            full_name,
+            farm_name
+          ),
           driver_batch_stops_secure!inner (
             id,
             address,
@@ -73,6 +81,26 @@ export default function RouteDetails() {
         .single();
 
       if (!data) return null;
+
+      // Create collection point stop
+      const collectionPointStop: BatchStop = {
+        id: 'collection-point',
+        sequence_number: 0,
+        address: data.batch_metadata?.[0]?.collection_point_address || 'Collection Point',
+        status: 'pending',
+        estimated_arrival: null,
+        notes: 'Pick up all boxes from farm',
+        orders: {
+          id: 'collection',
+          box_code: null,
+          total_amount: 0,
+          profiles: {
+            full_name: (data.profiles as any)?.farm_name || (data.profiles as any)?.full_name || 'Farm',
+            phone: null
+          },
+          order_items: []
+        }
+      };
 
       // Get order details separately
       const orderIds = data.driver_batch_stops_secure?.map((s: any) => s.order_id) || [];
@@ -112,7 +140,7 @@ export default function RouteDetails() {
 
       return {
         ...data,
-        batch_stops: sortedStops as BatchStop[],
+        batch_stops: [collectionPointStop, ...sortedStops] as BatchStop[],
       };
     },
     enabled: !!user?.id,
@@ -283,7 +311,9 @@ export default function RouteDetails() {
 
         {/* Route Stops */}
         <div className="space-y-4">
-        {activeBatch.batch_stops?.map((stop, index) => (
+        {activeBatch.batch_stops?.map((stop, index) => {
+          const isCollectionPoint = stop.sequence_number === 0;
+          return (
           <Card
             key={stop.id}
             className={
@@ -291,6 +321,8 @@ export default function RouteDetails() {
                 ? "opacity-60"
                 : stop.status === "in_progress"
                 ? "border-primary border-2"
+                : isCollectionPoint
+                ? "border-accent border-2 bg-accent/5"
                 : ""
             }
           >
@@ -299,14 +331,16 @@ export default function RouteDetails() {
                 <div className="flex items-center gap-4">
                   <div
                     className={`h-12 w-12 rounded-full flex items-center justify-center font-bold ${
-                      stop.status === "delivered"
+                      isCollectionPoint
+                        ? "bg-accent text-accent-foreground"
+                        : stop.status === "delivered"
                         ? "bg-success/10 text-success"
                         : stop.status === "in_progress"
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted text-muted-foreground"
                     }`}
                   >
-                    {index + 1}
+                    {isCollectionPoint ? <Package className="h-6 w-6" /> : index}
                   </div>
                   <div>
                     <CardTitle className="text-lg">
@@ -325,34 +359,38 @@ export default function RouteDetails() {
                 </div>
                 <Badge
                   variant={
-                    stop.status === "delivered"
+                    isCollectionPoint
+                      ? "outline"
+                      : stop.status === "delivered"
                       ? "default"
                       : stop.status === "in_progress"
                       ? "default"
                       : "secondary"
                   }
                 >
-                  {stop.status}
+                  {isCollectionPoint ? "Collection Point" : stop.status}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                {stop.orders?.profiles?.phone && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span>{stop.orders.profiles.phone}</span>
-                  </div>
-                )}
-                {stop.estimated_arrival && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <span>
-                      ETA: {formatDistanceToNow(new Date(stop.estimated_arrival))}
-                    </span>
-                  </div>
-                )}
-              </div>
+              {!isCollectionPoint && (
+                <div className="grid grid-cols-2 gap-4">
+                  {stop.orders?.profiles?.phone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <span>{stop.orders.profiles.phone}</span>
+                    </div>
+                  )}
+                  {stop.estimated_arrival && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span>
+                        ETA: {formatDistanceToNow(new Date(stop.estimated_arrival))}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {stop.orders?.order_items && stop.orders.order_items.length > 0 && (
                 <div className="border-t pt-4">
@@ -379,7 +417,7 @@ export default function RouteDetails() {
                 </div>
               )}
 
-              {stop.status === "pending" && index === completedStops && (
+              {!isCollectionPoint && stop.status === "pending" && index === completedStops && (
                 <div className="flex gap-2 pt-2">
                   <Button className="flex-1">
                     <Navigation className="h-4 w-4 mr-2" />
@@ -390,9 +428,18 @@ export default function RouteDetails() {
                   </Button>
                 </div>
               )}
+
+              {isCollectionPoint && (
+                <div className="pt-2">
+                  <Button className="w-full">
+                    <Navigation className="h-4 w-4 mr-2" />
+                    Navigate to Farm
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
-        ))}
+        )})}
         </div>
       </main>
     </div>

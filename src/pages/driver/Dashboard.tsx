@@ -32,6 +32,7 @@ const DriverDashboard = () => {
 
   // Demo data for claimed route
   const demoActiveRoute = claimedDemoRoute ? [
+    { id: '0', customer: 'Thompson Family Farm', address: '456 Farm Road, Milton, NY 12547', status: 'pending', addressVisible: true, isCollectionPoint: true },
     { id: '1', customer: 'Alice Johnson', address: '123 Main St, Brooklyn, NY 11201', status: 'delivered', addressVisible: true },
     { id: '2', customer: 'Bob Smith', address: '456 Oak Ave, Brooklyn, NY 11201', status: 'delivered', addressVisible: true },
     { id: '3', customer: 'Carol Davis', address: '789 Pine Rd, Brooklyn, NY 11201', status: 'in_progress', addressVisible: true },
@@ -42,8 +43,8 @@ const DriverDashboard = () => {
   const demoEarnings = claimedDemoRoute ? {
     today: { 
       total: 284,
-      tips: 45,
-      deliveryFees: 239
+      tips: Math.round(5 * FLAT_DELIVERY_FEE * 0.05), // 5% of delivery fees for 5 stops
+      deliveryFees: 284 - Math.round(5 * FLAT_DELIVERY_FEE * 0.05)
     },
     week: { total: 1240, tips: 180, deliveryFees: 1060 },
     month: { total: 5200, tips: 750, deliveryFees: 4450 },
@@ -367,10 +368,10 @@ const DriverDashboard = () => {
   const displayActiveBatch = isDemoMode && claimedDemoRoute ? demoActiveBatch : activeBatch;
   const displayMonthlyBatches = isDemoMode && claimedDemoRoute ? demoMonthlyBatches : monthlyBatches;
 
-  const activeStopsCount = displayActiveRoute?.length || 0;
+  const activeStopsCount = displayActiveRoute?.filter((r: any) => !r.isCollectionPoint).length || 0;
   const usingFallbackToday = (displayEarnings?.today.total || 0) === 0 && activeStopsCount > 0;
   const todayGross = usingFallbackToday ? activeStopsCount * FLAT_DELIVERY_FEE : (displayEarnings?.today.total || 0);
-  const todayTips = usingFallbackToday ? 0 : (displayEarnings?.today.tips || 0);
+  const todayTips = usingFallbackToday ? Math.round(activeStopsCount * FLAT_DELIVERY_FEE * 0.05) : (displayEarnings?.today.tips || 0);
   const todayDeliveryFees = todayGross - todayTips;
   const expenseStops = usingFallbackToday ? activeStopsCount : (displayStats?.deliveries || 0);
   const todayExpenses = calculateEstimatedExpenses(expenseStops);
@@ -536,16 +537,11 @@ const DriverDashboard = () => {
                 <div className="text-sm text-muted-foreground">Net Payout (Est.)</div>
                 <div className="text-3xl font-bold text-green-700 dark:text-green-400">
                   {formatMoney(Math.max(0, todayGross - todayExpenses.total))}
-                </div>
               </div>
-              <TrendingUp className="h-8 w-8 text-green-600" />
             </div>
-            
-            <div className="text-xs text-muted-foreground">
-              <strong>Target:</strong> $250-$280 net/day • 
-              <strong> Actual Route:</strong> View in Route Details for precise fuel costs
-            </div>
-          </CardContent>
+            <TrendingUp className="h-8 w-8 text-green-600" />
+          </div>
+        </CardContent>
         </Card>
 
         {/* Weekly and Monthly Earnings */}
