@@ -24,6 +24,7 @@ import { Link } from "react-router-dom";
 import PriceBreakdownDrawer from "@/components/PriceBreakdownDrawer";
 import type { CheckoutRequest } from "@/contracts/checkout";
 import { useDemoMode } from "@/contexts/DemoModeContext";
+import { DELIVERY_FEE_USD } from "@/config/constants";
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -115,7 +116,7 @@ const Checkout = () => {
     }
   }, [marketConfig, selectedDate, availableDates]);
 
-  const deliveryFee = marketConfig?.delivery_fee || 7.50;
+  const deliveryFee = DELIVERY_FEE_USD;
   const platformFee = cartTotal * 0.10; // 10% platform fee
   const subtotal = cartTotal;
   
@@ -365,10 +366,9 @@ const Checkout = () => {
 
         <h1 className="text-3xl font-bold mb-8">Checkout</h1>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-6">
-            {/* Delivery Address */}
-            <Card>
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* Delivery Address */}
+          <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="h-5 w-5" />
@@ -446,80 +446,8 @@ const Checkout = () => {
               </CardContent>
             </Card>
 
-            {/* Driver Tip */}
+            {/* Order Summary */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Driver Tip (Optional)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  100% of your tip goes directly to your delivery driver
-                </p>
-                
-                {/* Preset Tip Percentages */}
-                <div className="grid grid-cols-4 gap-2">
-                  {[10, 15, 20].map((percent) => (
-                    <Button
-                      key={percent}
-                      variant={tipPercentage === percent ? "default" : "outline"}
-                      onClick={() => {
-                        setTipPercentage(percent);
-                        setCustomTip("");
-                      }}
-                      className="w-full"
-                    >
-                      {percent}%
-                    </Button>
-                  ))}
-                  <Button
-                    variant={customTip ? "default" : "outline"}
-                    onClick={() => {
-                      setTipPercentage(0);
-                      setCustomTip("0");
-                    }}
-                  >
-                    Custom
-                  </Button>
-                </div>
-
-                {/* Custom Tip Input */}
-                {(tipPercentage === 0 || customTip) && (
-                  <div className="space-y-2">
-                    <Label htmlFor="custom-tip">Custom Tip Amount</Label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-                      <Input
-                        id="custom-tip"
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        value={customTip}
-                        onChange={(e) => {
-                          setCustomTip(e.target.value);
-                          setTipPercentage(0);
-                        }}
-                        className="pl-7"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {tipAmount > 0 && (
-                  <p className="text-sm font-medium text-primary">
-                    Tip: {formatMoney(tipAmount)}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Order Summary */}
-          <div className="lg:col-span-1 space-y-6">
-            <Card className="sticky top-4">
               <CardHeader>
                 <CardTitle>Order Summary</CardTitle>
               </CardHeader>
@@ -589,74 +517,81 @@ const Checkout = () => {
                     <span>{formatMoney(total)}</span>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
 
-
-                <div className="border-t pt-4 space-y-3">
-                  <div className="flex items-start space-x-2">
-                    <Checkbox
-                      id="terms"
-                      checked={termsAccepted}
-                      onCheckedChange={(checked) => {
-                        setTermsAccepted(checked as boolean);
-                        setShowTermsError(false);
+            {/* Driver Tip */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Driver Tip (Optional)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  100% of your tip goes directly to your delivery driver
+                </p>
+                
+                {/* Preset Tip Percentages */}
+                <div className="grid grid-cols-4 gap-2">
+                  {[10, 15, 20].map((percent) => (
+                    <Button
+                      key={percent}
+                      variant={tipPercentage === percent ? "default" : "outline"}
+                      onClick={() => {
+                        setTipPercentage(percent);
+                        setCustomTip("");
                       }}
-                      className={showTermsError && !termsAccepted ? 'border-destructive' : ''}
-                    />
-                    <label
-                      htmlFor="terms"
-                      className={`text-sm leading-tight cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${
-                        showTermsError && !termsAccepted ? 'text-destructive' : ''
-                      }`}
+                      className="w-full"
                     >
-                      I agree to the{' '}
-                      <Link to="/terms" target="_blank" className="text-primary hover:underline">
-                        Terms of Service
-                      </Link>{' '}
-                      and{' '}
-                      <Link to="/privacy" target="_blank" className="text-primary hover:underline">
-                        Privacy Policy
-                      </Link>
-                    </label>
-                  </div>
-                  {showTermsError && !termsAccepted && (
-                    <p className="text-sm text-destructive flex items-center gap-2 ml-6">
-                      <AlertCircle className="h-4 w-4" />
-                      You must accept the terms to continue
-                    </p>
-                  )}
+                      {percent}%
+                    </Button>
+                  ))}
+                  <Button
+                    variant={customTip ? "default" : "outline"}
+                    onClick={() => {
+                      setTipPercentage(0);
+                      setCustomTip("0");
+                    }}
+                  >
+                    Custom
+                  </Button>
                 </div>
 
-                {!clientSecret && (
-                  <LoadingButton
-                    className="w-full"
-                    size="lg"
-                    onClick={() => createOrder.mutate()}
-                    isLoading={createOrder.isPending}
-                    loadingText="Creating order..."
-                    disabled={!selectedDate || !termsAccepted}
-                  >
-                    {total === 0 ? 'Complete Order' : 'Proceed to Payment'}
-                  </LoadingButton>
+                {/* Custom Tip Input */}
+                {(tipPercentage === 0 || customTip) && (
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-tip">Custom Tip Amount</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <Input
+                        id="custom-tip"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={customTip}
+                        onChange={(e) => {
+                          setCustomTip(e.target.value);
+                          setTipPercentage(0);
+                        }}
+                        className="pl-7"
+                      />
+                    </div>
+                  </div>
                 )}
 
-                {showDateError && !selectedDate && (
-                  <p className="text-sm text-destructive text-center flex items-center justify-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Please select a delivery date
-                  </p>
-                )}
-                
-                {showTermsError && !termsAccepted && selectedDate && (
-                  <p className="text-sm text-destructive text-center flex items-center justify-center gap-2">
-                    <AlertCircle className="h-4 w-4" />
-                    Please accept the terms to continue
+                {tipAmount > 0 && (
+                  <p className="text-sm font-medium text-primary">
+                    Tip: {formatMoney(tipAmount)}
                   </p>
                 )}
               </CardContent>
             </Card>
 
-            {/* Payment Method */}
-            <Card>
+          {/* Payment Method */}
+          <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CreditCard className="h-5 w-5" />
@@ -725,9 +660,70 @@ const Checkout = () => {
                     Complete order details to proceed with payment
                   </p>
                 )}
+                
+                <div className="border-t pt-4 space-y-3">
+                  <div className="flex items-start space-x-2">
+                    <Checkbox
+                      id="terms"
+                      checked={termsAccepted}
+                      onCheckedChange={(checked) => {
+                        setTermsAccepted(checked as boolean);
+                        setShowTermsError(false);
+                      }}
+                      className={showTermsError && !termsAccepted ? 'border-destructive' : ''}
+                    />
+                    <label
+                      htmlFor="terms"
+                      className={`text-sm leading-tight cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${
+                        showTermsError && !termsAccepted ? 'text-destructive' : ''
+                      }`}
+                    >
+                      I agree to the{' '}
+                      <Link to="/terms" target="_blank" className="text-primary hover:underline">
+                        Terms of Service
+                      </Link>{' '}
+                      and{' '}
+                      <Link to="/privacy" target="_blank" className="text-primary hover:underline">
+                        Privacy Policy
+                      </Link>
+                    </label>
+                  </div>
+                  {showTermsError && !termsAccepted && (
+                    <p className="text-sm text-destructive flex items-center gap-2 ml-6">
+                      <AlertCircle className="h-4 w-4" />
+                      You must accept the terms to continue
+                    </p>
+                  )}
+                </div>
+
+                {!clientSecret && (
+                  <LoadingButton
+                    className="w-full"
+                    size="lg"
+                    onClick={() => createOrder.mutate()}
+                    isLoading={createOrder.isPending}
+                    loadingText="Creating order..."
+                    disabled={!selectedDate || !termsAccepted}
+                  >
+                    {total === 0 ? 'Complete Order' : 'Proceed to Payment'}
+                  </LoadingButton>
+                )}
+
+                {showDateError && !selectedDate && (
+                  <p className="text-sm text-destructive text-center flex items-center justify-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Please select a delivery date
+                  </p>
+                )}
+                
+                {showTermsError && !termsAccepted && selectedDate && (
+                  <p className="text-sm text-destructive text-center flex items-center justify-center gap-2">
+                    <AlertCircle className="h-4 w-4" />
+                    Please accept the terms to continue
+                  </p>
+                )}
               </CardContent>
             </Card>
-          </div>
         </div>
       </div>
     </div>
