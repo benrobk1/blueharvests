@@ -91,8 +91,7 @@ const PriceBreakdownDrawer = ({
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              Farmers receive 88% of product price (vs 10-15% at grocery stores). 
-              Delivery fee is separate and added at checkout.
+              Farmers receive 90% of product price (vs 10-15% at grocery stores).
             </AlertDescription>
           </Alert>
         </div>
