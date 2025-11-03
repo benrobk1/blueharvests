@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Package, Coins } from "lucide-react";
+import { ArrowLeft, Package, Coins, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import OrderTracking from "@/components/OrderTracking";
@@ -12,10 +12,24 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import logo from "@/assets/blue-harvests-logo.jpeg";
 import { formatMoney } from "@/lib/formatMoney";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useState } from "react";
 
 const ConsumerOrderTracking = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
+  const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
 
   const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ['consumer-orders', user?.id],
@@ -85,6 +99,34 @@ const ConsumerOrderTracking = () => {
       })) || [];
     },
     enabled: !!user?.id,
+  });
+
+  const cancelOrder = useMutation({
+    mutationFn: async (orderId: string) => {
+      const { data, error } = await supabase.functions.invoke('cancel-order', {
+        body: { orderId },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Order Cancelled",
+        description: "Your order has been cancelled successfully.",
+      });
+      refetch();
+      setCancelOrderId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Cancellation Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      setCancelOrderId(null);
+    },
   });
 
   if (isLoading) {
@@ -244,6 +286,21 @@ const ConsumerOrderTracking = () => {
                         ✓ You've rated this delivery
                       </p>
                     )}
+
+                    {/* Cancel Order Button */}
+                    {order.status === 'pending' && (
+                      <div className="pt-4 border-t">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => setCancelOrderId(order.id)}
+                        >
+                          <X className="h-4 w-4 mr-2" />
+                          Cancel Order
+                        </Button>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -251,6 +308,27 @@ const ConsumerOrderTracking = () => {
           </div>
         )}
       </main>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={!!cancelOrderId} onOpenChange={(open) => !open && setCancelOrderId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Order?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this order? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep Order</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => cancelOrderId && cancelOrder.mutate(cancelOrderId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Cancel Order
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

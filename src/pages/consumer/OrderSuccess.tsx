@@ -244,14 +244,17 @@ const OrderSuccess = () => {
             <div className="flex flex-col sm:flex-row gap-3 pt-4">
               <Button
                 onClick={() => navigate('/consumer/orders')}
-                variant="outline"
                 className="flex-1"
+                size="lg"
               >
-                View All Orders
+                <Package className="h-5 w-5 mr-2" />
+                View My Orders
               </Button>
               <Button
                 onClick={() => navigate('/consumer/shop')}
+                variant="outline"
                 className="flex-1"
+                size="lg"
               >
                 Continue Shopping
               </Button>
