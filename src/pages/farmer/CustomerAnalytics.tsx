@@ -8,9 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatMoney } from '@/lib/formatMoney';
 import { useDemoMode } from '@/contexts/DemoModeContext';
-import { lazy, Suspense } from 'react';
-
-const CustomerMap = lazy(() => import('@/components/farmer/CustomerMap'));
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))'];
 
@@ -263,28 +260,6 @@ export default function CustomerAnalytics() {
           </CardContent>
         </Card>
       </div>
-
-      {/* ZIP Code Distribution */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <MapPin className="h-5 w-5" />
-            Orders by ZIP Code
-          </CardTitle>
-          <CardDescription>Revenue and order distribution across customer locations</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {displayZipData && Array.isArray(displayZipData) && displayZipData.length > 0 ? (
-            <Suspense fallback={<Skeleton className="w-full h-[400px]" />}>
-              <CustomerMap zipData={displayZipData} />
-            </Suspense>
-          ) : (
-            <div className="flex items-center justify-center h-64 text-muted-foreground">
-              No order data available yet
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* ZIP Code Table */}
       <Card>
