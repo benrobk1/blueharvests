@@ -40,12 +40,11 @@ export class CheckoutService {
 
     console.log(`[${requestId}] [CHECKOUT] Starting checkout for user ${userId}${isDemoMode ? ' (DEMO MODE)' : ''}`);
 
-    // FAST PATH FOR DEMO MODE: Parallelize all validation queries
+    // FAST PATH FOR DEMO MODE: Parallelize minimal queries and skip heavy operations
     if (isDemoMode) {
-      const [cart, cartItems, profile] = await Promise.all([
+      const [_, cartItems] = await Promise.all([
         this.validateCart(cartId, userId, requestId),
         this.getCartItems(cartId, requestId),
-        this.getUserProfile(userId, requestId),
       ]);
 
       if (cartItems.length === 0) {
@@ -55,34 +54,31 @@ export class CheckoutService {
       // Skip delivery date validation in demo mode
       const { subtotal } = await this.validatePricesAndInventory(cartItems, requestId);
       
-      // Minimal fee calculation
+      // Minimal fee calculation with lightweight defaults
       const platformFee = subtotal * 0.10;
       const deliveryFee = 5.99; // Fixed delivery fee for demo
       const totalBeforeCredits = subtotal + platformFee + deliveryFee + tipAmount;
       const creditsUsed = 0; // Skip credits in demo mode for speed
       const totalAmount = totalBeforeCredits;
 
-      // Skip payment processing - mock payment intent
-      const mockPaymentIntent = {
-        id: `demo_pi_${crypto.randomUUID()}`,
-        status: 'succeeded',
-        client_secret: null
-      };
+      // Skip payment processing entirely in demo
+      const paymentIntent = null;
 
-      // Create order (this includes inventory update)
+      // Create order (skip payouts/fees/inventory updates in demo)
       const orderId = await this.createOrder(
         userId,
         deliveryDate,
         totalAmount,
         tipAmount,
         'paid',
-        mockPaymentIntent as any,
+        paymentIntent,
         cartItems,
         platformFee,
         deliveryFee,
         creditsUsed,
-        profile,
-        requestId
+        {},
+        requestId,
+        true
       );
 
       // Clear cart
@@ -476,7 +472,8 @@ export class CheckoutService {
     deliveryFee: number,
     creditsUsed: number,
     profile: any,
-    requestId: string
+    requestId: string,
+    isDemoMode: boolean = false
   ): Promise<string> {
     // Create order
     const { data: order, error: orderError } = await this.supabase
@@ -508,15 +505,15 @@ export class CheckoutService {
       throw new CheckoutError('CHECKOUT_ERROR', 'Failed to create order');
     }
 
-    // Store payment intent
-    if (paymentIntent) {
+    // Store payment intent (skip in demo mode)
+    if (paymentIntent && !isDemoMode) {
       await this.supabase.from('payment_intents').insert({
         stripe_payment_intent_id: paymentIntent.id,
         order_id: order.id,
         consumer_id: userId,
         amount: totalAmount,
         status: paymentIntent.status,
-        payment_method: paymentIntent.payment_method as string || null,
+        payment_method: (paymentIntent.payment_method as string) || null,
         client_secret: paymentIntent.client_secret,
         metadata: paymentIntent.metadata
       });
@@ -536,27 +533,30 @@ export class CheckoutService {
 
     await this.supabase.from('order_items').insert(orderItems);
 
-    // Create transaction fees
-    await this.supabase.from('transaction_fees').insert([
-      {
-        order_id: order.id,
-        fee_type: 'platform',
-        amount: platformFee,
-        description: 'Platform fee (10%)'
-      },
-      {
-        order_id: order.id,
-        fee_type: 'delivery',
-        amount: deliveryFee,
-        description: 'Delivery fee'
-      }
-    ]);
+    // Fees, payouts, and inventory updates are skipped in demo mode
+    if (!isDemoMode) {
+      // Create transaction fees
+      await this.supabase.from('transaction_fees').insert([
+        {
+          order_id: order.id,
+          fee_type: 'platform',
+          amount: platformFee,
+          description: 'Platform fee (10%)'
+        },
+        {
+          order_id: order.id,
+          fee_type: 'delivery',
+          amount: deliveryFee,
+          description: 'Delivery fee'
+        }
+      ]);
 
-    // Create payouts for farmers
-    await this.createFarmerPayouts(order.id, cartItems, requestId);
+      // Create payouts for farmers
+      await this.createFarmerPayouts(order.id, cartItems, requestId);
 
-    // Update inventory
-    await this.updateInventory(cartItems, requestId);
+      // Update inventory
+      await this.updateInventory(cartItems, requestId);
+    }
 
     // Handle credits redemption
     if (creditsUsed > 0) {
