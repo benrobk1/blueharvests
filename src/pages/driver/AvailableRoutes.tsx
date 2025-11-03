@@ -14,7 +14,14 @@ export default function AvailableRoutes() {
   const navigate = useNavigate();
   const { isDemoMode } = useDemoMode();
   
-  console.log('Available Routes: isDemoMode =', isDemoMode);
+  // Demo batch data
+  const demoBatch = {
+    id: 'demo-batch-8',
+    batch_number: 8,
+    delivery_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Tomorrow
+    status: 'pending',
+    batch_stops: [{ count: 42 }]
+  };
   
   const { data: availableBatches, refetch } = useQuery({
     queryKey: ['available-routes'],
@@ -37,9 +44,20 @@ export default function AvailableRoutes() {
       console.log('Available batches result:', data);
       return data;
     },
+    enabled: !isDemoMode, // Don't fetch real data in demo mode
   });
+
+  // Show demo data if in demo mode, otherwise show real data
+  const displayBatches = isDemoMode ? [demoBatch] : availableBatches;
   
   const handleClaimRoute = async (batchId: string) => {
+    if (isDemoMode) {
+      toast({
+        title: 'Demo Mode',
+        description: 'In demo mode, route claiming is simulated. Sign up as a real driver to claim actual routes!',
+      });
+      return;
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     
@@ -91,7 +109,7 @@ export default function AvailableRoutes() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {!availableBatches || availableBatches.length === 0 ? (
+            {!displayBatches || displayBatches.length === 0 ? (
               <div className="text-center py-12">
                 <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">
@@ -99,7 +117,7 @@ export default function AvailableRoutes() {
                 </p>
               </div>
             ) : (
-              availableBatches.map((batch) => (
+              displayBatches.map((batch) => (
                 <div 
                   key={batch.id} 
                   className="flex items-center justify-between p-6 border rounded-lg hover:border-primary transition-colors bg-card"
