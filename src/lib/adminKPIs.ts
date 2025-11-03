@@ -11,26 +11,17 @@ export interface KPIData {
   churnRate: number;
 }
 
-export async function fetchKPIs(demoModeActive: boolean = false): Promise<KPIData> {
+export async function fetchKPIs(): Promise<KPIData> {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   const sixtyDaysAgo = new Date();
   sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-  // Step 1: Get demo/non-demo profile IDs
-  let demoFilterIds: string[] = [];
-  if (demoModeActive) {
-    const { data: demoProfiles } = await supabase
-      .from('profiles')
-      .select('id')
-      .ilike('email', '%@demo.com');
-    demoFilterIds = demoProfiles?.map(p => p.id) || [];
-  } else {
-    const { data: allProfiles } = await supabase
-      .from('profiles')
-      .select('id, email');
-    demoFilterIds = allProfiles?.filter(p => !p.email.endsWith('@demo.com')).map(p => p.id) || [];
-  }
+  // Get all profile IDs excluding demo users
+  const { data: allProfiles } = await supabase
+    .from('profiles')
+    .select('id, email');
+  const demoFilterIds = allProfiles?.filter(p => !p.email.endsWith('@demo.com')).map(p => p.id) || [];
 
   if (demoFilterIds.length === 0) {
     // No matching profiles, return zeros

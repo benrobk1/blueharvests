@@ -4,9 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { DemoModeProvider, useDemoMode } from "@/contexts/DemoModeContext";
 import { RoleGate } from "@/components/RoleGate";
-import { DemoModeBanner } from "@/components/admin/DemoModeBanner";
 import { InstallPromptToast } from "@/components/InstallPromptToast";
 import React from "react";
 import Index from "./pages/Index";
@@ -72,11 +70,9 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <DemoModeProvider>
-            <AuthProvider>
-              <AppContent />
-            </AuthProvider>
-          </DemoModeProvider>
+          <AuthProvider>
+            <AppContent />
+          </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
@@ -86,11 +82,9 @@ const App = () => {
 const AppContent = () => {
   const location = useLocation();
   const isConsumerRoute = location.pathname.startsWith('/consumer/');
-  const { isDemoMode } = useDemoMode();
 
   return (
     <>
-      {isDemoMode && <DemoModeBanner />}
       <CookieConsent />
       <InstallPromptToast />
       <Routes>
@@ -188,7 +182,7 @@ const AppContent = () => {
             </RoleGate>
           } />
           <Route path="/farmer/affiliated-farmers" element={
-            <RoleGate roles={isDemoMode ? ['lead_farmer', 'farmer'] : ['lead_farmer']}>
+            <RoleGate roles={['lead_farmer']}>
               <AffiliatedFarmers />
             </RoleGate>
           } />
@@ -261,19 +255,6 @@ const AppContent = () => {
           <Route path="/admin/tax-documents" element={
             <RoleGate roles={['admin']}>
               <TaxDocuments />
-            </RoleGate>
-          } />
-          
-          <Route path="/demo/live-map" element={
-            <RoleGate roles={isDemoMode ? ['admin', 'farmer', 'lead_farmer', 'driver'] : ['admin']}>
-              {/* Dynamic import to keep bundle size small */}
-              {React.createElement(React.lazy(() => import('./pages/demo/LiveMap')))}
-            </RoleGate>
-          } />
-          
-          <Route path="/demo/live-orders" element={
-            <RoleGate roles={isDemoMode ? ['admin', 'farmer', 'lead_farmer', 'driver', 'consumer'] : ['admin']}>
-              {React.createElement(React.lazy(() => import('./pages/demo/LiveOrderStatus')))}
             </RoleGate>
           } />
           

@@ -7,31 +7,20 @@ import { formatMoney } from '@/lib/formatMoney';
 import { DollarSign, TrendingUp, Users, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { useDemoMode } from '@/contexts/DemoModeContext';
 
 const COLORS = ['#10b981', '#3b82f6'];
 
 const AnalyticsAndFinancials = () => {
   const navigate = useNavigate();
-  const { isDemoMode } = useDemoMode();
   
   const { data, isLoading } = useQuery({
-    queryKey: ['analytics-financials', isDemoMode],
+    queryKey: ['analytics-financials'],
     queryFn: async () => {
-      // Step 1: Get demo/non-demo profile IDs
-      let filterIds: string[] = [];
-      if (isDemoMode) {
-        const { data: demoProfiles } = await supabase
-          .from('profiles')
-          .select('id')
-          .ilike('email', '%@demo.com');
-        filterIds = demoProfiles?.map(p => p.id) || [];
-      } else {
-        const { data: allProfiles } = await supabase
-          .from('profiles')
-          .select('id, email');
-        filterIds = allProfiles?.filter(p => !p.email.endsWith('@demo.com')).map(p => p.id) || [];
-      }
+      // Get all profile IDs excluding demo users
+      const { data: allProfiles } = await supabase
+        .from('profiles')
+        .select('id, email');
+      const filterIds = allProfiles?.filter(p => !p.email.endsWith('@demo.com')).map(p => p.id) || [];
 
       if (filterIds.length === 0) {
         return {

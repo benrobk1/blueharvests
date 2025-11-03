@@ -10,13 +10,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { Truck, Package, Calendar, ArrowLeft, ChevronDown, DollarSign, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useDemoMode } from '@/contexts/DemoModeContext';
 
 const BatchAdjustments = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { isDemoMode } = useDemoMode();
   const [selectedBatch, setSelectedBatch] = useState<string | null>(null);
 
   const { data: batches, isLoading } = useQuery({
@@ -70,29 +68,6 @@ const BatchAdjustments = () => {
     },
   });
 
-  // Demo batch data
-  const demoBatch = {
-    id: 'demo-batch-7',
-    batch_number: 7,
-    delivery_date: new Date().toISOString().split('T')[0],
-    status: 'in_progress',
-    driver_id: 'demo-driver-1',
-    zip_codes: ['11201', '11211'],
-    profiles: {
-      full_name: 'John Driver'
-    },
-    batch_stops: Array(39).fill(null).map((_, i) => ({
-      id: `stop-${i}`,
-      status: i < 20 ? 'delivered' : i === 20 ? 'in_progress' : 'pending'
-    })),
-    batch_metadata: [{
-      collection_point_address: '456 Farm Road, Milton, NY 12547',
-      order_count: 39,
-      estimated_route_hours: 6.5,
-      merged_zips: ['11201', '11211']
-    }]
-  };
-
   const reassignMutation = useMutation({
     mutationFn: async ({ batchId, driverId }: { batchId: string; driverId: string }) => {
       const { error } = await supabase
@@ -142,9 +117,6 @@ const BatchAdjustments = () => {
     );
   }
 
-  // Show demo data if in demo mode, otherwise show real data
-  const displayBatches = isDemoMode ? [demoBatch] : batches;
-
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -159,14 +131,14 @@ const BatchAdjustments = () => {
       </div>
 
       <div className="space-y-4">
-        {displayBatches && displayBatches.length === 0 ? (
+        {batches && batches.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center text-muted-foreground">
               No delivery batches found
             </CardContent>
           </Card>
         ) : (
-          displayBatches?.map((batch) => (
+          batches?.map((batch) => (
             <Card key={batch.id}>
               <CardHeader>
                 <div className="flex items-start justify-between">

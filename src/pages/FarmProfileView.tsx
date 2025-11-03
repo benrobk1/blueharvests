@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeft, MapPin, Sprout } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 
 interface FarmProfile {
   id: string;
@@ -30,7 +29,6 @@ interface ImpactMetrics {
 const FarmProfileView = () => {
   const { farmId } = useParams();
   const navigate = useNavigate();
-  const { isDemoMode } = useDemoMode();
   const [farm, setFarm] = useState<FarmProfile | null>(null);
   const [photos, setPhotos] = useState<FarmPhoto[]>([]);
   const [metrics, setMetrics] = useState<ImpactMetrics>({ totalSales: 0, totalOrders: 0, familiesFed: 0 });
@@ -57,17 +55,6 @@ const FarmProfileView = () => {
     }
 
     setFarm(farmData);
-
-    // In demo mode, show hardcoded metrics for Thompson Family Farm
-    if (isDemoMode && farmData.farm_name === "Thompson Family Farm") {
-      setMetrics({
-        totalSales: 22000,
-        totalOrders: 550,
-        familiesFed: 980,
-      });
-      setIsLoading(false);
-      return;
-    }
 
     // Load farm photos
     const { data: photosData } = await supabase
