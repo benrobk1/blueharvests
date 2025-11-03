@@ -228,10 +228,14 @@ export class CheckoutService {
   }
 
   private async validateDeliveryDate(deliveryDate: string, marketConfig: any, requestId: string): Promise<void> {
-    const deliveryDateObj = new Date(deliveryDate);
-    const dayOfWeek = deliveryDateObj.getDay();
+    // Parse the ISO datetime but use just the date portion to avoid timezone issues
+    const dateStr = deliveryDate.split('T')[0]; // Extract YYYY-MM-DD
+    const deliveryDateObj = new Date(dateStr + 'T12:00:00Z'); // Use noon UTC to avoid day boundary issues
+    const dayOfWeek = deliveryDateObj.getUTCDay();
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = dayNames[dayOfWeek];
+    
+    console.log(`[${requestId}] [CHECKOUT] Validating delivery date: ${dateStr}, day: ${dayName}, allowed days: ${JSON.stringify(marketConfig.delivery_days)}`);
     
     if (!marketConfig.delivery_days.includes(dayName)) {
       console.warn(`[${requestId}] [CHECKOUT] ⚠️  Invalid delivery day: ${dayName}`);
