@@ -1,6 +1,16 @@
 /**
  * Calculate distance between two points using Haversine formula
- * Returns distance in miles
+ * 
+ * @param lat1 - Latitude of first point
+ * @param lon1 - Longitude of first point
+ * @param lat2 - Latitude of second point
+ * @param lon2 - Longitude of second point
+ * @returns Distance in miles (rounded to nearest mile)
+ * 
+ * @example
+ * ```typescript
+ * calculateDistance(40.7128, -74.0060, 34.0522, -118.2437) // NYC to LA ≈ 2451 miles
+ * ```
  */
 export function calculateDistance(
   lat1: number,
@@ -29,6 +39,15 @@ function toRad(degrees: number): number {
 
 /**
  * Parse location string in "Lat,Lng" format
+ * 
+ * @param location - Comma-separated latitude,longitude string
+ * @returns Object with lat/lng numbers, or null if invalid
+ * 
+ * @example
+ * ```typescript
+ * parseLocation("40.7128,-74.0060") // { lat: 40.7128, lng: -74.0060 }
+ * parseLocation("invalid") // null
+ * ```
  */
 export function parseLocation(location: string): { lat: number; lng: number } | null {
   if (!location) return null;
@@ -43,7 +62,18 @@ export function parseLocation(location: string): { lat: number; lng: number } | 
 
 /**
  * Approximate geocoding for US ZIP codes (basic approximation)
- * In production, use a geocoding API
+ * 
+ * @description Simple ZIP to coordinates mapping for major metro areas.
+ * In production, use a proper geocoding API.
+ * 
+ * @param zipCode - Five-digit US ZIP code
+ * @returns Coordinates object or null if ZIP not in mapping
+ * 
+ * @example
+ * ```typescript
+ * getZipCodeCoordinates("10001") // { lat: 40.7506, lng: -73.9971 } (NYC)
+ * getZipCodeCoordinates("99999") // null (not in mapping)
+ * ```
  */
 export function getZipCodeCoordinates(zipCode: string): { lat: number; lng: number } | null {
   // Simplified ZIP code to coordinates mapping (major metros)
@@ -60,7 +90,16 @@ export function getZipCodeCoordinates(zipCode: string): { lat: number; lng: numb
 }
 
 /**
- * Calculate distance from farm to consumer
+ * Calculate distance from farm location to consumer ZIP code
+ * 
+ * @param farmLocation - Farm coordinates in "Lat,Lng" format
+ * @param consumerZip - Consumer's five-digit ZIP code
+ * @returns Distance in miles, or null if coordinates can't be determined
+ * 
+ * @example
+ * ```typescript
+ * calculateFarmToConsumerDistance("40.7128,-74.0060", "10001") // 2 (miles)
+ * ```
  */
 export function calculateFarmToConsumerDistance(
   farmLocation: string,

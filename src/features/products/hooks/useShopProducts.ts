@@ -5,6 +5,25 @@ import { useAuth } from '@/contexts/AuthContext';
 import { productQueries } from '../queries';
 import type { Product } from '../types';
 
+/**
+ * Hook for fetching shop products with farmer and market data
+ * 
+ * @description Loads approved products with available inventory, along with
+ * associated farmer profile data and market configuration. Optimizes farmer
+ * data fetching by batching unique farm profile IDs.
+ * 
+ * @returns Products, farmer data, consumer profile, market config, and loading state
+ * 
+ * @example
+ * ```typescript
+ * const { products, farmerData, marketConfig, isLoading } = useShopProducts();
+ * 
+ * products.forEach(product => {
+ *   const farmer = farmerData?.[product.farm_profile_id];
+ *   // Render product with farmer info
+ * });
+ * ```
+ */
 export const useShopProducts = () => {
   const { user } = useAuth();
 

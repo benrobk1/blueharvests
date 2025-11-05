@@ -12,15 +12,32 @@
  * - NOT percentage-based
  */
 
+/**
+ * Revenue distribution breakdown for product sales
+ */
 export interface RevenueSplit {
-  farmerShare: number;      // Always 88%
-  leadFarmerShare: number;  // Always 2%
-  platformFee: number;      // Always 10%
+  /** Farmer's share (always 88%) */
+  farmerShare: number;
+  /** Lead farmer's coordination fee (always 2%) */
+  leadFarmerShare: number;
+  /** Platform fee (always 10%) */
+  platformFee: number;
 }
 
 /**
  * Calculate revenue split from product subtotal
- * All farmers are affiliated with lead farmers, so split is always 88/2/10
+ * 
+ * @description All farmers are affiliated with lead farmers, so split is always 88/2/10.
+ * This applies only to product revenue, not delivery fees.
+ * 
+ * @param productSubtotal - Total product sales amount (excluding delivery fee)
+ * @returns Revenue split breakdown in dollars
+ * 
+ * @example
+ * ```typescript
+ * calculateRevenueSplit(100)
+ * // { farmerShare: 88, leadFarmerShare: 2, platformFee: 10 }
+ * ```
  */
 export function calculateRevenueSplit(productSubtotal: number): RevenueSplit {
   return {
@@ -31,15 +48,24 @@ export function calculateRevenueSplit(productSubtotal: number): RevenueSplit {
 }
 
 /**
- * Delivery fee is FLAT $7.50 per order, not percentage-based
+ * Flat delivery fee charged per order
+ * @constant
  */
 export const FLAT_DELIVERY_FEE = 7.50;
 
 /**
  * Calculate total driver payout for batch of deliveries
- * Each delivery has a flat $7.50 fee
+ * 
+ * @description Each delivery earns a flat $7.50 fee (not percentage-based).
+ * Driver receives total of all delivery fees in the batch.
+ * 
  * @param deliveryCount - Number of deliveries in batch
- * @returns Total payout (flat fee × count)
+ * @returns Total payout in dollars (flat fee × count)
+ * 
+ * @example
+ * ```typescript
+ * calculateDriverPayout(10) // 75.00 ($7.50 × 10)
+ * ```
  */
 export function calculateDriverPayout(deliveryCount: number): number {
   return Number((deliveryCount * FLAT_DELIVERY_FEE).toFixed(2));

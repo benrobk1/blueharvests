@@ -1,9 +1,31 @@
+/**
+ * Breakdown of driver expenses
+ */
 export interface ExpenseBreakdown {
+  /** Estimated fuel cost in dollars */
   fuel: number;
+  /** Estimated toll cost in dollars */
   tolls: number;
+  /** Total expenses (fuel + tolls) */
   total: number;
 }
 
+/**
+ * Calculate estimated driver expenses for a delivery batch
+ * 
+ * @description Estimates fuel and toll costs based on delivery count and distance.
+ * Uses assumptions: $3.50/gallon gas, 20 MPG efficiency, $50 NYC tolls, 3 miles per stop.
+ * 
+ * @param deliveryCount - Number of deliveries in batch
+ * @param totalDistance - Optional total route distance in miles
+ * @returns Breakdown of fuel, tolls, and total expenses
+ * 
+ * @example
+ * ```typescript
+ * calculateEstimatedExpenses(10) 
+ * // { fuel: 5.25, tolls: 50.00, total: 55.25 }
+ * ```
+ */
 export function calculateEstimatedExpenses(
   deliveryCount: number,
   totalDistance?: number
