@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Loader2, User, MapPin, Phone, Mail } from 'lucide-react';
 import { UserRatingDisplay } from '@/components/admin/UserRatingDisplay';
+import { adminQueries } from '@/features/admin';
 import {
   Dialog,
   DialogContent,
@@ -59,7 +60,7 @@ const UserSearch = () => {
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
 
   const { data: users, isLoading } = useQuery({
-    queryKey: ['user-search', searchTerm, roleFilter, statusFilter],
+    queryKey: adminQueries.userSearch(searchTerm, roleFilter, statusFilter),
     queryFn: async () => {
       let query = supabase
         .from('profiles')

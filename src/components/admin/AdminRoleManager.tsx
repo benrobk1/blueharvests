@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, UserPlus, UserMinus, Loader2 } from "lucide-react";
+import { adminQueries } from "@/features/admin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +26,7 @@ export const AdminRoleManager = () => {
   const queryClient = useQueryClient();
 
   const { data: admins, isLoading } = useQuery({
-    queryKey: ['admins'],
+    queryKey: adminQueries.admins(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_roles')
@@ -96,7 +97,7 @@ export const AdminRoleManager = () => {
           description: `${profile.full_name} is now an administrator`,
         });
       }
-      queryClient.invalidateQueries({ queryKey: ['admins'] });
+      queryClient.invalidateQueries({ queryKey: adminQueries.admins() });
       setEmail("");
     },
     onError: (error: Error) => {
@@ -130,7 +131,7 @@ export const AdminRoleManager = () => {
         title: 'Admin role revoked',
         description: 'User is no longer an administrator',
       });
-      queryClient.invalidateQueries({ queryKey: ['admins'] });
+      queryClient.invalidateQueries({ queryKey: adminQueries.admins() });
       setUserToRevoke(null);
     },
     onError: (error: Error) => {

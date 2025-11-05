@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { farmerQueries } from '@/features/farmers';
 
 interface WeeklyInventoryReviewProps {
   farmProfileId: string;
@@ -17,7 +18,7 @@ export function WeeklyInventoryReview({ farmProfileId }: WeeklyInventoryReviewPr
   const SEVEN_DAYS_AGO = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ['products-review', farmProfileId],
+    queryKey: farmerQueries.productsReview(farmProfileId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
@@ -40,7 +41,7 @@ export function WeeklyInventoryReview({ farmProfileId }: WeeklyInventoryReviewPr
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['products-review'] });
+      queryClient.invalidateQueries({ queryKey: farmerQueries.productsReview('') });
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('All products reviewed successfully!');
     },

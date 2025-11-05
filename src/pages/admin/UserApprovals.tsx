@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { adminQueries } from '@/features/admin';
 import {
   Dialog,
   DialogContent,
@@ -98,7 +99,7 @@ const UserApprovals = () => {
   };
 
   const { data: pendingUsers, isLoading } = useQuery({
-    queryKey: ['pending-users'],
+    queryKey: adminQueries.pendingUsers(),
     queryFn: async () => {
       const { data: profiles, error } = await supabase
         .from('profiles')
@@ -215,7 +216,7 @@ const UserApprovals = () => {
         title: 'User approved',
         description: 'The user has been approved successfully',
       });
-      queryClient.invalidateQueries({ queryKey: ['pending-users'] });
+      queryClient.invalidateQueries({ queryKey: adminQueries.pendingUsers() });
       setSelectedUser(null);
     },
     onError: (error: any) => {
@@ -269,7 +270,7 @@ const UserApprovals = () => {
         title: 'User rejected',
         description: 'The user has been rejected',
       });
-      queryClient.invalidateQueries({ queryKey: ['pending-users'] });
+      queryClient.invalidateQueries({ queryKey: adminQueries.pendingUsers() });
       setSelectedUser(null);
       setRejectionReason('');
     },

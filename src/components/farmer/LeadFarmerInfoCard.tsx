@@ -6,6 +6,7 @@ import { MapPin, Phone, Mail, Calendar, ExternalLink } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
+import { farmerQueries } from '@/features/farmers';
 
 interface LeadFarmerInfoCardProps {
   leadFarmerId: string;
@@ -14,7 +15,7 @@ interface LeadFarmerInfoCardProps {
 export function LeadFarmerInfoCard({ leadFarmerId }: LeadFarmerInfoCardProps) {
   const navigate = useNavigate();
   const { data: leadFarmerInfo, isLoading } = useQuery({
-    queryKey: ['lead-farmer-info', leadFarmerId],
+    queryKey: farmerQueries.leadFarmer.info(leadFarmerId),
     queryFn: async () => {
       const { data: profile, error: profileError } = await supabase
         .from('profiles')

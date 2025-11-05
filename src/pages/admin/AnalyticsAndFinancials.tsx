@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/formatMoney';
 import { DollarSign, TrendingUp, Users, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { adminQueries } from '@/features/admin';
 
 const COLORS = ['#10b981', '#3b82f6'];
 
@@ -14,7 +15,7 @@ const AnalyticsAndFinancials = () => {
   const navigate = useNavigate();
   
   const { data, isLoading } = useQuery({
-    queryKey: ['analytics-financials'],
+    queryKey: adminQueries.analyticsFinancials(),
     queryFn: async () => {
       // Get all profile IDs excluding demo users
       const { data: allProfiles } = await supabase

@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Clock, Info, MapPin } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+import { driverQueries } from '@/features/drivers';
 
 interface RouteDensityMapProps {
   batchId: string;
@@ -13,7 +14,7 @@ interface RouteDensityMapProps {
 
 export const RouteDensityMap = ({ batchId }: RouteDensityMapProps) => {
   const { data: stops, isLoading: stopsLoading } = useQuery({
-    queryKey: ['route-stops', batchId],
+    queryKey: driverQueries.routeStops(batchId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('driver_batch_stops_secure')
@@ -34,7 +35,7 @@ export const RouteDensityMap = ({ batchId }: RouteDensityMapProps) => {
   });
 
   const { data: batch, isLoading: batchLoading } = useQuery({
-    queryKey: ['delivery-batch', batchId],
+    queryKey: driverQueries.deliveryBatch(batchId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('delivery_batches')

@@ -7,6 +7,7 @@ import { format, differenceInHours } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Package } from "lucide-react";
 import { useState, useMemo } from "react";
+import { driverQueries } from "@/features/drivers";
 
 export function AvailableRoutes() {
   const { toast } = useToast();
@@ -14,7 +15,7 @@ export function AvailableRoutes() {
 
   // Fetch driver profile for sorting preferences
   const { data: driverProfile } = useQuery({
-    queryKey: ['driver-profile'],
+    queryKey: driverQueries.profile(),
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
@@ -30,7 +31,7 @@ export function AvailableRoutes() {
   });
 
   const { data: availableBatches, refetch } = useQuery({
-    queryKey: ['available-routes'],
+    queryKey: driverQueries.availableRoutes(),
     queryFn: async () => {
       const { data } = await supabase
         .from('delivery_batches')

@@ -8,6 +8,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { adminQueries } from '@/features/admin';
 
 export function FarmAffiliationManager() {
   const { toast } = useToast();
@@ -18,7 +19,7 @@ export function FarmAffiliationManager() {
   const [assigning, setAssigning] = useState(false);
   
   const { data: leadFarmers } = useQuery({
-    queryKey: ['lead-farmers'],
+    queryKey: adminQueries.leadFarmers(),
     queryFn: async () => {
       const { data } = await supabase
         .from('user_roles')
@@ -30,7 +31,7 @@ export function FarmAffiliationManager() {
   });
   
   const { data: farms } = useQuery({
-    queryKey: ['all-farms'],
+    queryKey: adminQueries.allFarms(),
     queryFn: async () => {
       const { data } = await supabase
         .from('farm_profiles')
@@ -75,8 +76,8 @@ export function FarmAffiliationManager() {
       setCommissionRate(5);
       
       // Refetch data
-      queryClient.invalidateQueries({ queryKey: ['lead-farmers'] });
-      queryClient.invalidateQueries({ queryKey: ['all-farms'] });
+      queryClient.invalidateQueries({ queryKey: adminQueries.leadFarmers() });
+      queryClient.invalidateQueries({ queryKey: adminQueries.allFarms() });
     } catch (error: any) {
       toast({
         title: 'Failed to assign',

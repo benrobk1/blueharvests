@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Star } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getRatingDisplay } from '@/lib/ratingHelpers';
+import { driverQueries } from '@/features/drivers';
 
 interface UserRatingDisplayProps {
   driverId: string;
@@ -10,7 +11,7 @@ interface UserRatingDisplayProps {
 
 export const UserRatingDisplay = ({ driverId }: UserRatingDisplayProps) => {
   const { data: ratingData, isLoading } = useQuery({
-    queryKey: ['driver-rating', driverId],
+    queryKey: driverQueries.rating(driverId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('delivery_ratings')

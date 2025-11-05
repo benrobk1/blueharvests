@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { adminQueries } from '@/features/admin';
 import {
   Dialog,
   DialogContent,
@@ -50,7 +51,7 @@ const Disputes = () => {
   const [refundAmount, setRefundAmount] = useState('');
 
   const { data: disputes, isLoading } = useQuery({
-    queryKey: ['admin-disputes'],
+    queryKey: adminQueries.disputes(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('disputes')
@@ -124,7 +125,7 @@ const Disputes = () => {
         title: 'Dispute resolved',
         description: 'The dispute has been updated successfully',
       });
-      queryClient.invalidateQueries({ queryKey: ['admin-disputes'] });
+      queryClient.invalidateQueries({ queryKey: adminQueries.disputes() });
       setSelectedDispute(null);
       setResolution('');
       setRefundAmount('');

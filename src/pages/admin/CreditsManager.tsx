@@ -8,12 +8,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatMoney } from "@/lib/formatMoney";
 import { format } from "date-fns";
+import { adminQueries } from "@/features/admin";
 
 const CreditsManager = () => {
   const navigate = useNavigate();
 
   const { data: creditsHistory, isLoading } = useQuery({
-    queryKey: ['credits-history'],
+    queryKey: adminQueries.creditsHistory(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('credits_ledger')

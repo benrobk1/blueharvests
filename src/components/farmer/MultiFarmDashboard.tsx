@@ -6,12 +6,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatMoney } from '@/lib/formatMoney';
 import { Skeleton } from '@/components/ui/skeleton';
+import { farmerQueries } from '@/features/farmers';
 
 export function MultiFarmDashboard() {
   const { user } = useAuth();
   
   const { data: affiliatedFarms, isLoading: farmsLoading } = useQuery({
-    queryKey: ['affiliated-farms', user?.id],
+    queryKey: farmerQueries.affiliatedFarms(user?.id || ''),
     queryFn: async () => {
       const { data } = await supabase
         .from('farm_affiliations')
@@ -33,7 +34,7 @@ export function MultiFarmDashboard() {
   });
   
   const { data: aggregateEarnings, isLoading: earningsLoading } = useQuery({
-    queryKey: ['aggregate-earnings', user?.id],
+    queryKey: farmerQueries.aggregateEarnings(user?.id || ''),
     queryFn: async () => {
       // Calculate commission from all affiliated farms
       const { data: commissions } = await supabase

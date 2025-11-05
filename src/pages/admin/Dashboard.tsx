@@ -9,13 +9,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import { KPIHeader } from "@/components/admin/KPIHeader";
+import { adminQueries } from "@/features/admin";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   
   // Fetch metrics
   const { data: metrics, isLoading: metricsLoading, refetch } = useQuery({
-    queryKey: ['admin-metrics'],
+    queryKey: adminQueries.metrics(),
     queryFn: async () => {
       // Count consumers
       const { count: consumers } = await supabase
@@ -71,7 +72,7 @@ const AdminDashboard = () => {
 
   // Fetch active drivers
   const { data: liveDrivers, isLoading: driversLoading } = useQuery({
-    queryKey: ['live-drivers'],
+    queryKey: adminQueries.liveDrivers(),
     queryFn: async () => {
       const { data } = await supabase
         .from('delivery_batches')
@@ -102,7 +103,7 @@ const AdminDashboard = () => {
 
   // Fetch recent activity
   const { data: recentActivity, isLoading: activityLoading } = useQuery({
-    queryKey: ['recent-activity'],
+    queryKey: adminQueries.recentActivity(),
     queryFn: async () => {
       const { data: orders } = await supabase
         .from('orders')

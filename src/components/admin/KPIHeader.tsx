@@ -4,6 +4,7 @@ import { Users, DollarSign, CheckCircle, Sprout, TrendingUp, Package, Heart, Use
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatMoney } from '@/lib/formatMoney';
 import { cn } from '@/lib/utils';
+import { adminQueries } from '@/features/admin';
 
 interface KPIMetricProps {
   label: string;
@@ -55,7 +56,7 @@ const KPIMetric = ({ label, value, icon, trend, target, comparison, status }: KP
 
 export const KPIHeader = () => {
   const { data: kpis, isLoading } = useQuery({
-    queryKey: ['admin-kpis'],
+    queryKey: adminQueries.kpis(),
     queryFn: () => fetchKPIs(),
     refetchInterval: 30000, // Update every 30 seconds
   });

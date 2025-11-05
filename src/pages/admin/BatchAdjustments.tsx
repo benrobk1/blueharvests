@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { useToast } from '@/hooks/use-toast';
 import { Truck, Package, Calendar, ArrowLeft, ChevronDown, DollarSign, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { adminQueries } from '@/features/admin';
 
 const BatchAdjustments = () => {
   const { toast } = useToast();
@@ -18,7 +19,7 @@ const BatchAdjustments = () => {
   const [selectedBatch, setSelectedBatch] = useState<string | null>(null);
 
   const { data: batches, isLoading } = useQuery({
-    queryKey: ['admin-batches'],
+    queryKey: adminQueries.batches(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('delivery_batches')
@@ -44,7 +45,7 @@ const BatchAdjustments = () => {
   });
 
   const { data: drivers } = useQuery({
-    queryKey: ['available-drivers'],
+    queryKey: adminQueries.availableDrivers(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('user_roles')
@@ -82,7 +83,7 @@ const BatchAdjustments = () => {
         title: 'Batch reassigned',
         description: 'The delivery batch has been reassigned successfully',
       });
-      queryClient.invalidateQueries({ queryKey: ['admin-batches'] });
+      queryClient.invalidateQueries({ queryKey: adminQueries.batches() });
       setSelectedBatch(null);
     },
     onError: (error: any) => {

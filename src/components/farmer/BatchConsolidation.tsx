@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatMoney } from "@/lib/formatMoney";
+import { farmerQueries } from "@/features/farmers";
 
 interface BatchOrder {
   orderId: string;
@@ -20,7 +21,7 @@ export const BatchConsolidation = () => {
   const { user } = useAuth();
 
   const { data: batches, isLoading } = useQuery({
-    queryKey: ['lead-farmer-batches', user?.id],
+    queryKey: farmerQueries.leadFarmer.batches(user?.id || ''),
     queryFn: async () => {
       // Get batches where user is the lead farmer
       const { data: batchData, error } = await supabase

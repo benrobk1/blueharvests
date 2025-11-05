@@ -19,6 +19,7 @@ import { FLAT_DELIVERY_FEE } from "@/lib/deliveryFeeHelpers";
 import { RouteDensityMap } from "@/components/driver/RouteDensityMap";
 import { useNavigate } from "react-router-dom";
 import { User } from "lucide-react";
+import { driverQueries } from "@/features/drivers";
 
 const DriverDashboard = () => {
   const { user } = useAuth();
@@ -27,7 +28,7 @@ const DriverDashboard = () => {
 
   // Fetch earnings from delivery fees and tips
   const { data: earnings, isLoading: earningsLoading } = useQuery({
-    queryKey: ['driver-earnings', user?.id],
+    queryKey: driverQueries.earnings(user?.id || ''),
     queryFn: async () => {
       const now = new Date();
       const todayStart = new Date(now.setHours(0, 0, 0, 0)).toISOString();
@@ -95,7 +96,7 @@ const DriverDashboard = () => {
   // Fetch active route
   // Use privacy-protecting driver_batch_stops_secure view to prevent premature address exposure
   const { data: activeRoute, isLoading: routeLoading } = useQuery({
-    queryKey: ['driver-active-route', user?.id],
+    queryKey: driverQueries.activeRoute(user?.id || ''),
     queryFn: async () => {
       // Query secure view - addresses masked until address_visible_at is set
       const { data: batch } = await supabase

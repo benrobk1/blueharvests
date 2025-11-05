@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { formatDistanceToNow } from "date-fns";
 import { Eye, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { adminQueries } from "@/features/admin";
 
 interface AuditLogEntry {
   id: string;
@@ -29,7 +30,7 @@ interface AuditLogEntry {
 
 const AuditLog = () => {
   const { data: logs, isLoading } = useQuery({
-    queryKey: ['audit-logs'],
+    queryKey: adminQueries.auditLogs(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('admin_audit_log')
