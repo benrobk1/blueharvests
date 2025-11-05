@@ -115,11 +115,6 @@ const AppContent = () => {
               <LiveTracking />
             </RoleGate>
           } />
-          <Route path="/demo/live-orders" element={
-            <RoleGate roles={['consumer']}>
-              <LiveTracking />
-            </RoleGate>
-          } />
           <Route path="/consumer/order-success/:orderId" element={
             <RoleGate roles={['consumer']}>
               <OrderSuccess />

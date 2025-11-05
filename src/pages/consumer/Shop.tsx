@@ -199,7 +199,7 @@ const Shop = () => {
                 <Package className="h-5 w-5 mr-2" />
                 Orders
               </Button>
-              <Button variant="outline" onClick={() => navigate("/demo/live-orders")}>
+              <Button variant="outline" onClick={() => navigate("/consumer/live-tracking")}>
                 <Truck className="h-5 w-5 mr-2" />
                 Live Status
               </Button>
