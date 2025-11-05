@@ -1,3 +1,31 @@
+/**
+ * ROUTE DETAILS PAGE
+ * 
+ * Displays delivery route information for drivers including stops, addresses, and navigation.
+ * 
+ * **ADDRESS PRIVACY IMPLEMENTATION**
+ * 
+ * This page implements the client-side portion of the address privacy system:
+ * 
+ * DATA FLOW:
+ * 1. Query uses `driver_batch_stops_secure` view (not raw batch_stops table)
+ * 2. View applies RLS policy: addresses visible only when `address_visible_at IS NOT NULL`
+ * 3. Collection point address is ALWAYS visible (farmers are public)
+ * 4. Consumer delivery addresses are HIDDEN until driver scans box at collection point
+ * 
+ * UI BEHAVIOR:
+ * - Before box scan: Drivers see ZIP code + approximate location only
+ * - After box scan: Full street address becomes visible
+ * - This is enforced at the DATABASE LEVEL via RLS policies
+ * 
+ * WHY THIS DESIGN:
+ * - Prevents drivers from cherry-picking "good" routes before claiming
+ * - Protects consumer privacy until pickup is confirmed
+ * - Ensures fair route distribution across all drivers
+ * 
+ * @see {@link https://github.com/yourusername/blue-harvests/blob/main/ARCHITECTURE.md#operational-safety-driver-address-privacy}
+ */
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -47,6 +75,20 @@ export default function RouteDetails() {
   const { data: activeBatch, isLoading } = useQuery({
     queryKey: ["driver-route-details", user?.id],
     queryFn: async () => {
+      /**
+       * ADDRESS PRIVACY: Using driver_batch_stops_secure view
+       * 
+       * This view applies RLS policies that:
+       * 1. Show full addresses ONLY when address_visible_at IS NOT NULL
+       * 2. Before box scan: Returns NULL or partial address data
+       * 3. After box scan: Returns full street address
+       * 
+       * The view query checks:
+       * - has_role(auth.uid(), 'driver') AND address_visible_at IS NOT NULL
+       * - OR has_role(auth.uid(), 'admin') -- admins always see addresses
+       * 
+       * This is the database-level enforcement mechanism.
+       */
       const { data } = await supabase
         .from("delivery_batches")
         .select(

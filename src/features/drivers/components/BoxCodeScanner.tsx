@@ -1,3 +1,32 @@
+/**
+ * BOX CODE SCANNER COMPONENT
+ * 
+ * Handles box code verification for both loading and delivery scenarios.
+ * 
+ * **CRITICAL SECURITY FEATURE - ADDRESS PRIVACY PROTECTION**
+ * 
+ * This component is a key part of the address privacy system that prevents
+ * drivers from cherry-picking routes based on "desirable" delivery addresses.
+ * 
+ * HOW IT WORKS:
+ * 1. When driver scans box code at COLLECTION POINT (mode='loading'):
+ *    - Sets `address_visible_at` timestamp on batch_stops table
+ *    - This timestamp unlock triggers full address visibility in RLS policy
+ *    - Driver can now see exact delivery address for that specific order
+ * 
+ * 2. When driver scans box code at DELIVERY (mode='delivery'):
+ *    - Logs delivery completion
+ *    - Verifies correct box delivered to correct address
+ *    - Updates order status
+ * 
+ * WHY THIS MATTERS:
+ * - Prevents operational abuse (route cherry-picking)
+ * - Protects consumer privacy (addresses hidden until pickup confirmed)
+ * - Ensures fair batch distribution (all drivers see same info when claiming)
+ * 
+ * @see {@link https://github.com/yourusername/blue-harvests/blob/main/ARCHITECTURE.md#operational-safety-driver-address-privacy}
+ */
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -87,7 +116,21 @@ export const BoxCodeScanner = ({
 
       setVerifiedOrder(verified);
 
-      // Create scan log entry
+      /**
+       * CRITICAL: Address Privacy System Implementation
+       * 
+       * When scanning at COLLECTION POINT (mode='loading'):
+       * - This scan creates a timestamp that unlocks address visibility
+       * - The database trigger or RLS policy uses `address_visible_at IS NOT NULL`
+       * - This prevents drivers from seeing addresses before confirming pickup
+       * 
+       * Database flow:
+       * 1. Driver scans box at farm → scan log created with scan_type='loaded'
+       * 2. RLS policy: `address_visible_at IS NOT NULL OR has_role(auth.uid(), 'admin')`
+       * 3. Full address becomes visible ONLY after this scan
+       * 
+       * This is the key enforcement mechanism that prevents route cherry-picking.
+       */
       if (user?.id) {
         await supabase.from('delivery_scan_logs').insert({
           batch_id: batchId,
