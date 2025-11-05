@@ -5,6 +5,7 @@ import OrderTracking from "@/components/OrderTracking";
 import { Skeleton } from "@/components/ui/skeleton";
 import logo from "@/assets/blue-harvests-logo.jpeg";
 import { useActiveOrder } from "@/hooks/useActiveOrder";
+import { OrderWithDetails } from "@/types/domain/order";
 import { EmptyOrderState } from "@/components/consumer/EmptyOrderState";
 import { mapOrderStatus, formatOrderItems, formatEstimatedTime } from "@/lib/orderHelpers";
 
@@ -27,8 +28,9 @@ const LiveTracking = () => {
     );
   }
 
-  const driver = activeOrder?.delivery_batches?.profiles;
-  const deliveryAddress = activeOrder?.profiles;
+  const typedOrder = activeOrder as OrderWithDetails | null;
+  const driver = typedOrder?.delivery_batches?.profiles;
+  const deliveryAddress = typedOrder?.profiles;
 
   return (
     <div className="min-h-screen bg-gradient-earth pb-20 md:pb-8">
@@ -45,17 +47,17 @@ const LiveTracking = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
-        {!activeOrder ? (
+        {!typedOrder ? (
           <EmptyOrderState />
         ) : (
           <OrderTracking
-            orderId={activeOrder.id.slice(0, 8)}
-            status={mapOrderStatus(activeOrder.status)}
+            orderId={typedOrder.id.slice(0, 8)}
+            status={mapOrderStatus(typedOrder.status)}
             driverName={driver?.full_name}
             driverPhone={driver?.phone}
-            estimatedTime={formatEstimatedTime(activeOrder.delivery_batches?.estimated_duration_minutes)}
-            items={formatOrderItems(activeOrder.order_items || [])}
-            total={Number(activeOrder.total_amount)}
+            estimatedTime={formatEstimatedTime(typedOrder.delivery_batches?.estimated_duration_minutes)}
+            items={formatOrderItems(typedOrder.order_items || [])}
+            total={Number(typedOrder.total_amount)}
             deliveryAddress={deliveryAddress ? 
               `${deliveryAddress.street_address}, ${deliveryAddress.city}, ${deliveryAddress.state} ${deliveryAddress.zip_code}` 
               : 'Address not available'

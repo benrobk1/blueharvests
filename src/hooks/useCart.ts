@@ -5,31 +5,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useErrorHandler } from '@/lib/errors/useErrorHandler';
 import { useToast } from '@/hooks/use-toast';
 import { createCartError, createValidationError } from '@/lib/errors/ErrorTypes';
+import { cartQueries } from '@/queries';
+import { ShoppingCart, SavedCart, CartItemWithProduct } from '@/types/domain/cart';
 
-interface CartItem {
-  id: string;
-  product_id: string;
-  quantity: number;
-  unit_price: number;
-  products: {
-    id: string;
-    name: string;
-    unit: string;
-    image_url: string | null;
-    available_quantity: number;
-    farm_profiles: {
-      id: string;
-      farm_name: string;
-    };
-  };
-}
-
-interface SavedCart {
-  id: string;
-  name: string;
-  items: any[];
-  created_at: string;
-}
+// Types are now imported from domain types
 
 export const useCart = () => {
   const { user } = useAuth();
@@ -37,8 +16,8 @@ export const useCart = () => {
   const { handleError } = useErrorHandler();
   const queryClient = useQueryClient();
 
-  const { data: cart, isLoading } = useQuery({
-    queryKey: ['cart', user?.id],
+  const { data: cart, isLoading } = useQuery<ShoppingCart | null>({
+    queryKey: cartQueries.current(user?.id),
     queryFn: async () => {
       if (!user) return null;
 
@@ -90,7 +69,10 @@ export const useCart = () => {
 
       return {
         id: cartId,
-        items: items as unknown as CartItem[],
+        consumer_id: user.id,
+        items: items as unknown as CartItemWithProduct[],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       };
     },
     enabled: !!user,
@@ -128,12 +110,12 @@ export const useCart = () => {
       }
     },
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ['cart', user?.id] });
-      const previousCart = queryClient.getQueryData(['cart', user?.id]);
+      await queryClient.cancelQueries({ queryKey: cartQueries.current(user?.id) });
+      const previousCart = queryClient.getQueryData(cartQueries.current(user?.id));
       return { previousCart };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cart', user?.id] });
+      queryClient.invalidateQueries({ queryKey: cartQueries.current(user?.id) });
       toast({
         title: 'Added to cart',
         description: 'Item added successfully',
@@ -141,7 +123,7 @@ export const useCart = () => {
     },
     onError: (error: Error, _variables, context) => {
       if (context?.previousCart) {
-        queryClient.setQueryData(['cart', user?.id], context.previousCart);
+        queryClient.setQueryData(cartQueries.current(user?.id), context.previousCart);
       }
       handleError(createCartError('Failed to add item to cart'));
     },
@@ -166,16 +148,16 @@ export const useCart = () => {
       }
     },
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ['cart', user?.id] });
-      const previousCart = queryClient.getQueryData(['cart', user?.id]);
+      await queryClient.cancelQueries({ queryKey: cartQueries.current(user?.id) });
+      const previousCart = queryClient.getQueryData(cartQueries.current(user?.id));
       return { previousCart };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cart', user?.id] });
+      queryClient.invalidateQueries({ queryKey: cartQueries.current(user?.id) });
     },
     onError: (error: Error, _variables, context) => {
       if (context?.previousCart) {
-        queryClient.setQueryData(['cart', user?.id], context.previousCart);
+        queryClient.setQueryData(cartQueries.current(user?.id), context.previousCart);
       }
       handleError(createCartError('Failed to update quantity'));
     },
@@ -191,12 +173,12 @@ export const useCart = () => {
       if (error) throw error;
     },
     onMutate: async () => {
-      await queryClient.cancelQueries({ queryKey: ['cart', user?.id] });
-      const previousCart = queryClient.getQueryData(['cart', user?.id]);
+      await queryClient.cancelQueries({ queryKey: cartQueries.current(user?.id) });
+      const previousCart = queryClient.getQueryData(cartQueries.current(user?.id));
       return { previousCart };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cart', user?.id] });
+      queryClient.invalidateQueries({ queryKey: cartQueries.current(user?.id) });
       toast({
         title: 'Removed from cart',
         description: 'Item removed successfully',
@@ -204,15 +186,15 @@ export const useCart = () => {
     },
     onError: (error: Error, _variables, context) => {
       if (context?.previousCart) {
-        queryClient.setQueryData(['cart', user?.id], context.previousCart);
+        queryClient.setQueryData(cartQueries.current(user?.id), context.previousCart);
       }
       handleError(createCartError('Failed to remove item from cart'));
     },
   });
 
   // Saved carts functionality
-  const { data: savedCarts = [] } = useQuery<SavedCart[]>({
-    queryKey: ['saved-carts', user?.id],
+  const { data: savedCarts = [] } = useQuery({
+    queryKey: cartQueries.saved.all(user?.id),
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await supabase
@@ -224,9 +206,11 @@ export const useCart = () => {
       if (error) throw error;
       return (data || []).map(cart => ({
         id: cart.id,
+        consumer_id: cart.consumer_id,
         name: cart.name,
         items: Array.isArray(cart.items) ? cart.items : [],
         created_at: cart.created_at,
+        updated_at: cart.updated_at,
       }));
     },
     enabled: !!user,
@@ -249,7 +233,7 @@ export const useCart = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['saved-carts', user?.id] });
+      queryClient.invalidateQueries({ queryKey: cartQueries.saved.all(user?.id) });
       toast({
         title: 'Cart saved',
         description: 'Your cart has been saved successfully',
@@ -294,7 +278,7 @@ export const useCart = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cart', user?.id] });
+      queryClient.invalidateQueries({ queryKey: cartQueries.current(user?.id) });
       toast({
         title: 'Cart loaded',
         description: 'Your saved cart has been loaded',
@@ -315,7 +299,7 @@ export const useCart = () => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['saved-carts', user?.id] });
+      queryClient.invalidateQueries({ queryKey: cartQueries.saved.all(user?.id) });
       toast({
         title: 'Cart deleted',
         description: 'Saved cart has been removed',

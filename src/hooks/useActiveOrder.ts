@@ -3,12 +3,14 @@ import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { POLLING_INTERVALS } from '@/config/ui-constants';
+import { orderQueries } from '@/queries';
+import { OrderWithDetails } from '@/types/domain/order';
 
 export const useActiveOrder = () => {
   const { user } = useAuth();
 
   const { data: activeOrder, isLoading, refetch } = useQuery({
-    queryKey: ['active-order', user?.id],
+    queryKey: orderQueries.active(user?.id || ''),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')

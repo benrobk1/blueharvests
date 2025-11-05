@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShoppingCart, Minus, Plus, Trash2, Save, History } from "lucide-react";
 import { useCart } from "@/hooks/useCart";
+import { SavedCart } from "@/types/domain/cart";
 import { formatMoney } from "@/lib/formatMoney";
 import { useNavigate, Link } from "react-router-dom";
 import { SaveCartDialog } from "@/components/SaveCartDialog";
@@ -19,7 +20,7 @@ export const CartDrawer = () => {
     updateQuantity, 
     removeItem, 
     isLoading,
-    savedCarts, 
+    savedCarts = [], 
     saveCart, 
     loadSavedCart, 
     deleteSavedCart 
@@ -164,7 +165,7 @@ export const CartDrawer = () => {
           {/* Saved Carts Tab */}
           <TabsContent value="saved" className="flex-1 overflow-y-auto mt-4">
             <SavedCartsList
-              savedCarts={savedCarts}
+              savedCarts={savedCarts as SavedCart[]}
               onLoad={(cartId) => loadSavedCart.mutate(cartId)}
               onDelete={(cartId) => deleteSavedCart.mutate(cartId)}
               isLoading={loadSavedCart.isPending || deleteSavedCart.isPending}
