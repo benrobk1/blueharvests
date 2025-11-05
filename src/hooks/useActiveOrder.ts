@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { POLLING_INTERVALS } from '@/config/ui-constants';
 
 export const useActiveOrder = () => {
   const { user } = useAuth();
@@ -38,7 +39,7 @@ export const useActiveOrder = () => {
       return data;
     },
     enabled: !!user?.id,
-    refetchInterval: 30000,
+    refetchInterval: POLLING_INTERVALS.ACTIVE_ORDER,
   });
 
   useEffect(() => {

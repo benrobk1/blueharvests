@@ -2,7 +2,9 @@ import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useErrorHandler } from '@/lib/errors/useErrorHandler';
 import { useToast } from '@/hooks/use-toast';
+import { createCartError, createValidationError } from '@/lib/errors/ErrorTypes';
 
 interface CartItem {
   id: string;
@@ -32,6 +34,7 @@ interface SavedCart {
 export const useCart = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { handleError } = useErrorHandler();
   const queryClient = useQueryClient();
 
   const { data: cart, isLoading } = useQuery({
@@ -140,11 +143,7 @@ export const useCart = () => {
       if (context?.previousCart) {
         queryClient.setQueryData(['cart', user?.id], context.previousCart);
       }
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      handleError(createCartError('Failed to add item to cart'));
     },
   });
 
@@ -178,11 +177,7 @@ export const useCart = () => {
       if (context?.previousCart) {
         queryClient.setQueryData(['cart', user?.id], context.previousCart);
       }
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      handleError(createCartError('Failed to update quantity'));
     },
   });
 
@@ -211,11 +206,7 @@ export const useCart = () => {
       if (context?.previousCart) {
         queryClient.setQueryData(['cart', user?.id], context.previousCart);
       }
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      handleError(createCartError('Failed to remove item from cart'));
     },
   });
 
@@ -244,7 +235,7 @@ export const useCart = () => {
   const saveCart = useMutation({
     mutationFn: async (name: string) => {
       if (!user || !cart?.items || cart.items.length === 0) {
-        throw new Error('Cart is empty');
+        throw createValidationError('Cart is empty');
       }
 
       const { error } = await supabase
@@ -265,11 +256,7 @@ export const useCart = () => {
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      handleError(error);
     },
   });
 
@@ -314,11 +301,7 @@ export const useCart = () => {
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      handleError(error);
     },
   });
 
@@ -339,11 +322,7 @@ export const useCart = () => {
       });
     },
     onError: (error: Error) => {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
+      handleError(error);
     },
   });
 
