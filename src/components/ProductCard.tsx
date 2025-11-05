@@ -3,13 +3,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatMoney } from '@/lib/formatMoney';
-import { Calendar, MapPin, Sprout, Check, Minus, Plus } from 'lucide-react';
+import { Calendar, MapPin, Sprout, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import PriceBreakdownDrawer from './PriceBreakdownDrawer';
 import { LoadingButton } from './LoadingButton';
 import { calculateFarmToConsumerDistance } from '@/lib/distanceHelpers';
 import { FarmStoryModal } from './FarmStoryModal';
+import { useCartActions } from '@/hooks/useCartActions';
+import { QuantitySelector } from './consumer/QuantitySelector';
 
 interface Product {
   id: string;
@@ -44,38 +46,26 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, onAddToCart, farmerData, consumerProfile }: ProductCardProps) => {
   const navigate = useNavigate();
-  const [isAdding, setIsAdding] = useState(false);
-  const [justAdded, setJustAdded] = useState(false);
   const [showFarmStory, setShowFarmStory] = useState(false);
-  const [quantity, setQuantity] = useState(1);
+  
+  const {
+    isAdding,
+    justAdded,
+    quantity,
+    handleAddToCart: handleCartAction,
+    incrementQuantity,
+    decrementQuantity,
+  } = useCartActions();
 
-  // Memoize distance calculation
   const milesFromFarm = useMemo(() => {
     if (!product.farm_profiles.location || !consumerProfile?.zip_code) return null;
     return calculateFarmToConsumerDistance(product.farm_profiles.location, consumerProfile.zip_code);
   }, [product.farm_profiles.location, consumerProfile?.zip_code]);
 
-  const handleAddToCart = async () => {
-    setIsAdding(true);
-    await onAddToCart(product, quantity);
-    setIsAdding(false);
-    setJustAdded(true);
-    setTimeout(() => {
-      setJustAdded(false);
-      setQuantity(1); // Reset quantity after adding
-    }, 2000);
-  };
-
-  const incrementQuantity = () => {
-    if (quantity < product.available_quantity) {
-      setQuantity(prev => prev + 1);
-    }
-  };
-
-  const decrementQuantity = () => {
-    if (quantity > 1) {
-      setQuantity(prev => prev - 1);
-    }
+  const handleAddToCart = () => {
+    handleCartAction(async () => {
+      await onAddToCart(product, quantity);
+    });
   };
 
   return (
@@ -159,29 +149,13 @@ const ProductCard = ({ product, onAddToCart, farmerData, consumerProfile }: Prod
           </div>
 
           <div className="flex flex-col gap-2">
-            {/* Quantity Selector */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={decrementQuantity}
-                disabled={quantity <= 1 || isAdding || justAdded}
-              >
-                <Minus className="h-3 w-3" />
-              </Button>
-              <span className="w-8 text-center font-medium">{quantity}</span>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8"
-                onClick={incrementQuantity}
-                disabled={quantity >= product.available_quantity || isAdding || justAdded}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
-            </div>
-
+            <QuantitySelector
+              quantity={quantity}
+              onIncrement={() => incrementQuantity(product.available_quantity)}
+              onDecrement={decrementQuantity}
+              disabled={isAdding || justAdded}
+            />
+            
             {/* Add to Cart Button */}
             <LoadingButton 
               onClick={handleAddToCart}
