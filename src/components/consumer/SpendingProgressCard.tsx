@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { consumerQueries } from "@/features/consumers";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { TrendingUp, Coins } from "lucide-react";
@@ -10,7 +11,7 @@ export const SpendingProgressCard = () => {
   const { user } = useAuth();
 
   const { data: subscription } = useQuery({
-    queryKey: ['subscription-spending', user?.id],
+    queryKey: consumerQueries.subscription(user?.id || ''),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('subscriptions')

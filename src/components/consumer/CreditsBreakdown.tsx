@@ -6,12 +6,13 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Coins, TrendingUp, Calendar, AlertCircle } from "lucide-react";
 import { formatMoney } from "@/lib/formatMoney";
 import { calculateAvailableNextMonth } from "@/lib/creditsHelpers";
+import { consumerQueries } from "@/features/consumers";
 
 export const CreditsBreakdown = () => {
   const { user } = useAuth();
 
   const { data: creditsData } = useQuery({
-    queryKey: ['credits-breakdown', user?.id],
+    queryKey: consumerQueries.creditsBreakdown(user?.id || ''),
     queryFn: async () => {
       // Get current subscription
       const { data: subscription } = await supabase

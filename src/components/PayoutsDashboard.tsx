@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { formatMoney } from '@/lib/formatMoney';
 import { DollarSign, Clock, CheckCircle2, TrendingUp } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
+import { payoutQueries } from '@/features/payouts';
 
 interface Payout {
   id: string;
@@ -18,7 +19,7 @@ interface Payout {
 
 export const PayoutsDashboard = () => {
   const { data: payouts, isLoading } = useQuery({
-    queryKey: ['payouts'],
+    queryKey: payoutQueries.all(),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('payouts')

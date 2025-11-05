@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { ArrowLeft, Calendar, CreditCard, MapPin, Coins, DollarSign, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useCart } from "@/features/cart";
 import { useAuth } from "@/contexts/AuthContext";
+import { consumerQueries } from "@/features/consumers";
 import { supabase } from "@/integrations/supabase/client";
 import { formatMoney } from "@/lib/formatMoney";
 import { useToast } from "@/hooks/use-toast";
@@ -42,7 +43,7 @@ const Checkout = () => {
   const [showTermsError, setShowTermsError] = useState(false);
 
   const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
+    queryKey: consumerQueries.profile(user?.id),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
@@ -57,7 +58,7 @@ const Checkout = () => {
   });
 
   const { data: credits } = useQuery({
-    queryKey: ['credits', user?.id],
+    queryKey: consumerQueries.credits(user?.id || ''),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('credits_ledger')
@@ -74,7 +75,7 @@ const Checkout = () => {
   });
 
   const { data: marketConfig } = useQuery({
-    queryKey: ['market-config', profile?.zip_code],
+    queryKey: consumerQueries.marketConfig(profile?.zip_code),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('market_configs')

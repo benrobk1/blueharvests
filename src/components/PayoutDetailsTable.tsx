@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { payoutQueries } from '@/features/payouts';
 import { formatMoney } from '@/lib/formatMoney';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,7 +17,7 @@ export function PayoutDetailsTable({ recipientType }: PayoutDetailsTableProps) {
   const { user } = useAuth();
   
   const { data: payouts, isLoading } = useQuery({
-    queryKey: ['payout-details', user?.id, recipientType],
+    queryKey: payoutQueries.details(user?.id || '', recipientType),
     queryFn: async () => {
       const { data } = await supabase
         .from('payouts')

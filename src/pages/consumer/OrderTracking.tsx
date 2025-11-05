@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import logo from "@/assets/blue-harvests-logo.jpeg";
 import { formatMoney } from "@/lib/formatMoney";
 import { useToast } from "@/hooks/use-toast";
+import { consumerQueries } from "@/features/consumers";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +33,7 @@ const ConsumerOrderTracking = () => {
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
 
   const { data: orders, isLoading, refetch } = useQuery({
-    queryKey: ['consumer-orders', user?.id],
+    queryKey: consumerQueries.orders(user?.id || ''),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')

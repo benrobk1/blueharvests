@@ -148,7 +148,7 @@ const DriverDashboard = () => {
 
   // Fetch stats and ratings
   const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['driver-stats', user?.id],
+    queryKey: driverQueries.stats(user?.id || ''),
     queryFn: async () => {
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
@@ -210,7 +210,7 @@ const DriverDashboard = () => {
 
   // Fetch active batch ID for route density map
   const { data: activeBatch } = useQuery({
-    queryKey: ['driver-active-batch', user?.id],
+    queryKey: driverQueries.activeBatch(user?.id || ''),
     queryFn: async () => {
       const { data } = await supabase
         .from('delivery_batches')
@@ -227,7 +227,7 @@ const DriverDashboard = () => {
 
   // Fetch monthly completed batches count
   const { data: monthlyBatches } = useQuery({
-    queryKey: ['driver-monthly-batches', user?.id],
+    queryKey: driverQueries.monthlyBatches(user?.id || ''),
     queryFn: async () => {
       const monthStart = new Date();
       monthStart.setDate(monthStart.getDate() - 30);

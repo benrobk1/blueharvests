@@ -8,6 +8,8 @@ import { ArrowLeft, MapPin, TrendingUp, Users, ChevronDown } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatMoney } from '@/lib/formatMoney';
+import { farmerQueries } from '@/features/farmers';
+import { userQueries } from '@/queries';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))'];
 
@@ -37,7 +39,7 @@ export default function CustomerAnalytics() {
 
   // Check if user is a lead farmer
   const { data: userRoles } = useQuery({
-    queryKey: ['user-roles', user?.id],
+    queryKey: userQueries.roles(user?.id || ''),
     queryFn: async () => {
       const { data } = await supabase
         .from('user_roles')
@@ -51,7 +53,7 @@ export default function CustomerAnalytics() {
   const isLeadFarmer = userRoles?.some(r => r.role === 'lead_farmer');
 
   const { data: zipCodeData, isLoading: zipLoading } = useQuery({
-    queryKey: ['customer-analytics-zip', user?.id, isLeadFarmer],
+    queryKey: farmerQueries.customerAnalytics(user?.id || '', isLeadFarmer),
     queryFn: async () => {
       if (isLeadFarmer) {
         // For lead farmers, get aggregated data from affiliated farms
@@ -178,7 +180,7 @@ export default function CustomerAnalytics() {
   const displayZipData = zipCodeData || [];
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
-    queryKey: ['customer-summary', user?.id, displayZipData],
+    queryKey: farmerQueries.customerSummary(user?.id || '', displayZipData),
     queryFn: async () => {
       if (!Array.isArray(displayZipData)) {
         return { totalCustomers: 0, totalOrders: 0, totalRevenue: 0, avgOrderValue: 0 };

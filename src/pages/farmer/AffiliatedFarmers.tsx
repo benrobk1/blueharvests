@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Phone, Mail, MapPin, Package, ExternalLink, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
+import { farmerQueries } from '@/features/farmers';
 
 // Demo data for collection point
 const DEMO_COLLECTION_POINT = {
@@ -67,7 +68,7 @@ export default function AffiliatedFarmers() {
   const navigate = useNavigate();
 
   const { data: collectionPoint, isLoading: collectionPointLoading } = useQuery({
-    queryKey: ['collection-point', user?.id],
+    queryKey: farmerQueries.leadFarmer.collectionPoint(user?.id || ''),
     queryFn: async () => {
       const { data } = await supabase
         .from('profiles')
@@ -80,7 +81,7 @@ export default function AffiliatedFarmers() {
   });
 
   const { data: affiliatedFarmers, isLoading } = useQuery({
-    queryKey: ['affiliated-farmers-detailed', user?.id],
+    queryKey: farmerQueries.affiliatedFarmersDetailed(user?.id || ''),
     queryFn: async () => {
       const { data, error } = await supabase
         .from('farm_affiliations')

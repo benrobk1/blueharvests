@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { payoutQueries } from '@/features/payouts';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatMoney } from '@/lib/formatMoney';
 import { format, subDays, startOfDay } from 'date-fns';
@@ -15,7 +16,7 @@ export function PayoutHistoryChart({ recipientType }: PayoutHistoryChartProps) {
   const { user } = useAuth();
   
   const { data: payoutHistory, isLoading } = useQuery({
-    queryKey: ['payout-history', user?.id, recipientType],
+    queryKey: payoutQueries.history(user?.id || '', recipientType),
     queryFn: async () => {
       const thirtyDaysAgo = startOfDay(subDays(new Date(), 30));
       

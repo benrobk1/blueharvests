@@ -7,13 +7,14 @@ import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { Package, MapPin, Calendar } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { driverQueries } from "@/features/drivers";
 
 export default function AvailableRoutes() {
   const { toast } = useToast();
   const navigate = useNavigate();
   
   const { data: availableBatches, refetch } = useQuery({
-    queryKey: ['available-routes'],
+    queryKey: driverQueries.availableRoutes(),
     queryFn: async () => {
       console.log('Fetching available routes...');
       const { data } = await supabase

@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Copy, Share2, Mail } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { consumerQueries } from '@/features/consumers';
 
 interface ReferralModalProps {
   open: boolean;
@@ -17,7 +18,7 @@ export const ReferralModal = ({ open, onOpenChange }: ReferralModalProps) => {
   const { toast } = useToast();
 
   const { data: profile } = useQuery({
-    queryKey: ['profile', user?.id],
+    queryKey: consumerQueries.profile(user?.id),
     queryFn: async () => {
       if (!user) return null;
       const { data } = await supabase

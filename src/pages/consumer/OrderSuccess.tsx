@@ -10,6 +10,7 @@ import { formatMoney } from "@/lib/formatMoney";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import logo from "@/assets/blue-harvests-logo.jpeg";
+import { consumerQueries } from "@/features/consumers";
 
 const OrderSuccess = () => {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ const OrderSuccess = () => {
   const { user } = useAuth();
 
   const { data: order, isLoading } = useQuery({
-    queryKey: ['order-success', orderId],
+    queryKey: consumerQueries.orderSuccess(orderId || ''),
     queryFn: async () => {
       if (!orderId) throw new Error('No order ID provided');
       
