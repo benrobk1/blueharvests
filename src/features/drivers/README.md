@@ -1,129 +1,158 @@
-# Driver Feature Module
+# Drivers Feature
 
-Delivery route management, navigation, earnings tracking, and batch coordination for drivers.
+Centralized module for driver-related functionality including route management, box scanning, and delivery tracking.
+
+## Structure
+
+```
+drivers/
+├── components/        # UI components
+│   ├── AvailableRoutes.tsx
+│   ├── BoxCodeScanner.tsx
+│   ├── DriverInterface.tsx
+│   └── RouteDensityMap.tsx
+├── queries/          # React Query hooks
+│   └── index.ts
+├── types/            # TypeScript types
+│   └── index.ts
+├── errors.ts         # Feature-specific errors
+└── index.ts          # Public exports
+```
 
 ## Components
 
-### `AvailableRoutes`
-Displays unclaimed delivery batches available for drivers to accept. Shows batch details including:
-- Delivery date and time window
-- Number of stops
-- Estimated earnings (delivery fee + potential tips)
-- Collection point location
-- ZIP code coverage (addresses hidden until pickup)
+### AvailableRoutes
+Displays available delivery batches for drivers to claim.
 
-**Address Privacy**: Only shows ZIP codes and batch-level info before claiming.
+**Props:**
+- None (fetches data internally)
 
-### `BoxCodeScanner`
-**CRITICAL SECURITY COMPONENT** - Core implementation of address privacy system.
+**Usage:**
+```tsx
+import { AvailableRoutes } from '@/features/drivers';
 
-Handles box code verification in two modes:
-1. **Loading Mode** (`mode='loading'`): Scan boxes at collection point
-   - Creates scan log with `scan_type='loaded'`
-   - Sets `address_visible_at` timestamp (unlocks addresses)
-   - Enables full address visibility via RLS policy
-2. **Delivery Mode** (`mode='delivery'`): Scan boxes at consumer location
-   - Verifies correct box at correct address
-   - Updates delivery status
-
-**Why This Matters**:
-- Prevents route cherry-picking (drivers can't see "good" addresses before claiming)
-- Protects consumer privacy (addresses hidden until pickup confirmed)
-- Ensures operational fairness
-
-### `RouteDensityMap`
-Interactive map visualization showing delivery density by ZIP code. Helps drivers understand route concentration and efficiency.
-
-## Queries
-
-See `queries/index.ts` for full query factory documentation.
-
-Key queries:
-- `driverQueries.availableRoutes()` - Unclaimed batches
-- `driverQueries.activeBatch(userId)` - Current assigned route
-- `driverQueries.routeStops(batchId)` - Delivery stops (RLS-protected)
-- `driverQueries.earnings(userId)` - Payment history
-
-## Error Handling
-
-Feature-specific error creators in `errors.ts`:
-- `createRouteClaimError()` - Batch claiming failures
-- `createDeliveryError()` - Delivery status update errors
-- `createBoxScanError()` - Invalid box code scans
-- `createDriverPayoutError()` - Payout data fetch errors
-
-## Address Privacy System
-
-### How It Works
-
-**Before Box Scan** (at collection point):
-```
-Database: address_visible_at = NULL
-Driver sees: ZIP code only (e.g., "10001")
-UI displays: "Deliveries in ZIP 10001" (no street addresses)
+<AvailableRoutes />
 ```
 
-**After Box Scan** (at collection point):
-```
-Database: address_visible_at = NOW()
-Driver sees: Full street address (e.g., "123 Main St, Apt 4B")
-UI displays: Complete delivery information
-```
+### BoxCodeScanner
+QR/barcode scanner for loading and delivering boxes.
 
-### Database Implementation
+**Props:**
+- `mode: 'loading' | 'delivery'` - Scanner mode
+- `batchId?: string` - Batch identifier
+- `onScanComplete: (orderId: string, boxCode: string) => void` - Callback on successful scan
 
-RLS Policy on `batch_stops`:
-```sql
-CREATE POLICY "Drivers see addresses only after pickup"
-ON batch_stops FOR SELECT
-TO authenticated
-USING (
-  CASE 
-    WHEN has_role(auth.uid(), 'driver') THEN 
-      address_visible_at IS NOT NULL
-    ELSE 
-      true  -- Consumers/farmers/admins always see addresses
-  END
-);
-```
+**Usage:**
+```tsx
+import { BoxCodeScanner } from '@/features/drivers';
 
-### Frontend Implementation
-
-- `RouteDetails.tsx` - Uses `driver_batch_stops_secure` view
-- `BoxCodeScanner.tsx` - Creates scan log that triggers visibility
-- `AvailableRoutes.tsx` - Shows ZIP codes only for unclaimed batches
-
-## Usage Example
-
-```typescript
-import { driverQueries, AvailableRoutes, BoxCodeScanner } from '@/features/drivers';
-
-// Get available routes
-const { data: routes } = useQuery(driverQueries.availableRoutes());
-
-// Render available routes component
-<AvailableRoutes onRouteClaimed={handleClaim} />
-
-// Box scanning at collection point
 <BoxCodeScanner 
-  mode="loading" 
+  mode="loading"
   batchId={batchId}
-  onScanComplete={(orderId, code) => {
-    // Address now visible for this order
-    refetchStops();
+  onScanComplete={(orderId, boxCode) => {
+    console.log('Scanned:', boxCode);
   }}
 />
 ```
 
-## Security Considerations
+### DriverInterface
+Mobile-optimized interface for active deliveries.
 
-- **Never** bypass `driver_batch_stops_secure` view
-- **Always** use box scanner for address unlocking
-- **Don't** expose raw `batch_stops` table to drivers
-- **Validate** scan logs server-side (prevent fake scans)
+**Props:**
+- `stops: Stop[]` - Array of delivery stops
+- `onMarkDelivered: (stopId: string) => void` - Mark stop as delivered
+- `onStartNavigation: (stopId: string) => void` - Start navigation to stop
 
-## Related Documentation
+**Usage:**
+```tsx
+import { DriverInterface } from '@/features/drivers';
 
-- [ARCHITECTURE.md - Address Privacy](../../ARCHITECTURE.md#operational-safety-driver-address-privacy)
-- [SECURITY.md - RLS Policies](../../SECURITY.md)
-- [Driver Workflow E2E Tests](../../e2e/driver-workflow.spec.ts)
+<DriverInterface
+  stops={stops}
+  onMarkDelivered={handleMarkDelivered}
+  onStartNavigation={handleStartNavigation}
+/>
+```
+
+### RouteDensityMap
+Visualizes route density and delivery progress.
+
+**Props:**
+- `batchId: string` - Batch identifier
+
+**Usage:**
+```tsx
+import { RouteDensityMap } from '@/features/drivers';
+
+<RouteDensityMap batchId={batchId} />
+```
+
+## Types
+
+### Stop
+```typescript
+interface Stop {
+  id: string;
+  customer: string;
+  address: string;
+  status: 'pending' | 'in_progress' | 'delivered';
+}
+```
+
+### VerifiedOrder
+```typescript
+interface VerifiedOrder {
+  order_id: string;
+  box_code: string;
+  consumer_name: string;
+  delivery_address: string;
+}
+```
+
+### DeliveryBatch
+```typescript
+interface DeliveryBatch {
+  id: string;
+  batch_number: number;
+  delivery_date: string;
+  status: string;
+  estimated_duration_minutes: number | null;
+  zip_codes: string[] | null;
+}
+```
+
+## Query Keys
+
+```typescript
+export const driversKeys = {
+  all: ['drivers'] as const,
+  batches: () => [...driversKeys.all, 'batches'] as const,
+  batch: (id: string) => [...driversKeys.batches(), id] as const,
+  routes: () => [...driversKeys.all, 'routes'] as const,
+  route: (id: string) => [...driversKeys.routes(), id] as const,
+};
+```
+
+## Error Handling
+
+```typescript
+import { DriversError } from '@/features/drivers';
+
+throw DriversError.batchNotFound(batchId);
+throw DriversError.scanFailed(reason);
+throw DriversError.deliveryFailed(stopId, reason);
+```
+
+## Pages Using This Feature
+
+- `/driver/dashboard` - Main driver dashboard
+- `/driver/available-routes` - Browse and claim routes
+- `/driver/route/:batchId` - Active route details
+- `/driver/load-boxes/:batchId` - Box loading interface
+- `/profile/driver` - Driver profile and documents
+
+## Related Features
+
+- **Orders**: Delivery stop information
+- **Payouts**: Driver earnings and payment history
+- **Admin**: Batch assignment and route optimization

@@ -107,9 +107,13 @@ Feature-based architecture with colocated code:
   - Components: PayoutsDashboard, PayoutDetailsTable, PayoutHistoryChart
   - Queries: payoutQueries
   - Errors: createPayoutError
+- **Drivers** (`/drivers`): Route claiming, delivery tracking, box scanning
+  - Components: AvailableRoutes, BoxCodeScanner, RouteDensityMap, DriverInterface
+  - Types: Stop, VerifiedOrder, DeliveryBatch
+  - Queries: driversKeys
+  - Errors: createDriverError
 
 **Pending Migration** (⏳):
-- **Drivers** - Route claiming, delivery tracking, earnings
 - **Farmers** - Inventory management, batches, payouts
 - **Admin** - User approvals, KPIs, tax documents
 
