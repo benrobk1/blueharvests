@@ -51,6 +51,11 @@ export const RATE_LIMITS = {
     windowMs: 60 * 1000, // 1 minute
     keyPrefix: 'batch_gen' 
   },
+  PROCESS_PAYOUTS: {
+    maxRequests: 1,
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    keyPrefix: 'process-payouts'
+  },
 } as const;
 
 // Subscription

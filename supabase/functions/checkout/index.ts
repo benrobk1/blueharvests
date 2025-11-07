@@ -1,5 +1,5 @@
 /**
- * CHECKOUT EDGE FUNCTION - REFACTORED WITH MIDDLEWARE PATTERN
+ * CHECKOUT EDGE FUNCTION - REF ACTORED WITH MIDDLEWARE PATTERN
  * 
  * This demonstrates the recommended middleware pattern for edge functions.
  * Compare with generate-batches to see before/after.
@@ -187,36 +187,3 @@ serve(async (req) => {
     });
   }
 });
-
-/**
- * MIGRATION GUIDE FOR OTHER FUNCTIONS
- * 
- * To refactor other edge functions to this pattern:
- * 
- * 1. ADD REQUEST ID
- *    const requestId = crypto.randomUUID();
- *    Use in all logs: console.log(`[${requestId}] message`)
- * 
- * 2. EXTRACT AUTH (if needed)
- *    const authHeader = req.headers.get('Authorization');
- *    // ... validate and get user
- * 
- * 3. ADD RATE LIMITING (if needed)
- *    const rateCheck = await checkRateLimit(supabase, userId, config);
- * 
- * 4. VALIDATE INPUT (if complex)
- *    Create Zod schema in _shared/contracts/
- *    const result = schema.safeParse(body);
- * 
- * 5. EXTRACT BUSINESS LOGIC TO SERVICE (if complex)
- *    Move domain logic to _shared/services/
- *    Create custom error classes for domain errors
- * 
- * 6. STRUCTURED ERROR HANDLING
- *    try/catch with specific error types
- *    Return appropriate HTTP status codes
- * 
- * 7. CONSISTENT LOGGING
- *    [requestId] [FUNCTION] Action: details
- *    Use ✅ for success, ❌ for errors, ⚠️ for warnings
- */

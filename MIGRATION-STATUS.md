@@ -116,7 +116,7 @@ All React Query keys now use the factory pattern for consistency:
 ## Phase 3: Middleware Pattern 🔄
 
 **Status**: In Progress  
-**Progress**: 50% (utilities created, not applied)
+**Progress**: 50% (utilities created, partial implementation in edge functions)
 
 ### ✅ Middleware Utilities Created
 
@@ -173,18 +173,19 @@ serve(handler(async (req, ctx) => {
 
 | Function | Status | Priority | Notes |
 |----------|--------|----------|-------|
-| checkout | ⏳ To Migrate | HIGH | Currently has inline middleware |
-| optimize-delivery-batches | ⏳ To Migrate | HIGH | Uses withAdminAuth but not composition |
-| generate-batches | ⏳ To Migrate | HIGH | Large function, good refactor candidate |
-| process-payouts | ⏳ To Migrate | MEDIUM | Admin-only, straightforward |
-| claim-route | ⏳ To Migrate | MEDIUM | Driver auth required |
+| checkout | 🔄 Partial | HIGH | Uses inline middleware pattern, needs composition |
+| optimize-delivery-batches | 🔄 Partial | HIGH | Uses withAdminAuth, needs full composition |
+| generate-batches | ⏳ To Migrate | HIGH | Large function (827 lines), needs service extraction |
+| process-payouts | 🔄 Partial | MEDIUM | Uses withAdminAuth + rate limiting |
+| claim-route | ⏳ To Migrate | MEDIUM | Simple auth, ready for middleware |
 | stripe-webhook | ⏳ To Migrate | LOW | No auth, just signature validation |
 | send-notification | ⏳ To Migrate | LOW | Internal service call |
 | send-cutoff-reminders | ⏳ To Migrate | LOW | CRON job |
 | check-stripe-connect | ⏳ To Migrate | LOW | Simple check |
 | award-credits | ⏳ To Migrate | LOW | Admin-only |
 
-**Estimated Total Effort**: 6-8 hours for all functions
+**Note**: Middleware utilities need refactoring to support proper currying before full composition pattern can be applied.  
+**Remaining Effort**: 6-8 hours to refactor middleware utilities and apply composition pattern
 
 ---
 
