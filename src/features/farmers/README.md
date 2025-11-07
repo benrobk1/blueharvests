@@ -1,8 +1,28 @@
-# Farmer Feature Module
+# Farmers Feature
 
-Farm inventory management, product catalog, batch coordination, and earnings tracking for farmers.
+Centralized module for farmer-related functionality including inventory management, batch coordination, product management, and payment processing.
 
-## Components
+## Structure
+
+```
+farmers/
+├── components/        # UI components
+│   ├── BatchConsolidation.tsx
+│   ├── BoxCodeDisplay.tsx
+│   ├── BulkEditDialog.tsx
+│   ├── CSVProductImport.tsx
+│   ├── LeadFarmerInfoCard.tsx
+│   ├── MultiFarmDashboard.tsx
+│   ├── NextOrderCutoffCard.tsx
+│   ├── ProductForm.tsx
+│   ├── StripeConnectSimple.tsx
+│   ├── ValidationPreviewTable.tsx
+│   └── WeeklyInventoryReview.tsx
+├── queries/          # React Query hooks
+│   └── index.ts
+├── errors.ts         # Feature-specific errors
+└── index.ts          # Public exports
+```
 
 ### `ProductForm`
 Modal form for adding and editing farm products. Includes:

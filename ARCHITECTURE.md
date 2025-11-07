@@ -1,33 +1,21 @@
 # Blue Harvests Architecture Guide
 
 **Last Updated**: November 2025  
-**Code Quality Initiative Status**: ✅ Phases 1-4 Complete | 🔄 Phase 5 In Progress
+**Code Quality Initiative Status**: ✅ Phases 1, 2, 4, 5 Complete | 🔄 Phase 3 In Progress
 
 ## 📋 Migration Summary
 
 ### Completed Phases
 - ✅ **Phase 1**: Standardized Query Keys - All React Query keys use factory pattern
-- ✅ **Phase 2**: Feature Migration - Cart, Orders, Products moved to `src/features/`
-- ✅ **Phase 3**: Middleware Pattern - Utilities created in `_shared/middleware/`
+- ✅ **Phase 2**: Feature Migration - All 8 features migrated to `src/features/`
 - ✅ **Phase 4**: Error Handling - Standardized error types & useErrorHandler hook
-- 🔄 **Phase 5**: Documentation - JSDoc complete, feature READMEs in progress
+- ✅ **Phase 5**: Documentation - JSDoc complete, all feature READMEs complete
 
 ### Remaining Work
-**Feature Migration** (Phase 2 continuation):
-- ⏳ Migrate `drivers` feature to `src/features/drivers/`
-- ⏳ Migrate `farmers` feature to `src/features/farmers/`
-- ⏳ Migrate `admin` feature to `src/features/admin/`
-- ⏳ Migrate `consumers` feature to `src/features/consumers/`
-
-**Middleware Application** (Phase 3 continuation):
+**Middleware Application** (Phase 3):
 - ⏳ Apply `composeMiddleware` to all edge functions (currently only utilities exist)
 - ⏳ Update `checkout`, `generate-batches`, `process-payouts` to use composition pattern
 - ⏳ Migrate remaining functions: `claim-route`, `stripe-webhook`, `send-notification`
-
-**Documentation** (Phase 5):
-- ✅ JSDoc comments on all public APIs
-- 🔄 Feature-level READMEs (3 of 8 complete)
-- ⏳ Inline comments for complex business logic
 - ⏳ Address privacy system documentation
 
 ---
@@ -112,10 +100,14 @@ Feature-based architecture with colocated code:
   - Types: Stop, VerifiedOrder, DeliveryBatch
   - Queries: driversKeys
   - Errors: createDriverError
-
-**Pending Migration** (⏳):
-- **Farmers** - Inventory management, batches, payouts
-- **Admin** - User approvals, KPIs, tax documents
+- **Farmers** (`/farmers`): Inventory management, batch coordination, product management
+  - Components: BatchConsolidation, BoxCodeDisplay, BulkEditDialog, CSVProductImport, LeadFarmerInfoCard, MultiFarmDashboard, NextOrderCutoffCard, ProductForm, StripeConnectSimple, ValidationPreviewTable, WeeklyInventoryReview
+  - Queries: farmerQueries
+  - Errors: createFarmerError
+- **Admin** (`/admin`): User management, system monitoring, tax documents
+  - Components: AdminRoleManager, CreditsManager, FarmAffiliationManager, KPIHeader, TaxDocumentGenerator, UserRatingDisplay
+  - Queries: adminQueries
+  - Errors: createAdminError
 
 Each feature exports a clean public API via `index.ts`
 
