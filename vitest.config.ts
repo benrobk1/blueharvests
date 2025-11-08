@@ -10,7 +10,36 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+      reporter: ['text', 'json', 'html', 'lcov'],
+      reportsDirectory: './coverage',
+      exclude: [
+        'node_modules/',
+        'src/test/',
+        '**/*.d.ts',
+        '**/*.config.*',
+        '**/mockData',
+        '**/types',
+        'dist/',
+        'e2e/',
+        'scripts/',
+        // Auto-generated files
+        'src/integrations/supabase/types.ts',
+        'src/integrations/supabase/client.ts',
+        // Config files
+        'src/vite-env.d.ts',
+        'src/main.tsx',
+        'src/App.tsx',
+        // UI component library (tested via integration)
+        'src/components/ui/**',
+      ],
+      include: [
+        'src/**/*.{ts,tsx}',
+      ],
+      all: true,
+      lines: 70,
+      functions: 70,
+      branches: 70,
+      statements: 70,
     },
   },
   resolve: {

@@ -1,22 +1,126 @@
 # Testing Guide
 
-This project includes comprehensive testing setup with Vitest and Playwright.
+This project includes comprehensive testing setup with Vitest for unit tests, Playwright for E2E tests, and code coverage reporting.
+
+## 📊 Code Coverage
+
+### Running Coverage Reports
+
+Generate coverage report:
+```bash
+npm run test:coverage
+```
+
+View coverage in your browser:
+```bash
+npm run test:coverage
+# Open coverage/index.html in your browser
+```
+
+Interactive coverage with UI:
+```bash
+npm run test:coverage:ui
+```
+
+### Coverage Thresholds
+
+The project enforces minimum coverage thresholds:
+- **Lines**: 70%
+- **Functions**: 70%
+- **Branches**: 70%
+- **Statements**: 70%
+
+### Coverage Configuration
+
+Coverage is configured in `vitest.config.ts`:
+
+**Excluded from coverage:**
+- Auto-generated files (`src/integrations/supabase/types.ts`)
+- Test files and configuration
+- UI component library (tested via integration tests)
+- Type definitions
+- Build artifacts
+
+**Included in coverage:**
+- All source files in `src/**/*.{ts,tsx}`
+- Feature modules
+- Business logic utilities
+- Custom hooks
+- Services and helpers
+
+### Reading Coverage Reports
+
+**Terminal Output:**
+```
+File                    | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+------------------------|---------|----------|---------|---------|-------------------
+src/lib/formatMoney.ts  |   100   |   100    |   100   |   100   |
+src/lib/creditsHelpers  |   95.5  |   90     |   100   |   95.5  | 23-25
+```
+
+**HTML Report:**
+- Open `coverage/index.html` in browser
+- Navigate through files to see line-by-line coverage
+- Red lines = uncovered code
+- Green lines = covered code
+- Yellow lines = partially covered branches
+
+### Improving Coverage
+
+**Identify untested code:**
+```bash
+npm run test:coverage
+# Review HTML report at coverage/index.html
+```
+
+**Add tests for critical paths:**
+1. Business logic in `src/lib/`
+2. Feature hooks in `src/features/*/hooks/`
+3. Custom React hooks in `src/hooks/`
+4. Service classes in backend
+
+**Example: Adding a test for uncovered code**
+```typescript
+// Found uncovered function in coverage report
+describe('calculateDeliveryFee', () => {
+  it('returns correct fee for standard delivery', () => {
+    expect(calculateDeliveryFee('10001', mockConfig)).toBe(7.50);
+  });
+  
+  it('handles invalid ZIP codes', () => {
+    expect(() => calculateDeliveryFee('', mockConfig)).toThrow();
+  });
+});
+```
 
 ## Test Coverage
 
-### E2E Tests (Playwright)
-- ✅ Consumer checkout flow (`e2e/checkout-flow.spec.ts`)
-- ✅ Role-based access control (`e2e/auth-roles.spec.ts`)
-- ✅ Order cutoff enforcement (`e2e/order-cutoff.spec.ts`)
-- ✅ Driver workflow (`e2e/driver-workflow.spec.ts`)
+### Unit Tests Coverage Status
 
-### Unit Tests (Vitest)
+#### Business Logic (High Coverage Priority)
 - ✅ Money formatting (`src/lib/__tests__/formatMoney.test.ts`)
 - ✅ Credits system (`src/lib/__tests__/creditsHelpers.test.ts`)
 - ✅ Delivery fees & revenue split (`src/lib/__tests__/deliveryFeeHelpers.test.ts`)
 - ✅ Driver expense estimation (`src/lib/__tests__/driverEarningsHelpers.test.ts`)
 
-**Current Coverage:** ~60% (business logic + critical paths)
+#### Feature Modules (To Add)
+- ⏳ Cart operations (`src/features/cart/`)
+- ⏳ Order management (`src/features/orders/`)
+- ⏳ Product queries (`src/features/products/`)
+- ⏳ Payout calculations (`src/features/payouts/`)
+
+#### Utilities (To Add)
+- ⏳ Address helpers (`src/lib/addressHelpers.ts`)
+- ⏳ Distance calculations (`src/lib/distanceHelpers.ts`)
+- ⏳ Rating helpers (`src/lib/ratingHelpers.ts`)
+
+### E2E Tests Coverage
+- ✅ Consumer checkout flow (`e2e/checkout-flow.spec.ts`)
+- ✅ Role-based access control (`e2e/auth-roles.spec.ts`)
+- ✅ Order cutoff enforcement (`e2e/order-cutoff.spec.ts`)
+- ✅ Driver workflow (`e2e/driver-workflow.spec.ts`)
+
+**Current Status:** Unit tests cover critical business logic. Coverage reports help identify gaps for future test additions.
 
 ---
 
