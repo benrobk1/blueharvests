@@ -1,6 +1,9 @@
 # Blue Harvests Architecture Guide
 
-**Last Updated**: November 2025  
+> **Documentation Version**: November 2025  
+> **Project Status**: Production-ready, active development  
+> **If anything seems outdated**: Check Git history or ask maintainers
+
 **Code Quality Initiative Status**: ✅ Phases 1, 2, 4, 5 Complete | 🔄 Phase 3 In Progress
 
 ## 📋 Migration Summary
@@ -937,6 +940,14 @@ SELECT * FROM payouts WHERE payee_id = 'user-id' ORDER BY created_at DESC;
 - [ ] Test checkout flow end-to-end
 - [ ] Verify batch generation runs successfully
 - [ ] Monitor error rates in Sentry (if configured)
+
+## 📚 See Also
+
+- [DATABASE.md](./DATABASE.md) - Detailed schema documentation and table relationships
+- [API.md](./API.md) - Edge function endpoints and contracts
+- [SECURITY.md](./SECURITY.md) - RLS policies and security implementation
+- [QUICKSTART.md](./QUICKSTART.md) - Get started in 5 minutes
+- [CONTRIBUTING.md](./CONTRIBUTING.md) - Development workflow and guidelines
 
 ## 📚 Further Reading
 

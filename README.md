@@ -1,7 +1,8 @@
 # 🌾 Blue Harvests - Local Farm-to-Table Marketplace
 
-**Last Updated**: November 2025  
-**Code Quality**: ⚙️ Refactoring In Progress | Well-Documented | Type-Safe
+> **Documentation Version**: November 2025  
+> **Project Status**: Production-ready, active development  
+> **If anything seems outdated**: Check Git history or ask maintainers
 
 A modern, full-stack platform connecting local farmers with consumers through efficient delivery coordination. Built with React, TypeScript, and Supabase, featuring real-time tracking, automated batch optimization, and comprehensive payment processing.
 
@@ -9,27 +10,25 @@ A modern, full-stack platform connecting local farmers with consumers through ef
 
 [![CI Status](https://github.com/YOUR_USERNAME/YOUR_REPO/workflows/CI/badge.svg)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions)
 
-## 📚 Documentation
+## 📚 Documentation Guide
 
-- **[Architecture Guide](ARCHITECTURE.md)** - System design, query patterns, middleware
-- **[API Documentation](API.md)** - Edge function endpoints and contracts
-- **[Feature Specifications](ARCHITECTURE-FEATURES.md)** - Detailed feature docs
-- **[Security Guide](SECURITY.md)** - RLS policies and data privacy
-- **[Error Handling](src/lib/errors/README.md)** - Standardized error handling
-- **[Feature Architecture](src/features/README.md)** - Feature-based code organization
+**New to the project?** Start here:
+1. [QUICKSTART.md](./QUICKSTART.md) - Get running in 5 minutes
+2. [DATABASE.md](./DATABASE.md) - Understand the data model
+3. [ARCHITECTURE.md](./ARCHITECTURE.md) - System design deep-dive
 
-## 🎯 Code Quality Initiative
+**For developers:**
+- [CONTRIBUTING.md](./CONTRIBUTING.md) - Development workflow
+- [API.md](./API.md) - Edge function reference
+- [SECURITY.md](./SECURITY.md) - Security architecture
+- [src/features/README.md](./src/features/README.md) - Code organization
 
-**Status: Phases 1-4 Complete | Phase 5 In Progress**
-
-- ✅ **Phase 1: Standardized Query Keys** - Factory pattern for all React Query keys
-- ✅ **Phase 2: Feature-Based Architecture** - All 8 features migrated to `src/features/`
-- 🔄 **Phase 3: Middleware Pattern** - Utilities created (not yet applied to all functions)
-- ✅ **Phase 4: Type-Safe Errors** - Centralized error handling with useErrorHandler
-- ✅ **Phase 5: Documentation** - JSDoc complete, all feature READMEs complete
-
-**Remaining Work:**
-- Apply middleware composition to all edge functions
+**Reference:**
+- Feature READMEs in `src/features/*/README.md`
+- [Error Handling Guide](./src/lib/errors/README.md)
+- [Testing Guide](./README-TESTING.md)
+- [PWA Setup](./README-PWA.md)
+- [Capacitor Setup](./README-CAPACITOR.md)
 
 ---
 
@@ -100,20 +99,7 @@ This script (`scripts/seed-demo.ts`) creates:
 
 ### Test Accounts
 
-```
-Consumer: test-consumer@example.com / password123
-Farmer:   test-farmer@example.com / password123  
-Driver:   test-driver@example.com / password123
-Admin:    test-admin@example.com / password123
-```
-
-**Test Payment Card** (Stripe):
-```
-Card: 4242 4242 4242 4242
-Expiry: Any future date
-CVC: Any 3 digits
-ZIP: 10001
-```
+See [QUICKSTART.md](./QUICKSTART.md#-test-accounts) for test credentials and demo card details.
 
 ### Security Notes
 
@@ -146,54 +132,7 @@ See [`SECURITY.md`](./SECURITY.md) for complete security architecture.
 
 ---
 
-## 🎯 Quick Demo (5 Minutes)
-
-This project demonstrates a production-ready marketplace with multi-role workflows, automated batch optimization, and real-time order tracking.
-
-### Demo Script (YC-Ready)
-
-#### 1. **Consumer Flow** (2 min)
-- Browse farmer products at `/shop`
-- Add items to cart with real-time inventory updates
-- Apply credits at checkout (earn $10 per $100 spent)
-- Complete payment with Stripe test card: `4242 4242 4242 4242`
-- View live order tracking with status updates
-
-#### 2. **Farmer Flow** (1 min)
-- Login as farmer at `/farmer-auth`
-- Upload products via CSV bulk import or manual form
-- View real-time earnings dashboard with 88% revenue share
-- Track order fulfillment and customer analytics
-
-#### 3. **Driver Flow** (1 min)
-- Login as driver at `/driver-auth`
-- View AI-optimized delivery batches (auto-generated daily)
-- Scan box codes with camera to confirm pickup
-- Complete optimized route with GPS navigation
-- Track earnings ($7.50 per delivery + tips)
-
-#### 4. **Admin Flow** (1 min)
-- View KPIs: revenue splits (88/2/10), batch efficiency, growth metrics
-- Approve pending products and new users
-- Generate 1099 tax forms for contractors (farmers & drivers)
-- Monitor system health and subsidized batches
-
-### Test Accounts
-
-Run the seed script to create demo data:
-```bash
-npm run seed
-```
-
-**Test Credentials**:
-```
-Consumer: test-consumer@example.com / password123
-Farmer:   test-farmer@example.com / password123
-Driver:   test-driver@example.com / password123
-Admin:    test-admin@example.com / password123
-```
-
-### Key Features to Highlight
+## 🎯 Key Features
 
 ✅ **Dual-Path Batch Optimization** - AI-powered (Gemini 2.5) with deterministic geographic fallback  
 ✅ **Automated Revenue Distribution** - 88% farmer / 2% lead farmer / 10% platform, calculated automatically  
@@ -201,7 +140,11 @@ Admin:    test-admin@example.com / password123
 ✅ **Stripe Connect** - Automated farmer payouts with 1099 generation  
 ✅ **Mobile-First PWA** - Offline cart support, installable on iOS/Android  
 ✅ **Real-Time Tracking** - Order status updates via Supabase Realtime  
-✅ **Role-Based Access Control** - Secure multi-tenant architecture with RLS policies  
+✅ **Role-Based Access Control** - Secure multi-tenant architecture with RLS policies
+
+## 🎯 Quick Demo
+
+For a detailed 5-minute walkthrough of all user flows, see [QUICKSTART.md](./QUICKSTART.md#-first-feature-to-explore).
 
 ---
 
@@ -268,12 +211,6 @@ Consumers → Shop → Cart → Checkout → Stripe Payment
 
 ---
 
-## 📚 Documentation
-
-- **[Architecture Guide](./ARCHITECTURE.md)** - Detailed system design and data flows
-- [Testing Guide](./README-TESTING.md) - Test runner instructions and E2E scenarios
-- [PWA Setup](./README-PWA.md) - Progressive Web App features and installation
-- [Capacitor Setup](./README-CAPACITOR.md) - Native mobile app build instructions
 
 ---
 

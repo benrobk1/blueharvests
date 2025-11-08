@@ -1,5 +1,9 @@
 # Quick Start for Developers
 
+> **Documentation Version**: November 2025  
+> **Project Status**: Production-ready, active development  
+> **If anything seems outdated**: Check Git history or ask maintainers
+
 Get the Blue Harvests marketplace running locally in 5 minutes.
 
 ## 🚀 5-Minute Setup

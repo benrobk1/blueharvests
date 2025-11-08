@@ -1,5 +1,9 @@
 # Security Model
 
+> **Documentation Version**: November 2025  
+> **Project Status**: Production-ready, active development  
+> **If anything seems outdated**: Check Git history or ask maintainers
+
 ## Authentication & Authorization
 
 - **JWT-based authentication** via Supabase Auth

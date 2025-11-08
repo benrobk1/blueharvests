@@ -1,5 +1,9 @@
 # Database Schema Documentation
 
+> **Documentation Version**: November 2025  
+> **Project Status**: Production-ready, active development  
+> **If anything seems outdated**: Check Git history or ask maintainers
+
 This document provides a comprehensive overview of the Blue Harvests database schema, including table structures, relationships, security policies, and data flow patterns.
 
 ## Table of Contents
@@ -1170,6 +1174,13 @@ When removing columns:
 
 **Symptom:** High connection count  
 **Solution:** Use connection pooling, close idle connections
+
+## See Also
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - How these tables fit into overall system design
+- [SECURITY.md](./SECURITY.md) - RLS policies and access control implementation
+- [API.md](./API.md) - Edge function endpoints that interact with these tables
+- [QUICKSTART.md](./QUICKSTART.md) - Developer quick start guide
 
 ## Additional Resources
 
