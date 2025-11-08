@@ -198,50 +198,112 @@ Each feature exports a clean public API via `index.ts`
 - **Never Logged**: Sensitive data filtered from logs
 - **Fail-Fast**: Missing critical secrets cause immediate error
 
-### Operational Safety: Driver Address Privacy
+### Operational Safety: Driver Address Privacy (Progressive Disclosure)
 
-**Critical Design Decision**: Driver addresses are hidden until pickup confirmation to prevent operational abuse.
+**Critical Design Decision**: Driver addresses are hidden until pickup confirmation to prevent operational abuse and protect consumer privacy.
 
-**How It Works**:
-1. Orders are created with full delivery addresses stored in `profiles` table
-2. Drivers see only:
-   - ZIP code (for route planning)
-   - Approximate collection point location
-   - Batch size and order count
-3. When driver scans box code at collection point:
-   - `address_visible_at` timestamp is set on `batch_stops` table
-   - Full street address becomes visible in driver app
-   - Driver can now navigate to exact delivery location
+For complete technical documentation, see **[Address Privacy System](./SECURITY.md#address-privacy-model)**.
 
-**Why This Matters**:
-- **Prevents Cherry-Picking**: Drivers can't reject routes based on "bad" addresses before claiming
-- **Privacy Protection**: Consumer addresses not exposed to drivers until pickup is confirmed
-- **Operational Fairness**: All drivers see same route info when claiming batches
-- **Fraud Prevention**: Drivers can't game the system by knowing addresses in advance
+---
 
-**Database Implementation**:
-```sql
--- batch_stops table
-address_visible_at timestamp;  -- NULL until box code scanned at collection point
+#### Quick Overview
 
--- RLS Policy (see supabase/migrations/)
-CREATE POLICY "Drivers see addresses only after pickup"
-ON batch_stops FOR SELECT
-TO authenticated
-USING (
-  CASE 
-    WHEN has_role(auth.uid(), 'driver') THEN 
-      address_visible_at IS NOT NULL
-    ELSE 
-      true  -- Consumers/farmers/admins always see addresses
-  END
-);
+The address privacy system implements **progressive disclosure**: consumer addresses are revealed to drivers incrementally as they make delivery progress. This prevents route cherry-picking, protects consumer privacy, and ensures operational fairness.
+
+**Data Flow:**
+```
+Order Creation → Batch Assignment → Driver Claims Route → Box Scan at Collection → Address Revealed → Delivery → Next 3 Addresses Unlocked
 ```
 
-**Frontend Implementation**:
-- `src/components/driver/RouteDetails.tsx`: Shows/hides address based on `address_visible_at`
-- `src/components/driver/BoxCodeScanner.tsx`: Sets `address_visible_at` on successful scan
-- `src/pages/driver/Dashboard.tsx`: Displays batch-level info (ZIP, order count) only
+---
+
+#### Implementation Summary
+
+**Database Layer:**
+- `batch_stops.address_visible_at` - NULL until box scanned at collection point
+- `update_address_visibility()` trigger - Unlocks next 3 addresses on delivery progress
+- `get_consumer_address()` function - Enforces access control at query level
+
+**Application Layer:**
+- `BoxCodeScanner.tsx` - Sets `address_visible_at` when driver scans box
+- `DriverInterface.tsx` - Shows/hides addresses based on visibility status
+- `RouteDetails.tsx` - Displays ZIP code only before pickup, full address after
+
+**Security Benefits:**
+1. **Prevents Cherry-Picking** - Drivers can't see addresses before claiming routes
+2. **Privacy Protection** - Consumer addresses hidden until pickup confirmation
+3. **Operational Fairness** - All drivers see identical route information
+4. **Fraud Prevention** - Address visibility tied to physical action (box scan)
+
+---
+
+#### Progressive Disclosure Workflow
+
+1. **Route Claiming Phase**
+   - Driver sees: ZIP codes, batch size, collection point address
+   - Driver does NOT see: Individual consumer addresses
+
+2. **Box Loading Phase**
+   - Driver arrives at collection point
+   - Scans box code for first delivery
+   - Trigger fires: First address + next 3 addresses become visible
+
+3. **Delivery Phase**
+   - Driver completes delivery, marks stop as delivered
+   - Trigger fires: Next 3 addresses become visible
+   - Process repeats until all deliveries complete
+
+4. **Completion**
+   - All addresses eventually visible for route completion
+   - Historical address data retained for support/disputes
+
+---
+
+#### Code Examples
+
+**Frontend - Address Visibility Check:**
+```typescript
+// drivers/components/DriverInterface.tsx
+const { data: stops } = useQuery({
+  queryKey: ['batch-stops', batchId],
+  queryFn: async () => {
+    const { data } = await supabase
+      .from('batch_stops')
+      .select('*, orders(consumer_id, profiles(street_address, zip_code))')
+      .eq('delivery_batch_id', batchId);
+    
+    return data?.map(stop => ({
+      ...stop,
+      addressVisible: !!stop.address_visible_at,
+    }));
+  },
+});
+
+// Render logic
+{stops.map(stop => (
+  <StopCard>
+    <Address>
+      {stop.addressVisible 
+        ? stop.orders.profiles.street_address 
+        : 'Address Hidden'}
+    </Address>
+  </StopCard>
+))}
+```
+
+**Backend - Box Scan Handler:**
+```typescript
+// supabase/functions/scan-box/index.ts
+await supabase
+  .from('batch_stops')
+  .update({ 
+    address_visible_at: new Date().toISOString(),
+    status: 'in_progress'
+  })
+  .eq('order_id', orderId);
+```
+
+For detailed database implementation, RLS policies, and troubleshooting, see **[SECURITY.md](./SECURITY.md#address-privacy-model)**.
 
 ## 📊 Observability & Error Tracking
 

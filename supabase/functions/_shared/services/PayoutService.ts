@@ -23,11 +23,38 @@ export class PayoutService {
     private stripe: Stripe
   ) {}
 
+  /**
+   * MAIN PAYOUT PROCESSING METHOD
+   * 
+   * Processes all pending payouts to Stripe Connect accounts.
+   * 
+   * Business Logic:
+   * 1. Fetch pending payouts with order status
+   * 2. Verify order is delivered (payouts only trigger after delivery)
+   * 3. Verify Stripe Connect account is enabled for payouts
+   * 4. Create Stripe transfer to recipient's Connect account
+   * 5. Update payout record with transfer ID and status
+   * 
+   * Revenue Split Model:
+   * - Farmer: 88% of product price
+   * - Lead Farmer Commission: 2% of product price (if applicable)
+   * - Driver: Fixed per-delivery fee + variable based on distance
+   * - Platform: 10% of subtotal
+   * 
+   * Error Handling:
+   * - Skips payouts for undelivered orders
+   * - Fails payouts if Connect account not enabled
+   * - Marks failed payouts in database for retry
+   * - Returns detailed error report
+   * 
+   * @returns PayoutResult with counts and error details
+   */
   async processPendingPayouts(): Promise<PayoutResult> {
     const requestId = crypto.randomUUID();
     console.log(`[${requestId}] [PAYOUTS] Starting payout processing...`);
 
-    // Fetch pending payouts
+    // STEP 1: Fetch all pending payouts with related order data
+    // Only process payouts that have a Stripe Connect account configured
     const { data: pendingPayouts, error } = await this.supabase
       .from('payouts')
       .select(`
@@ -39,14 +66,15 @@ export class PayoutService {
         )
       `)
       .eq('status', 'pending')
-      .not('stripe_connect_account_id', 'is', null)
-      .in('recipient_type', ['farmer', 'driver']);
+      .not('stripe_connect_account_id', 'is', null)  // Must have Connect account
+      .in('recipient_type', ['farmer', 'driver']);   // Only process farmer/driver payouts
 
     if (error) {
       console.error(`[${requestId}] [PAYOUTS] ❌ Database error:`, error);
       throw error;
     }
 
+    // Early return if no payouts to process
     if (!pendingPayouts || pendingPayouts.length === 0) {
       console.log(`[${requestId}] [PAYOUTS] No pending payouts to process`);
       return { successful: 0, failed: 0, skipped: 0, errors: [] };
@@ -61,7 +89,7 @@ export class PayoutService {
       errors: []
     };
 
-    // Process each payout
+    // STEP 2: Process each payout individually
     for (const payout of pendingPayouts) {
       try {
         const order = payout.orders as any;
@@ -128,7 +156,9 @@ export class PayoutService {
           code: error.code
         });
 
-        // Mark payout as failed
+        // STEP 6: Mark payout as failed for manual review
+        // Failed payouts can be retried after resolving the issue
+        // Common failures: insufficient balance, account restricted, invalid account
         await this.supabase
           .from('payouts')
           .update({
