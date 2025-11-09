@@ -175,16 +175,6 @@ const Index = () => {
               Family Farm Fresh • Locally Traceable • Climate Friendly
             </p>
           </div>
-          <div className="flex justify-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => navigate("/auth/admin")}
-              className="text-white/50 hover:text-white/70 text-xs"
-            >
-              Staff Portal
-            </Button>
-          </div>
         </div>
       </footer>
     </div>
