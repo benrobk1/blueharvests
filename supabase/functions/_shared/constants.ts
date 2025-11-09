@@ -111,6 +111,16 @@ export const RATE_LIMITS = {
     windowMs: 60 * 60 * 1000, // 1 hour (push service quota protection)
     keyPrefix: 'send-push-notification'
   },
+  AWARD_CREDITS: {
+    maxRequests: 20,
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    keyPrefix: 'award-credits'
+  },
+  OPTIMIZE_BATCHES: {
+    maxRequests: 1,
+    windowMs: 10 * 60 * 1000, // 10 minutes
+    keyPrefix: 'optimize-batches'
+  },
 } as const;
 
 // Subscription

@@ -15,3 +15,5 @@ export * from './admin.ts';
 export * from './stripe.ts';
 export * from './subscription.ts';
 export * from './notifications.ts';
+export * from './credits.ts';
+export * from './optimization.ts';
