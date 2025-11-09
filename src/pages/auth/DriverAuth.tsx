@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Link } from "react-router-dom";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Truck, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -379,12 +380,23 @@ const DriverAuth = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="availability">Availability</Label>
-                    <Input 
-                      id="availability" 
-                      placeholder="Weekdays, weekends, specific days..." 
+                    <Select
                       value={formData.availability}
-                      onChange={(e) => setFormData({...formData, availability: e.target.value})}
-                    />
+                      onValueChange={(value) => setFormData({...formData, availability: value})}
+                    >
+                      <SelectTrigger id="availability">
+                        <SelectValue placeholder="Select preferred delivery day" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Monday">Monday</SelectItem>
+                        <SelectItem value="Tuesday">Tuesday</SelectItem>
+                        <SelectItem value="Wednesday">Wednesday</SelectItem>
+                        <SelectItem value="Thursday">Thursday</SelectItem>
+                        <SelectItem value="Friday">Friday</SelectItem>
+                        <SelectItem value="Saturday">Saturday</SelectItem>
+                        <SelectItem value="Sunday">Sunday</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
