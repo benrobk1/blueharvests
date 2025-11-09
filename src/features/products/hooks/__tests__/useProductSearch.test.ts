@@ -6,7 +6,8 @@ import { createMockProducts } from '@/test/factories/productFactory';
 describe('useProductSearch', () => {
   const mockProducts = createMockProducts(5, {
     farm_profiles: { id: 'farm-1', farm_name: 'Test Farm', location: null },
-  });
+    harvest_date: null,
+  }) as any;
 
   it('should initialize with empty search query', () => {
     const { result } = renderHook(() => useProductSearch(mockProducts));

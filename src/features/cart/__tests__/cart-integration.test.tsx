@@ -5,10 +5,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useCart } from '../hooks/useCart';
-import { renderWithProviders } from '@/test/helpers/renderWithProviders';
+import { createTestQueryClient } from '@/test/helpers/renderWithProviders';
 import { createMockSupabaseClient } from '@/test/mocks/supabase';
 import { createMockAuthContext } from '@/test/mocks/authContext';
 import { createMockProduct } from '@/test/factories/productFactory';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ReactNode } from 'react';
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: createMockSupabaseClient(),
@@ -20,6 +24,19 @@ vi.mock('@/contexts/AuthContext', () => ({
   })),
 }));
 
+const wrapper = ({ children }: { children: ReactNode }) => {
+  const queryClient = createTestQueryClient();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+};
+
 describe('Cart Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -27,9 +44,7 @@ describe('Cart Integration Tests', () => {
 
   describe('Add to Cart Flow', () => {
     it('should create cart and add item for new user', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -50,9 +65,7 @@ describe('Cart Integration Tests', () => {
     });
 
     it('should increment quantity for existing item', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -75,9 +88,7 @@ describe('Cart Integration Tests', () => {
 
   describe('Cart Calculations', () => {
     it('should calculate total correctly with multiple items', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -88,9 +99,7 @@ describe('Cart Integration Tests', () => {
     });
 
     it('should calculate item count correctly', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -103,9 +112,7 @@ describe('Cart Integration Tests', () => {
 
   describe('Update Cart Flow', () => {
     it('should update item quantity', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -124,9 +131,7 @@ describe('Cart Integration Tests', () => {
     });
 
     it('should remove item when quantity set to 0', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -147,9 +152,7 @@ describe('Cart Integration Tests', () => {
 
   describe('Remove from Cart Flow', () => {
     it('should remove item from cart', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -167,9 +170,7 @@ describe('Cart Integration Tests', () => {
 
   describe('Saved Carts Flow', () => {
     it('should save current cart', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -184,9 +185,7 @@ describe('Cart Integration Tests', () => {
     });
 
     it('should load saved cart', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -202,9 +201,7 @@ describe('Cart Integration Tests', () => {
     });
 
     it('should delete saved cart', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { screen } from '@testing-library/dom';
-import { fireEvent } from '@testing-library/dom';
+import { screen, fireEvent } from '@testing-library/react';
 import { CartDrawer } from '../CartDrawer';
 import { renderWithProviders } from '@/test/helpers/renderWithProviders';
 

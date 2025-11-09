@@ -6,9 +6,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useCart } from '@/features/cart/hooks/useCart';
 import { useActiveOrder } from '../hooks/useActiveOrder';
-import { renderWithProviders } from '@/test/helpers/renderWithProviders';
+import { createTestQueryClient } from '@/test/helpers/renderWithProviders';
 import { createMockSupabaseClient } from '@/test/mocks/supabase';
 import { createMockAuthContext } from '@/test/mocks/authContext';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ReactNode } from 'react';
 
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: createMockSupabaseClient(),
@@ -20,6 +24,19 @@ vi.mock('@/contexts/AuthContext', () => ({
   })),
 }));
 
+const wrapper = ({ children }: { children: ReactNode }) => {
+  const queryClient = createTestQueryClient();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+};
+
 describe('Order Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -27,9 +44,7 @@ describe('Order Integration Tests', () => {
 
   describe('Order Creation Flow', () => {
     it('should validate minimum order amount', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -41,9 +56,7 @@ describe('Order Integration Tests', () => {
     });
 
     it('should prepare cart data for checkout', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -58,9 +71,7 @@ describe('Order Integration Tests', () => {
 
   describe('Active Order Tracking', () => {
     it('should track active order after placement', async () => {
-      const { result } = renderHook(() => useActiveOrder(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useActiveOrder(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -73,18 +84,14 @@ describe('Order Integration Tests', () => {
     });
 
     it('should setup realtime updates for order status', async () => {
-      const { result } = renderHook(() => useActiveOrder(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useActiveOrder(), { wrapper });
 
       // Hook should initialize
       expect(result.current).toBeDefined();
     });
 
     it('should poll for order updates', async () => {
-      const { result } = renderHook(() => useActiveOrder(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useActiveOrder(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -97,9 +104,7 @@ describe('Order Integration Tests', () => {
 
   describe('Order Status Transitions', () => {
     it('should handle confirmed status', async () => {
-      const { result } = renderHook(() => useActiveOrder(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useActiveOrder(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -113,9 +118,7 @@ describe('Order Integration Tests', () => {
     });
 
     it('should handle in_transit status', async () => {
-      const { result } = renderHook(() => useActiveOrder(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useActiveOrder(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -126,9 +129,7 @@ describe('Order Integration Tests', () => {
     });
 
     it('should handle out_for_delivery status', async () => {
-      const { result } = renderHook(() => useActiveOrder(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useActiveOrder(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -141,9 +142,7 @@ describe('Order Integration Tests', () => {
 
   describe('Order Data Integrity', () => {
     it('should include order items in active order', async () => {
-      const { result } = renderHook(() => useActiveOrder(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useActiveOrder(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -156,9 +155,7 @@ describe('Order Integration Tests', () => {
     });
 
     it('should include delivery information', async () => {
-      const { result } = renderHook(() => useActiveOrder(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useActiveOrder(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -171,9 +168,7 @@ describe('Order Integration Tests', () => {
     });
 
     it('should include driver information when assigned', async () => {
-      const { result } = renderHook(() => useActiveOrder(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useActiveOrder(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -188,9 +183,7 @@ describe('Order Integration Tests', () => {
 
   describe('Error Handling', () => {
     it('should handle empty cart checkout attempt', async () => {
-      const { result } = renderHook(() => useCart(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useCart(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
@@ -203,9 +196,7 @@ describe('Order Integration Tests', () => {
     });
 
     it('should handle order placement failures gracefully', async () => {
-      const { result } = renderHook(() => useActiveOrder(), {
-        wrapper: renderWithProviders,
-      });
+      const { result } = renderHook(() => useActiveOrder(), { wrapper });
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false);
