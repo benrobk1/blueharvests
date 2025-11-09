@@ -87,7 +87,18 @@ export const useShopProducts = () => {
       if (!user) return null;
       const { data } = await supabase
         .from('profiles')
-        .select('zip_code')
+        .select(`
+          id,
+          full_name,
+          email,
+          phone,
+          street_address,
+          address_line_2,
+          city,
+          state,
+          zip_code,
+          avatar_url
+        `)
         .eq('id', user.id)
         .single();
       return data;
