@@ -1,37 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Users, TrendingUp, Truck, Leaf, Search, Sprout } from "lucide-react";
+import { ShoppingCart, Users, TrendingUp, Truck, Leaf, Search } from "lucide-react";
 import logo from "@/assets/blue-harvests-logo.jpeg";
 
 const Index = () => {
   const navigate = useNavigate();
-
-  const consumerOption = {
-    id: "consumer",
-    title: "Shop from Farmers",
-    description: "Access locally grown, organic produce delivered fresh to your door",
-    route: "/auth/consumer",
-  };
-
-  const partnerOptions = [
-    {
-      id: "driver",
-      title: "Earn as a Driver",
-      description: "Join our delivery network and earn 100% of delivery fees plus tips",
-      icon: Truck,
-      color: "secondary",
-      route: "/auth/driver",
-    },
-    {
-      id: "farmer",
-      title: "Sell Your Harvest",
-      description: "Keep 90% of your sales and connect directly with local customers",
-      icon: Sprout,
-      color: "earth",
-      route: "/auth/farmer",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-earth">
@@ -75,45 +49,6 @@ const Index = () => {
               </div>
             </div>
           </div>
-
-        {/* Consumer Section */}
-        <Card className="p-8 hover:shadow-lift transition-all border-2 border-primary/20">
-          <div className="flex items-center mb-4">
-            <Users className="h-10 w-10 text-primary mr-3" />
-            <h2 className="text-3xl font-bold">{consumerOption.title}</h2>
-          </div>
-          <p className="text-muted-foreground text-lg mb-6">{consumerOption.description}</p>
-          <Button 
-            size="lg"
-            onClick={() => navigate(consumerOption.route)}
-            className="w-full text-lg h-14"
-          >
-            Start Shopping →
-          </Button>
-        </Card>
-
-        {/* Partner Options Section */}
-        <div className="mt-16">
-          <h2 className="text-3xl font-bold text-center mb-8">Join Our Community</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            {partnerOptions.map((option) => (
-              <Card key={option.id} className="p-6 hover:shadow-lift transition-all">
-                <div className="flex items-center mb-4">
-                  <option.icon className="h-8 w-8 text-primary mr-3" />
-                  <h3 className="text-2xl font-bold">{option.title}</h3>
-                </div>
-                <p className="text-muted-foreground mb-4">{option.description}</p>
-                <Button 
-                  variant="outline"
-                  onClick={() => navigate(option.route)}
-                  className="w-full"
-                >
-                  Learn More →
-                </Button>
-              </Card>
-            ))}
-          </div>
-        </div>
 
         {/* How It Works Section */}
         <div className="col-span-1 md:col-span-3 mt-12">
