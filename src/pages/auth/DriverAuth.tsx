@@ -36,6 +36,10 @@ const DriverAuth = () => {
     vehicleType: "",
     vehicleMake: "",
     vehicleYear: "",
+    streetAddress: "",
+    addressLine2: "",
+    city: "",
+    state: "",
     zipCode: "",
     availability: "",
     additionalInfo: "",
@@ -50,7 +54,8 @@ const DriverAuth = () => {
     try {
       // Validate required fields
       if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword || 
-          !formData.phone || !formData.licenseNumber || !formData.vehicleType || !formData.zipCode) {
+          !formData.phone || !formData.licenseNumber || !formData.vehicleType || 
+          !formData.streetAddress || !formData.city || !formData.state || !formData.zipCode) {
         throw new Error("Please fill in all required fields");
       }
 
@@ -93,11 +98,15 @@ const DriverAuth = () => {
         .update({
           full_name: formData.name,
           phone: formData.phone,
+          street_address: formData.streetAddress,
+          address_line_2: formData.addressLine2,
+          city: formData.city,
+          state: formData.state,
+          zip_code: formData.zipCode,
           vehicle_type: formData.vehicleType,
           vehicle_make: formData.vehicleMake,
           vehicle_year: formData.vehicleYear,
           license_number: formData.licenseNumber,
-          zip_code: formData.zipCode,
           approval_status: 'pending',
           acquisition_channel: acquisitionChannel,
           delivery_days: formData.availability ? [formData.availability] : null,
@@ -123,6 +132,10 @@ const DriverAuth = () => {
         vehicleType: "",
         vehicleMake: "",
         vehicleYear: "",
+        streetAddress: "",
+        addressLine2: "",
+        city: "",
+        state: "",
         zipCode: "",
         availability: "",
         additionalInfo: "",
@@ -312,7 +325,49 @@ const DriverAuth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="zipCode">Your ZIP Code *</Label>
+                    <Label htmlFor="streetAddress">Street Address *</Label>
+                    <Input 
+                      id="streetAddress" 
+                      placeholder="123 Main St" 
+                      required 
+                      value={formData.streetAddress}
+                      onChange={(e) => setFormData({...formData, streetAddress: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="addressLine2">Apartment, Suite, etc. (Optional)</Label>
+                    <Input 
+                      id="addressLine2" 
+                      placeholder="Apt 4B" 
+                      value={formData.addressLine2}
+                      onChange={(e) => setFormData({...formData, addressLine2: e.target.value})}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City *</Label>
+                      <Input 
+                        id="city" 
+                        placeholder="Springfield" 
+                        required 
+                        value={formData.city}
+                        onChange={(e) => setFormData({...formData, city: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="state">State *</Label>
+                      <Input 
+                        id="state" 
+                        placeholder="IL" 
+                        required 
+                        maxLength={2}
+                        value={formData.state}
+                        onChange={(e) => setFormData({...formData, state: e.target.value})}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="zipCode">ZIP Code *</Label>
                     <Input 
                       id="zipCode" 
                       placeholder="10001" 

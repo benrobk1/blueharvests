@@ -48,6 +48,7 @@ const ConsumerAuth = () => {
     const fullName = formData.get("fullName") as string;
     const phone = formData.get("phone") as string;
     const street = formData.get("street") as string;
+    const addressLine2 = formData.get("addressLine2") as string;
     const city = formData.get("city") as string;
     const state = formData.get("state") as string;
     const zipCode = formData.get("zipCode") as string;
@@ -73,6 +74,7 @@ const ConsumerAuth = () => {
             full_name: fullName,
             phone,
             street_address: street,
+            address_line_2: addressLine2,
             city,
             state,
             zip_code: zipCode,
@@ -220,7 +222,11 @@ const ConsumerAuth = () => {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="street">Street Address *</Label>
-                    <Input id="street" name="street" placeholder="123 Main St, Apt 4B" required />
+                    <Input id="street" name="street" placeholder="123 Main St" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="addressLine2">Apartment, Suite, etc. (Optional)</Label>
+                    <Input id="addressLine2" name="addressLine2" placeholder="Apt 4B" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">

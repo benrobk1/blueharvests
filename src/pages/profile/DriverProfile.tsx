@@ -24,6 +24,11 @@ const DriverProfile = () => {
     full_name: "",
     email: "",
     phone: "",
+    street_address: "",
+    address_line_2: "",
+    city: "",
+    state: "",
+    zip_code: "",
     vehicle_type: "",
     vehicle_make: "",
     vehicle_year: "",
@@ -63,6 +68,11 @@ const DriverProfile = () => {
         full_name: data.full_name || "",
         email: data.email || "",
         phone: data.phone || "",
+        street_address: data.street_address || "",
+        address_line_2: data.address_line_2 || "",
+        city: data.city || "",
+        state: data.state || "",
+        zip_code: data.zip_code || "",
         vehicle_type: data.vehicle_type || "",
         vehicle_make: data.vehicle_make || "",
         vehicle_year: data.vehicle_year || "",
@@ -87,6 +97,11 @@ const DriverProfile = () => {
       .update({
         full_name: profile.full_name,
         phone: profile.phone,
+        street_address: profile.street_address,
+        address_line_2: profile.address_line_2,
+        city: profile.city,
+        state: profile.state,
+        zip_code: profile.zip_code,
         vehicle_type: profile.vehicle_type,
         vehicle_make: profile.vehicle_make,
         vehicle_year: profile.vehicle_year,
@@ -197,6 +212,59 @@ const DriverProfile = () => {
                   value={profile.phone}
                   onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
                   placeholder="+1 (555) 000-0000"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="street_address">Street Address</Label>
+                <Input
+                  id="street_address"
+                  value={profile.street_address}
+                  onChange={(e) => setProfile({ ...profile, street_address: e.target.value })}
+                  placeholder="123 Main St"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address_line_2">Apartment, Suite, etc. (Optional)</Label>
+                <Input
+                  id="address_line_2"
+                  value={profile.address_line_2}
+                  onChange={(e) => setProfile({ ...profile, address_line_2: e.target.value })}
+                  placeholder="Apt 4B"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={profile.city}
+                    onChange={(e) => setProfile({ ...profile, city: e.target.value })}
+                    placeholder="Springfield"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="state">State</Label>
+                  <Input
+                    id="state"
+                    value={profile.state}
+                    onChange={(e) => setProfile({ ...profile, state: e.target.value })}
+                    placeholder="IL"
+                    maxLength={2}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="zip_code">ZIP Code</Label>
+                <Input
+                  id="zip_code"
+                  value={profile.zip_code}
+                  onChange={(e) => setProfile({ ...profile, zip_code: e.target.value })}
+                  placeholder="10001"
+                  maxLength={5}
                 />
               </div>
 
