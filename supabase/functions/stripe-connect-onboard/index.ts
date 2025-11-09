@@ -102,12 +102,14 @@ serve(async (req) => {
         .eq('id', user.id);
     }
 
-    // Create account link for onboarding
+    // Create account link for onboarding - use role-specific return URL
     const origin = req.headers.get('origin') || 'http://localhost:3000';
+    const returnPath = roles.includes('driver') ? '/driver/profile' : '/farmer/profile';
+    
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${origin}/profile`,
-      return_url: `${origin}/profile?stripe_onboarding=success`,
+      refresh_url: `${origin}${returnPath}`,
+      return_url: `${origin}${returnPath}?stripe_onboarding=success`,
       type: 'account_onboarding',
     });
 
