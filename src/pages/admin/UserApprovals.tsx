@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { adminQueries } from '@/features/admin';
 import {
   Dialog,
@@ -67,6 +68,9 @@ const UserApprovals = () => {
   const navigate = useNavigate();
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set());
+  const [bulkRejectionReason, setBulkRejectionReason] = useState('');
+  const [showBulkRejectDialog, setShowBulkRejectDialog] = useState(false);
 
   // Helper to extract storage path from URL or path string
   const toStoragePath = (val: string | null): string | null => {
@@ -284,6 +288,169 @@ const UserApprovals = () => {
     },
   });
 
+  const bulkApproveMutation = useMutation({
+    mutationFn: async (userIds: string[]) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Approve all selected users
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          approval_status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: user.id,
+          rejected_reason: null,
+        })
+        .in('id', userIds);
+
+      if (updateError) throw updateError;
+
+      // Process each user for role assignment and farm profile
+      for (const userId of userIds) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('applied_role, farm_name, additional_info, city, state')
+          .eq('id', userId)
+          .single();
+
+        if (profileData) {
+          const appliedRole = (profileData?.applied_role as 'farmer' | 'lead_farmer' | 'driver') ?? 'farmer';
+          await supabase
+            .from('user_roles')
+            .upsert({ user_id: userId, role: appliedRole }, { onConflict: 'user_id,role' });
+
+          // Create farm profile if it's a farmer/lead_farmer
+          if (appliedRole === 'farmer' || appliedRole === 'lead_farmer') {
+            const { data: existingFarm } = await supabase
+              .from('farm_profiles')
+              .select('id')
+              .eq('farmer_id', userId)
+              .maybeSingle();
+
+            if (!existingFarm) {
+              await supabase
+                .from('farm_profiles')
+                .insert({
+                  farmer_id: userId,
+                  farm_name: profileData?.farm_name || 'Untitled Farm',
+                  description: profileData?.additional_info || null,
+                  location: [profileData?.city, profileData?.state].filter(Boolean).join(', ') || null,
+                });
+            }
+          }
+        }
+
+        // Log approval history
+        await supabase
+          .from('approval_history')
+          .insert({
+            user_id: userId,
+            previous_status: 'pending',
+            new_status: 'approved',
+            approved_by: user.id,
+          });
+
+        // Log admin action
+        await supabase.rpc('log_admin_action', {
+          _action_type: 'bulk_user_approved',
+          _target_user_id: userId,
+          _old_value: { status: 'pending' },
+          _new_value: { status: 'approved' },
+        });
+      }
+    },
+    onSuccess: (_, userIds) => {
+      toast({
+        title: 'Users approved',
+        description: `${userIds.length} user(s) have been approved successfully`,
+      });
+      queryClient.invalidateQueries({ queryKey: adminQueries.pendingUsers() });
+      setSelectedUserIds(new Set());
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Bulk approval failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const bulkRejectMutation = useMutation({
+    mutationFn: async ({ userIds, reason }: { userIds: string[]; reason: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Reject all selected users
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          approval_status: 'rejected',
+          rejected_reason: reason,
+          approved_by: user.id,
+        })
+        .in('id', userIds);
+
+      if (updateError) throw updateError;
+
+      // Log for each user
+      for (const userId of userIds) {
+        await supabase
+          .from('approval_history')
+          .insert({
+            user_id: userId,
+            previous_status: 'pending',
+            new_status: 'rejected',
+            reason,
+            approved_by: user.id,
+          });
+
+        await supabase.rpc('log_admin_action', {
+          _action_type: 'bulk_user_rejected',
+          _target_user_id: userId,
+          _old_value: { status: 'pending' },
+          _new_value: { status: 'rejected', reason },
+        });
+      }
+    },
+    onSuccess: (_, { userIds }) => {
+      toast({
+        title: 'Users rejected',
+        description: `${userIds.length} user(s) have been rejected`,
+      });
+      queryClient.invalidateQueries({ queryKey: adminQueries.pendingUsers() });
+      setSelectedUserIds(new Set());
+      setBulkRejectionReason('');
+      setShowBulkRejectDialog(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Bulk rejection failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const toggleUserSelection = (userId: string) => {
+    const newSet = new Set(selectedUserIds);
+    if (newSet.has(userId)) {
+      newSet.delete(userId);
+    } else {
+      newSet.add(userId);
+    }
+    setSelectedUserIds(newSet);
+  };
+
+  const toggleSelectAll = (users: UserProfile[]) => {
+    if (selectedUserIds.size === users.length) {
+      setSelectedUserIds(new Set());
+    } else {
+      setSelectedUserIds(new Set(users.map(u => u.id)));
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'approved':
@@ -337,13 +504,107 @@ const UserApprovals = () => {
               </CardContent>
             </Card>
           ) : (
-            pendingList.map((user) => (
+            <>
+              {/* Bulk Actions Bar */}
+              <Card className="bg-muted/50">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          checked={selectedUserIds.size === pendingList.length && pendingList.length > 0}
+                          onCheckedChange={() => toggleSelectAll(pendingList)}
+                        />
+                        <span className="text-sm font-medium">
+                          {selectedUserIds.size > 0 
+                            ? `${selectedUserIds.size} selected` 
+                            : 'Select all'}
+                        </span>
+                      </div>
+                    </div>
+                    {selectedUserIds.size > 0 && (
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => bulkApproveMutation.mutate(Array.from(selectedUserIds))}
+                          disabled={bulkApproveMutation.isPending}
+                          size="sm"
+                        >
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Approve Selected ({selectedUserIds.size})
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => setShowBulkRejectDialog(true)}
+                          disabled={bulkRejectMutation.isPending}
+                          size="sm"
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Reject Selected ({selectedUserIds.size})
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Bulk Reject Dialog */}
+              <Dialog open={showBulkRejectDialog} onOpenChange={setShowBulkRejectDialog}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Reject Multiple Applications</DialogTitle>
+                    <DialogDescription>
+                      Please provide a reason for rejecting {selectedUserIds.size} application(s)
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="bulkReason">Reason</Label>
+                      <Textarea
+                        id="bulkReason"
+                        value={bulkRejectionReason}
+                        onChange={(e) => setBulkRejectionReason(e.target.value)}
+                        placeholder="Explain why these applications are being rejected..."
+                        rows={4}
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => {
+                          bulkRejectMutation.mutate({
+                            userIds: Array.from(selectedUserIds),
+                            reason: bulkRejectionReason,
+                          });
+                        }}
+                        disabled={!bulkRejectionReason || bulkRejectMutation.isPending}
+                        variant="destructive"
+                      >
+                        Confirm Rejection
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowBulkRejectDialog(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              {pendingList.map((user) => (
               <Card key={user.id}>
                 <CardHeader>
                   <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle>{user.full_name}</CardTitle>
-                      <CardDescription>{user.email}</CardDescription>
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={selectedUserIds.has(user.id)}
+                        onCheckedChange={() => toggleUserSelection(user.id)}
+                        className="mt-1"
+                      />
+                      <div>
+                        <CardTitle>{user.full_name}</CardTitle>
+                        <CardDescription>{user.email}</CardDescription>
+                      </div>
                     </div>
                     {getStatusBadge(user.approval_status)}
                   </div>
@@ -654,8 +915,9 @@ const UserApprovals = () => {
                   </div>
                 </CardContent>
               </Card>
-            ))
-          )}
+            ))}
+          </>
+        )}
         </TabsContent>
 
         <TabsContent value="rejected" className="space-y-4">
