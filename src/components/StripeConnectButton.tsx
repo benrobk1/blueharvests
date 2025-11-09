@@ -71,6 +71,10 @@ export const StripeConnectButton = () => {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
+        body: {
+          origin: window.location.origin,
+          returnPath: '/driver/profile',
+        },
       });
 
       console.log('Function response:', { data, error });

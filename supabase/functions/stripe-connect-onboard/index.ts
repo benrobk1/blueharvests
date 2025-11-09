@@ -18,6 +18,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
+    // Parse optional body for overrides (origin/returnPath)
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch (_) {
+      body = {};
+    }
+
     // Authenticate user
     const authHeader = req.headers.get('Authorization')!;
     const token = authHeader.replace('Bearer ', '');
@@ -102,14 +110,16 @@ serve(async (req) => {
         .eq('id', user.id);
     }
 
-    // Create account link for onboarding - use role-specific return URL
-    const origin = req.headers.get('origin') || 'http://localhost:3000';
-    const returnPath = roles.includes('driver') ? '/driver/profile' : '/farmer/profile';
-    
+    // Create account link for onboarding - prefer client-provided origin/returnPath if present
+    const headerOrigin = req.headers.get('origin') || '';
+    const baseOrigin = body.origin || headerOrigin || 'http://localhost:3000';
+    const defaultPath = roles.includes('driver') ? '/driver/profile' : '/farmer/profile';
+    const returnPath = body.returnPath || defaultPath;
+
     const accountLink = await stripe.accountLinks.create({
       account: accountId,
-      refresh_url: `${origin}${returnPath}`,
-      return_url: `${origin}${returnPath}?stripe_onboarding=success`,
+      refresh_url: `${baseOrigin}${returnPath}`,
+      return_url: `${baseOrigin}${returnPath}?stripe_onboarding=success`,
       type: 'account_onboarding',
     });
 
