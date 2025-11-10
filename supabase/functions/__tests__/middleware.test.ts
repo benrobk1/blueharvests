@@ -106,7 +106,7 @@ Deno.test('withCORS - handles OPTIONS preflight', async () => {
 
 Deno.test('middleware composition - combines multiple middleware', async () => {
   const handler = withRequestId(
-    withCORS(async (req, ctx) => {
+    withCORS(async (req, ctx: any) => {
       return new Response(JSON.stringify({ test: 'data' }), {
         headers: { 'Content-Type': 'application/json' }
       });
