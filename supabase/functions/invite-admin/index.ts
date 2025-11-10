@@ -18,6 +18,9 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const requestId = crypto.randomUUID();
+  console.log(`[${requestId}] [INVITE-ADMIN] Request started`);
+
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -61,7 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Invalid email address");
     }
 
-    console.log(`[INVITE-ADMIN] Processing invitation for ${email}`);
+    console.log(`[${requestId}] [INVITE-ADMIN] Processing invitation for ${email}`);
 
     // Check if user already exists
     const { data: existingProfile } = await supabase
@@ -102,7 +105,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     if (insertError) {
-      console.error("[INVITE-ADMIN] Error storing invitation:", insertError);
+      console.error(`[${requestId}] [INVITE-ADMIN] Error storing invitation:`, insertError);
       throw new Error("Failed to create invitation");
     }
 
@@ -130,13 +133,15 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log(`[INVITE-ADMIN] Email sent successfully:`, emailResponse);
+    console.log(`[${requestId}] [INVITE-ADMIN] Email sent successfully:`, emailResponse);
 
     // Log admin action
     await supabase.rpc("log_admin_action", {
       _action_type: "admin_invited",
       _new_value: { email, expires_at: expiresAt.toISOString() },
     });
+
+    console.log(`[${requestId}] [INVITE-ADMIN] ✅ Success`);
 
     return new Response(
       JSON.stringify({ 
@@ -149,7 +154,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("[INVITE-ADMIN] Error:", error);
+    console.error(`[${requestId}] [INVITE-ADMIN] ❌ Error:`, error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {

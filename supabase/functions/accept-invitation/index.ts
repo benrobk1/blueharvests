@@ -17,6 +17,9 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const requestId = crypto.randomUUID();
+  console.log(`[${requestId}] [ACCEPT-INVITATION] Request started`);
+
   try {
     const { token, password, fullName }: AcceptInvitationRequest = await req.json();
 
@@ -29,7 +32,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error("Password must be at least 6 characters");
     }
 
-    console.log(`[ACCEPT-INVITATION] Processing token: ${token.substring(0, 8)}...`);
+    console.log(`[${requestId}] [ACCEPT-INVITATION] Processing token: ${token.substring(0, 8)}...`);
 
     // Use service role to create user and manage invitation
     const supabase = createClient(
@@ -46,7 +49,7 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (invitationError || !invitation) {
-      console.error("[ACCEPT-INVITATION] Invalid token:", invitationError);
+      console.error(`[${requestId}] [ACCEPT-INVITATION] Invalid token:`, invitationError);
       return new Response(
         JSON.stringify({ error: "Invalid or expired invitation" }),
         {
@@ -58,7 +61,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Check expiration
     if (new Date(invitation.expires_at) < new Date()) {
-      console.error("[ACCEPT-INVITATION] Token expired");
+      console.error(`[${requestId}] [ACCEPT-INVITATION] Token expired`);
       return new Response(
         JSON.stringify({ error: "This invitation has expired" }),
         {
@@ -68,7 +71,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`[ACCEPT-INVITATION] Creating user for ${invitation.email}`);
+    console.log(`[${requestId}] [ACCEPT-INVITATION] Creating user for ${invitation.email}`);
 
     // Create user account
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -81,11 +84,11 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     if (authError || !authData.user) {
-      console.error("[ACCEPT-INVITATION] Error creating user:", authError);
+      console.error(`[${requestId}] [ACCEPT-INVITATION] Error creating user:`, authError);
       throw new Error(authError?.message || "Failed to create user account");
     }
 
-    console.log(`[ACCEPT-INVITATION] User created: ${authData.user.id}`);
+    console.log(`[${requestId}] [ACCEPT-INVITATION] User created: ${authData.user.id}`);
 
     // Assign admin role
     const { error: roleError } = await supabase
@@ -96,13 +99,13 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     if (roleError) {
-      console.error("[ACCEPT-INVITATION] Error assigning role:", roleError);
+      console.error(`[${requestId}] [ACCEPT-INVITATION] Error assigning role:`, roleError);
       // Clean up - delete the user if role assignment fails
       await supabase.auth.admin.deleteUser(authData.user.id);
       throw new Error("Failed to assign admin role");
     }
 
-    console.log(`[ACCEPT-INVITATION] Admin role assigned`);
+    console.log(`[${requestId}] [ACCEPT-INVITATION] Admin role assigned`);
 
     // Mark invitation as used
     await supabase
@@ -119,7 +122,7 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    console.log(`[ACCEPT-INVITATION] Success for ${invitation.email}`);
+    console.log(`[${requestId}] [ACCEPT-INVITATION] ✅ Success for ${invitation.email}`);
 
     return new Response(
       JSON.stringify({
@@ -133,7 +136,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("[ACCEPT-INVITATION] Error:", error);
+    console.error(`[${requestId}] [ACCEPT-INVITATION] ❌ Error:`, error);
     return new Response(
       JSON.stringify({ error: error.message || "Failed to accept invitation" }),
       {
