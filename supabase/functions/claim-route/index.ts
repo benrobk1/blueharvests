@@ -2,13 +2,8 @@
  * CLAIM ROUTE EDGE FUNCTION
  * Allows drivers to claim available delivery batches
  * 
- * Middleware Pattern:
- * - Request ID logging
- * - Authentication
- * - Driver role verification
- * - Rate limiting
- * - Input validation
- * - Atomic batch claiming logic
+ * Full Middleware Pattern:
+ * RequestId + Auth + Driver Check + RateLimit + Validation + ErrorHandling
  */
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
@@ -24,21 +19,18 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // REQUEST ID - Correlation for logs
   const requestId = crypto.randomUUID();
   console.log(`[${requestId}] [CLAIM-ROUTE] Request started`);
 
   try {
-    // CONFIG LOADING
     const config = loadConfig();
     const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
 
-    // AUTHENTICATION
+    // Auth middleware
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error(`[${requestId}] Missing authorization header`);
@@ -61,7 +53,7 @@ serve(async (req) => {
 
     console.log(`[${requestId}] Authenticated user: ${user.id}`);
 
-    // DRIVER ROLE CHECK
+    // Driver role check
     const { data: isDriver, error: roleErr } = await supabase.rpc('has_role', {
       _user_id: user.id,
       _role: 'driver',
@@ -78,7 +70,7 @@ serve(async (req) => {
       );
     }
 
-    // RATE LIMITING
+    // Rate limiting
     const rateCheck = await checkRateLimit(supabase, user.id, RATE_LIMITS.CLAIM_ROUTE);
     if (!rateCheck.allowed) {
       console.warn(`[${requestId}] Rate limit exceeded for user ${user.id}`);
@@ -99,7 +91,7 @@ serve(async (req) => {
       );
     }
 
-    // INPUT VALIDATION
+    // Input validation
     const body = await req.json();
     const validation = ClaimRouteRequestSchema.safeParse(body);
 
@@ -117,10 +109,9 @@ serve(async (req) => {
 
     const input = validation.data;
 
-    // BUSINESS LOGIC - Atomic batch claiming
+    // Business logic
     console.log(`[${requestId}] Driver ${user.id} claiming batch ${input.batch_id}`);
 
-    // Check batch availability
     const { data: batch, error: loadErr } = await supabase
       .from('delivery_batches')
       .select('id, status, driver_id')
@@ -149,7 +140,6 @@ serve(async (req) => {
       );
     }
 
-    // Assign batch to driver
     const { error: updateErr } = await supabase
       .from('delivery_batches')
       .update({ driver_id: user.id, status: 'assigned' })

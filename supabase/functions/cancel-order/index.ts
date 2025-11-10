@@ -2,12 +2,8 @@
  * CANCEL ORDER EDGE FUNCTION
  * Cancels orders with inventory restoration and cleanup
  * 
- * Middleware Pattern:
- * - Request ID logging
- * - Authentication
- * - Rate limiting
- * - Input validation
- * - Service layer for complex cancellation logic
+ * Full Middleware Pattern:
+ * RequestId + Auth + RateLimit + Validation + ErrorHandling
  */
 
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
@@ -15,8 +11,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { loadConfig } from '../_shared/config.ts';
 import { RATE_LIMITS } from '../_shared/constants.ts';
 import { CancelOrderRequestSchema } from '../_shared/contracts/index.ts';
-import { checkRateLimit } from '../_shared/rateLimiter.ts';
 import { OrderCancellationService } from '../_shared/services/OrderCancellationService.ts';
+import { checkRateLimit } from '../_shared/rateLimiter.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,21 +20,18 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // REQUEST ID - Correlation for logs
   const requestId = crypto.randomUUID();
   console.log(`[${requestId}] [CANCEL-ORDER] Request started`);
 
   try {
-    // CONFIG LOADING
     const config = loadConfig();
     const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
 
-    // AUTHENTICATION
+    // Auth middleware
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error(`[${requestId}] Missing authorization header`);
@@ -61,7 +54,7 @@ serve(async (req) => {
 
     console.log(`[${requestId}] Authenticated user: ${user.id}`);
 
-    // RATE LIMITING
+    // Rate limiting
     const rateCheck = await checkRateLimit(supabase, user.id, RATE_LIMITS.CANCEL_ORDER);
     if (!rateCheck.allowed) {
       console.warn(`[${requestId}] Rate limit exceeded for user ${user.id}`);
@@ -82,7 +75,7 @@ serve(async (req) => {
       );
     }
 
-    // INPUT VALIDATION
+    // Input validation
     const body = await req.json();
     const validation = CancelOrderRequestSchema.safeParse(body);
 
@@ -100,7 +93,7 @@ serve(async (req) => {
 
     const input = validation.data;
 
-    // BUSINESS LOGIC - Service layer
+    // Business logic
     console.log(`[${requestId}] Cancelling order ${input.orderId} for user ${user.id}`);
     const cancellationService = new OrderCancellationService(supabase);
 
@@ -109,7 +102,6 @@ serve(async (req) => {
     } catch (error: any) {
       const errorMessage = error.message || 'Unknown error';
 
-      // Map service errors to HTTP responses
       if (errorMessage.includes('ORDER_NOT_FOUND')) {
         return new Response(
           JSON.stringify({
@@ -140,7 +132,6 @@ serve(async (req) => {
         );
       }
 
-      // Re-throw other errors
       throw error;
     }
 
