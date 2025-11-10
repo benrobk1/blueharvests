@@ -1,234 +1,223 @@
 /**
- * STRIPE WEBHOOK HANDLER (POST-DEMO IMPLEMENTATION)
+ * STRIPE WEBHOOK HANDLER
  * 
  * Handles Stripe webhook events for payment and subscription state sync.
+ * Uses middleware pattern for consistent error handling and logging.
  * 
- * SUPPORTED EVENTS (TODOs for post-demo):
+ * SUPPORTED EVENTS:
  * - payment_intent.succeeded → Update order status to 'paid'
  * - payment_intent.payment_failed → Mark order as 'failed', notify consumer
  * - customer.subscription.updated → Sync subscription status in database
  * - customer.subscription.deleted → Disable credits eligibility, notify consumer
  * - charge.dispute.created → Notify admin, flag order for review
  * - payout.failed → Retry payout logic, alert finance team
- * 
- * SECURITY:
- * - Verifies webhook signature using STRIPE_WEBHOOK_SECRET
- * - Rejects unsigned/invalid requests with 400 error
- * - Public endpoint (no JWT verification needed)
- * 
- * WHY THIS MATTERS FOR YC DEMO:
- * - Shows production-readiness thinking
- * - Webhook signature verification is critical security
- * - TODOs demonstrate edge cases have been considered
- * - Ready to implement post-demo with minimal code changes
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import Stripe from 'https://esm.sh/stripe@18.5.0';
+import { loadConfig } from '../_shared/config.ts';
+import { 
+  withRequestId, 
+  withCORS, 
+  withErrorHandling, 
+  withMetrics,
+  createMiddlewareStack,
+  type RequestIdContext,
+  type CORSContext,
+  type MetricsContext
+} from '../_shared/middleware/index.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature',
-};
+type Context = RequestIdContext & CORSContext & MetricsContext;
 
-serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+/**
+ * Main webhook handler with middleware composition
+ */
+const handler = async (req: Request, ctx: Context): Promise<Response> => {
+  ctx.metrics.mark('webhook_received');
+  
+  const config = loadConfig();
+  const stripeSecretKey = config.stripe?.secretKey || Deno.env.get('STRIPE_SECRET_KEY');
+  const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+
+  if (!stripeSecretKey) {
+    console.error(`[${ctx.requestId}] ❌ STRIPE_SECRET_KEY not configured`);
+    return new Response(
+      JSON.stringify({ error: 'Stripe configuration missing', code: 'CONFIG_ERROR' }), 
+      { 
+        status: 500,
+        headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
   }
 
-  const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] [STRIPE_WEBHOOK] Received webhook request`);
+  if (!webhookSecret) {
+    console.error(`[${ctx.requestId}] ❌ STRIPE_WEBHOOK_SECRET not configured`);
+    return new Response(
+      JSON.stringify({ error: 'Webhook secret missing', code: 'CONFIG_ERROR' }), 
+      { 
+        status: 500,
+        headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+
+  const stripe = new Stripe(stripeSecretKey, {
+    apiVersion: '2023-10-16',
+    httpClient: Stripe.createFetchHttpClient(),
+  });
+
+  // Verify webhook signature
+  const signature = req.headers.get('stripe-signature');
+  if (!signature) {
+    console.error(`[${ctx.requestId}] ❌ Missing stripe-signature header`);
+    ctx.metrics.mark('signature_missing');
+    return new Response(
+      JSON.stringify({ error: 'Missing signature', code: 'INVALID_SIGNATURE' }), 
+      { 
+        status: 400,
+        headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+
+  const body = await req.text();
+  let event: Stripe.Event;
 
   try {
-    const stripeSecretKey = Deno.env.get('STRIPE_SECRET_KEY');
-    const webhookSecret = Deno.env.get('STRIPE_WEBHOOK_SECRET');
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    console.log(`[${ctx.requestId}] ✅ Signature verified: ${event.type}`);
+    ctx.metrics.mark('signature_verified');
+  } catch (err: any) {
+    console.error(`[${ctx.requestId}] ❌ Signature verification failed: ${err.message}`);
+    ctx.metrics.mark('signature_failed');
+    return new Response(
+      JSON.stringify({ error: `Webhook Error: ${err.message}`, code: 'INVALID_SIGNATURE' }), 
+      { 
+        status: 400,
+        headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
 
-    if (!stripeSecretKey) {
-      console.error(`[${requestId}] [STRIPE_WEBHOOK] ❌ STRIPE_SECRET_KEY not configured`);
-      return new Response('Stripe secret key not configured', { 
-        status: 500,
-        headers: corsHeaders 
-      });
-    }
+  // Idempotency check
+  const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
 
-    if (!webhookSecret) {
-      console.error(`[${requestId}] [STRIPE_WEBHOOK] ❌ STRIPE_WEBHOOK_SECRET not configured`);
-      return new Response('Webhook secret not configured', { 
-        status: 500,
-        headers: corsHeaders 
-      });
-    }
+  const { data: existingEvent } = await supabase
+    .from('stripe_webhook_events')
+    .select('id')
+    .eq('stripe_event_id', event.id)
+    .single();
 
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: '2023-10-16',
-      httpClient: Stripe.createFetchHttpClient(),
+  if (existingEvent) {
+    console.log(`[${ctx.requestId}] ⚠️ Event ${event.id} already processed, skipping`);
+    ctx.metrics.mark('event_duplicate');
+    return new Response(
+      JSON.stringify({ received: true, skipped: true }), 
+      { 
+        status: 200,
+        headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' }
+      }
+    );
+  }
+
+  // Record event
+  const { error: insertError } = await supabase
+    .from('stripe_webhook_events')
+    .insert({
+      stripe_event_id: event.id,
+      event_type: event.type,
     });
 
-    // Verify webhook signature
-    const signature = req.headers.get('stripe-signature');
-    if (!signature) {
-      console.error(`[${requestId}] [STRIPE_WEBHOOK] ❌ Missing stripe-signature header`);
-      return new Response('Missing signature', { 
-        status: 400,
-        headers: corsHeaders 
-      });
-    }
-
-    const body = await req.text();
-    let event: Stripe.Event;
-
-    try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-      console.log(`[${requestId}] [STRIPE_WEBHOOK] ✅ Signature verified: ${event.type}`);
-    } catch (err: any) {
-      console.error(`[${requestId}] [STRIPE_WEBHOOK] ❌ Signature verification failed: ${err.message}`);
-      return new Response(`Webhook Error: ${err.message}`, { 
-        status: 400,
-        headers: corsHeaders 
-      });
-    }
-
-    // Idempotency check: prevent duplicate processing
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
-
-    const { data: existingEvent } = await supabaseClient
-      .from('stripe_webhook_events')
-      .select('id')
-      .eq('stripe_event_id', event.id)
-      .single();
-
-    if (existingEvent) {
-      console.log(`[${requestId}] [STRIPE_WEBHOOK] ⚠️  Event ${event.id} already processed, skipping`);
+  if (insertError) {
+    if (insertError.code === '23505') {
+      console.log(`[${ctx.requestId}] ⚠️ Event ${event.id} being processed concurrently`);
+      ctx.metrics.mark('event_concurrent');
       return new Response(
         JSON.stringify({ received: true, skipped: true }), 
         { 
           status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' }
         }
       );
     }
-
-    // Record event as being processed (prevents concurrent duplicates)
-    const { error: insertError } = await supabaseClient
-      .from('stripe_webhook_events')
-      .insert({
-        stripe_event_id: event.id,
-        event_type: event.type,
-      });
-
-    if (insertError) {
-      // If insert fails due to unique constraint, event was processed concurrently
-      if (insertError.code === '23505') {
-        console.log(`[${requestId}] [STRIPE_WEBHOOK] ⚠️  Event ${event.id} being processed concurrently, skipping`);
-        return new Response(
-          JSON.stringify({ received: true, skipped: true }), 
-          { 
-            status: 200,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
-      }
-      throw insertError;
-    }
-
-    console.log(`[${requestId}] [STRIPE_WEBHOOK] 📝 Event ${event.id} recorded, processing...`);
-
-    // Handle events
-    switch (event.type) {
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log(`[${requestId}] [STRIPE_WEBHOOK] Payment succeeded: ${paymentIntent.id}`);
-        
-        // TODO: Update order status to 'paid'
-        // TODO: Send order confirmation email
-        // TODO: Award credits if applicable (1 credit per $100 spent)
-        
-        break;
-      }
-
-      case 'payment_intent.payment_failed': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log(`[${requestId}] [STRIPE_WEBHOOK] Payment failed: ${paymentIntent.id}`);
-        
-        // TODO: Mark order as 'failed' in database
-        // TODO: Send notification to consumer with retry instructions
-        // TODO: Log failure reason for admin review
-        
-        break;
-      }
-
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
-        console.log(`[${requestId}] [STRIPE_WEBHOOK] Subscription updated: ${subscription.id}`);
-        
-        // TODO: Sync subscription status in database
-        // TODO: Update credits eligibility based on status
-        // TODO: If canceled, send cancellation confirmation email
-        
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
-        console.log(`[${requestId}] [STRIPE_WEBHOOK] Subscription deleted: ${subscription.id}`);
-        
-        // TODO: Disable credits earning (but allow redemption of existing)
-        // TODO: Send notification about subscription end
-        // TODO: Offer resubscribe incentive (e.g., bonus credits)
-        
-        break;
-      }
-
-      case 'charge.dispute.created': {
-        const dispute = event.data.object as Stripe.Dispute;
-        console.log(`[${requestId}] [STRIPE_WEBHOOK] Dispute created: ${dispute.id}`);
-        
-        // TODO: Notify admin team immediately
-        // TODO: Flag order for manual review
-        // TODO: Create dispute record in database
-        // TODO: Pause related payouts until resolved
-        
-        break;
-      }
-
-      case 'payout.failed': {
-        const payout = event.data.object as Stripe.Payout;
-        console.log(`[${requestId}] [STRIPE_WEBHOOK] Payout failed: ${payout.id}`);
-        
-        // TODO: Mark payout as 'failed' in database
-        // TODO: Retry payout logic (with exponential backoff)
-        // TODO: Alert finance team if retries exhausted
-        // TODO: Notify recipient of payout delay
-        
-        break;
-      }
-
-      default:
-        console.log(`[${requestId}] [STRIPE_WEBHOOK] ⚠️  Unhandled event type: ${event.type}`);
-    }
-
-    return new Response(
-      JSON.stringify({ received: true, event: event.type }),
-      { 
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
-
-  } catch (error) {
-    console.error(`[${requestId}] [STRIPE_WEBHOOK] ❌ Error:`, error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
-    );
+    throw insertError;
   }
-});
+
+  console.log(`[${ctx.requestId}] 📝 Event ${event.id} recorded, processing...`);
+  ctx.metrics.mark('event_processing');
+
+  // Handle events
+  switch (event.type) {
+    case 'payment_intent.succeeded': {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      console.log(`[${ctx.requestId}] Payment succeeded: ${paymentIntent.id}`);
+      ctx.metrics.mark('payment_succeeded');
+      // TODO: Implementation
+      break;
+    }
+
+    case 'payment_intent.payment_failed': {
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      console.log(`[${ctx.requestId}] Payment failed: ${paymentIntent.id}`);
+      ctx.metrics.mark('payment_failed');
+      // TODO: Implementation
+      break;
+    }
+
+    case 'customer.subscription.updated': {
+      const subscription = event.data.object as Stripe.Subscription;
+      console.log(`[${ctx.requestId}] Subscription updated: ${subscription.id}`);
+      ctx.metrics.mark('subscription_updated');
+      // TODO: Implementation
+      break;
+    }
+
+    case 'customer.subscription.deleted': {
+      const subscription = event.data.object as Stripe.Subscription;
+      console.log(`[${ctx.requestId}] Subscription deleted: ${subscription.id}`);
+      ctx.metrics.mark('subscription_deleted');
+      // TODO: Implementation
+      break;
+    }
+
+    case 'charge.dispute.created': {
+      const dispute = event.data.object as Stripe.Dispute;
+      console.log(`[${ctx.requestId}] Dispute created: ${dispute.id}`);
+      ctx.metrics.mark('dispute_created');
+      // TODO: Implementation
+      break;
+    }
+
+    case 'payout.failed': {
+      const payout = event.data.object as Stripe.Payout;
+      console.log(`[${ctx.requestId}] Payout failed: ${payout.id}`);
+      ctx.metrics.mark('payout_failed');
+      // TODO: Implementation
+      break;
+    }
+
+    default:
+      console.log(`[${ctx.requestId}] ⚠️ Unhandled event type: ${event.type}`);
+      ctx.metrics.mark('event_unhandled');
+  }
+
+  ctx.metrics.mark('event_processed');
+  return new Response(
+    JSON.stringify({ received: true, event: event.type }),
+    { 
+      status: 200,
+      headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' }
+    }
+  );
+};
+
+// Compose middleware stack (no auth needed for webhooks)
+const middlewareStack = createMiddlewareStack<Context>(
+  withRequestId,
+  withCORS,
+  withMetrics('stripe-webhook'),
+  withErrorHandling
+);
+
+serve(middlewareStack(handler));

@@ -2,163 +2,126 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { loadConfig } from '../_shared/config.ts';
 import { RATE_LIMITS } from '../_shared/constants.ts';
-import { checkRateLimit } from '../_shared/rateLimiter.ts';
 import { SendPushNotificationRequestSchema } from '../_shared/contracts/notifications.ts';
+import { 
+  withRequestId, 
+  withCORS, 
+  withAuth,
+  withValidation,
+  withRateLimit,
+  withErrorHandling, 
+  withMetrics,
+  createMiddlewareStack,
+  type RequestIdContext,
+  type CORSContext,
+  type AuthContext,
+  type MetricsContext,
+  type ValidationContext
+} from '../_shared/middleware/index.ts';
 
 /**
  * SEND PUSH NOTIFICATION EDGE FUNCTION
  * 
  * Sends push notifications to users (drivers/consumers).
- * Includes aggressive rate limiting to protect push service quotas.
+ * Uses middleware pattern with aggressive rate limiting.
  * Note: Requires VAPID setup for production Web Push API.
  */
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+type SendPushRequest = {
+  user_id: string;
+  title: string;
+  body: string;
+  data?: Record<string, any>;
 };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+type Context = RequestIdContext & CORSContext & AuthContext & MetricsContext & ValidationContext<SendPushRequest>;
+
+/**
+ * Main handler with middleware composition
+ */
+const handler = async (req: Request, ctx: Context): Promise<Response> => {
+  ctx.metrics.mark('notification_requested');
+  
+  const config = loadConfig();
+  const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
+
+  const { user_id, title, body: messageBody, data } = ctx.input;
+
+  console.log(`[${ctx.requestId}] Push notification request:`, { user_id, title });
+
+  // Get user's push subscription
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('push_subscription, email, full_name')
+    .eq('id', user_id)
+    .single();
+
+  if (profileError || !profile) {
+    console.error(`[${ctx.requestId}] ❌ User not found: ${user_id}`);
+    ctx.metrics.mark('user_not_found');
+    return new Response(JSON.stringify({ 
+      error: 'User not found',
+      code: 'USER_NOT_FOUND'
+    }), {
+      status: 404,
+      headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 
-  const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] [SEND-PUSH-NOTIFICATION] Request started`);
-
-  try {
-    const config = loadConfig();
-    const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
-
-    // Authenticate user
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'UNAUTHORIZED', code: 'UNAUTHORIZED' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: userData } = await supabase.auth.getUser(token);
-    const user = userData.user;
-    
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'UNAUTHORIZED', code: 'UNAUTHORIZED' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Validate input
-    const body = await req.json();
-    const result = SendPushNotificationRequestSchema.safeParse(body);
-
-    if (!result.success) {
-      return new Response(JSON.stringify({
-        error: 'VALIDATION_ERROR',
-        message: 'Request validation failed',
-        details: result.error.flatten(),
-        code: 'VALIDATION_ERROR',
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    const { user_id, title, body: messageBody, data } = result.data;
-
-    console.log(`[${requestId}] Push notification request:`, { user_id, title });
-
-    // AGGRESSIVE RATE LIMITING: Protect push service quotas (FCM/APNS limits)
-    // 20 notifications per hour per user prevents spam and quota exhaustion
-    const rateCheck = await checkRateLimit(supabase, user_id, RATE_LIMITS.SEND_PUSH_NOTIFICATION);
-    
-    if (!rateCheck.allowed) {
-      console.warn(`[${requestId}] ⚠️ Rate limit exceeded for user ${user_id}`);
-      return new Response(JSON.stringify({ 
-        error: 'TOO_MANY_REQUESTS',
-        message: 'Notification rate limit exceeded.',
-        retryAfter: rateCheck.retryAfter,
-        code: 'TOO_MANY_REQUESTS',
-      }), {
-        status: 429,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json',
-          'Retry-After': String(rateCheck.retryAfter || 60),
-        }
-      });
-    }
-
-    // Get user's push subscription
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('push_subscription, email, full_name')
-      .eq('id', user_id)
-      .single();
-
-    if (profileError || !profile) {
-      console.error(`[${requestId}] ❌ User not found: ${user_id}`);
-      return new Response(JSON.stringify({ 
-        error: 'User not found',
-        code: 'USER_NOT_FOUND'
-      }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // Check if notifications are enabled
-    if (!profile.push_subscription?.enabled) {
-      console.log(`[${requestId}] ℹ️ Notifications not enabled for user ${user_id}`);
-      return new Response(JSON.stringify({ 
-        error: 'Notifications not enabled for this user',
-        code: 'NOTIFICATIONS_DISABLED'
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
-    // TODO: Implement Web Push API with VAPID keys
-    // For now, just log the notification
-    console.log(`[${requestId}] 📱 Push notification (logged):`, {
-      to: profile.email,
-      title,
-      body: messageBody,
-      data,
-    });
-
-    // Update last notification timestamp
-    await supabase
-      .from('profiles')
-      .update({
-        push_subscription: {
-          ...profile.push_subscription,
-          last_notification: new Date().toISOString(),
-        },
-      })
-      .eq('id', user_id);
-
-    console.log(`[${requestId}] ✅ Notification logged successfully`);
-
+  // Check if notifications are enabled
+  if (!profile.push_subscription?.enabled) {
+    console.log(`[${ctx.requestId}] ℹ️ Notifications not enabled for user ${user_id}`);
+    ctx.metrics.mark('notifications_disabled');
     return new Response(JSON.stringify({ 
-      success: true,
-      message: 'Notification logged (push implementation requires VAPID setup)' 
+      error: 'Notifications not enabled for this user',
+      code: 'NOTIFICATIONS_DISABLED'
     }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-    });
-
-  } catch (error: any) {
-    console.error(`[${requestId}] ❌ Push notification error:`, error);
-    return new Response(JSON.stringify({ 
-      error: error.message,
-      code: 'SERVER_ERROR'
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 400,
+      headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' }
     });
   }
-});
+
+  // TODO: Implement Web Push API with VAPID keys
+  // For now, just log the notification
+  console.log(`[${ctx.requestId}] 📱 Push notification (logged):`, {
+    to: profile.email,
+    title,
+    body: messageBody,
+    data,
+  });
+
+  // Update last notification timestamp
+  await supabase
+    .from('profiles')
+    .update({
+      push_subscription: {
+        ...profile.push_subscription,
+        last_notification: new Date().toISOString(),
+      },
+    })
+    .eq('id', user_id);
+
+  console.log(`[${ctx.requestId}] ✅ Notification logged successfully`);
+  ctx.metrics.mark('notification_sent');
+
+  return new Response(JSON.stringify({ 
+    success: true,
+    message: 'Notification logged (push implementation requires VAPID setup)' 
+  }), {
+    status: 200,
+    headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' }
+  });
+};
+
+// Compose middleware stack
+const middlewareStack = createMiddlewareStack<Context>(
+  withRequestId,
+  withCORS,
+  withAuth,
+  withValidation(SendPushNotificationRequestSchema),
+  withRateLimit(RATE_LIMITS.SEND_PUSH_NOTIFICATION),
+  withMetrics('send-push-notification'),
+  withErrorHandling
+);
+
+serve(middlewareStack(handler));

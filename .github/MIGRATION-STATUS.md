@@ -14,7 +14,7 @@ This document tracks the progress of migrating all edge functions to use the sta
 
 ## Migration Status
 
-### ✅ Fully Migrated (13/29)
+### ✅ Fully Migrated (16/29)
 1. **checkout** - Complete middleware stack with CheckoutService
 2. **process-payouts** - Admin auth + rate limiting + PayoutService  
 3. **claim-route** - Driver auth + route validation
@@ -28,11 +28,9 @@ This document tracks the progress of migrating all edge functions to use the sta
 11. **send-notification** - Email notifications via Resend
 12. **check-stripe-connect** - Stripe account status verification
 13. **stripe-connect-onboard** - Stripe Connect account creation
-
-### 🔄 Partially Migrated (3/29)
-14. **stripe-webhook** - Has request ID logging, needs metrics + error handling
-15. **send-push-notification** - Has auth + rate limiting, needs metrics
-16. **generate-1099** - Has basic structure, needs full middleware
+14. **stripe-webhook** - Full middleware with signature verification + metrics
+15. **send-push-notification** - Auth + validation + rate limiting + metrics
+16. **generate-1099** - Admin auth + validation + rate limiting + PDF generation
 
 ### ⏳ Not Yet Migrated (13/29)
 17. **check-subscription** - Stripe subscription status checks
