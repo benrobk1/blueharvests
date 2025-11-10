@@ -185,7 +185,7 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
 };
 
 // Compose middleware stack
-const middlewareStack = createMiddlewareStack<Context>(
+const middlewareStack = createMiddlewareStack<Context>([
   withRequestId,
   withCORS,
   withAdminAuth,
@@ -193,6 +193,6 @@ const middlewareStack = createMiddlewareStack<Context>(
   withRateLimit(RATE_LIMITS.GENERATE_1099),
   withMetrics('generate-1099'),
   withErrorHandling
-);
+]);
 
-serve(middlewareStack(handler));
+serve((req) => middlewareStack(handler)(req, {} as Partial<Context>));

@@ -1,175 +1,118 @@
-/**
- * CREATE SUBSCRIPTION CHECKOUT EDGE FUNCTION
- * Creates Stripe checkout session for subscription with optional trial
- * 
- * Middleware Pattern:
- * - Request ID logging
- * - Authentication
- * - Rate limiting
- * - Input validation
- * - Stripe integration
- */
-
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import Stripe from 'https://esm.sh/stripe@18.5.0';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { loadConfig } from '../_shared/config.ts';
 import { RATE_LIMITS } from '../_shared/constants.ts';
-import { checkRateLimit } from '../_shared/rateLimiter.ts';
+import { 
+  withRequestId, 
+  withCORS, 
+  withAuth,
+  withValidation,
+  withRateLimit,
+  withErrorHandling, 
+  withMetrics,
+  createMiddlewareStack,
+  type RequestIdContext,
+  type CORSContext,
+  type AuthContext,
+  type MetricsContext,
+  type ValidationContext
+} from '../_shared/middleware/index.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+/**
+ * CREATE SUBSCRIPTION CHECKOUT EDGE FUNCTION
+ * 
+ * Creates Stripe checkout session for subscription with optional trial.
+ * Uses middleware pattern with full authentication and validation.
+ */
 
 // Validation schema
 const CreateSubscriptionCheckoutSchema = z.object({
   enable_trial: z.boolean().optional().default(false),
 });
 
-serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+type CreateSubscriptionCheckoutRequest = z.infer<typeof CreateSubscriptionCheckoutSchema>;
+
+type Context = RequestIdContext & CORSContext & AuthContext & MetricsContext & ValidationContext<CreateSubscriptionCheckoutRequest>;
+
+/**
+ * Main handler with middleware composition
+ */
+const handler = async (req: Request, ctx: Context): Promise<Response> => {
+  ctx.metrics.mark('checkout_creation_started');
+  
+  const config = loadConfig();
+  const user = ctx.user;
+  
+  if (!user.email) {
+    throw new Error('User email not available');
   }
 
-  // REQUEST ID - Correlation for logs
-  const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] [CREATE-SUBSCRIPTION-CHECKOUT] Request started`);
+  console.log(`[${ctx.requestId}] Creating subscription checkout for user ${user.id}`);
 
-  try {
-    // CONFIG LOADING
-    const config = loadConfig();
-    const supabase = createClient(config.supabase.url, config.supabase.anonKey);
+  const stripe = new Stripe(config.stripe.secretKey, {
+    apiVersion: '2023-10-16',
+  });
 
-    // AUTHENTICATION
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error(`[${requestId}] Missing authorization header`);
-      return new Response(
-        JSON.stringify({ error: 'UNAUTHORIZED', message: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  // Check for existing customer
+  const customers = await stripe.customers.list({
+    email: user.email,
+    limit: 1,
+  });
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  const customerId = customers.data.length > 0 ? customers.data[0].id : undefined;
+  console.log(`[${ctx.requestId}] Stripe customer: ${customerId || 'new'}`);
+  
+  ctx.metrics.mark(customerId ? 'existing_customer' : 'new_customer');
 
-    if (authError || !user) {
-      console.error(`[${requestId}] Authentication failed:`, authError?.message);
-      return new Response(
-        JSON.stringify({ error: 'UNAUTHORIZED', message: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  // Create checkout session config
+  const sessionConfig: Stripe.Checkout.SessionCreateParams = {
+    customer: customerId,
+    customer_email: customerId ? undefined : user.email,
+    line_items: [
+      {
+        price: 'price_1SMh7wDipsIpa8WwwtVag1ej',
+        quantity: 1,
+      },
+    ],
+    mode: 'subscription',
+    success_url: `${req.headers.get('origin')}/consumer/shop?subscription=success`,
+    cancel_url: `${req.headers.get('origin')}/consumer/shop?subscription=cancelled`,
+  };
 
-    if (!user.email) {
-      throw new Error('User email not available');
-    }
-
-    console.log(`[${requestId}] Authenticated user: ${user.id}`);
-
-    // RATE LIMITING
-    const rateCheck = await checkRateLimit(supabase, user.id, RATE_LIMITS.CREATE_SUBSCRIPTION);
-    if (!rateCheck.allowed) {
-      console.warn(`[${requestId}] Rate limit exceeded for user ${user.id}`);
-      return new Response(
-        JSON.stringify({
-          error: 'TOO_MANY_REQUESTS',
-          message: 'Too many requests. Please try again later.',
-          retryAfter: rateCheck.retryAfter,
-        }),
-        {
-          status: 429,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-            'Retry-After': String(rateCheck.retryAfter || 60),
-          },
-        }
-      );
-    }
-
-    // INPUT VALIDATION
-    const body = await req.json().catch(() => ({ enable_trial: false }));
-    const validation = CreateSubscriptionCheckoutSchema.safeParse(body);
-
-    if (!validation.success) {
-      console.warn(`[${requestId}] Validation failed:`, validation.error.flatten());
-      return new Response(
-        JSON.stringify({
-          error: 'VALIDATION_ERROR',
-          message: 'Request validation failed',
-          details: validation.error.flatten(),
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const input = validation.data;
-
-    // BUSINESS LOGIC - Stripe checkout creation
-    console.log(`[${requestId}] Creating subscription checkout for user ${user.id}`);
-
-    const stripe = new Stripe(config.stripe.secretKey, {
-      // Using account default API version for compatibility
-    });
-
-    // Check for existing customer
-    const customers = await stripe.customers.list({
-      email: user.email,
-      limit: 1,
-    });
-
-    const customerId = customers.data.length > 0 ? customers.data[0].id : undefined;
-    console.log(`[${requestId}] Stripe customer: ${customerId || 'new'}`);
-
-    // Create checkout session config
-    const sessionConfig: any = {
-      customer: customerId,
-      customer_email: customerId ? undefined : user.email,
-      line_items: [
-        {
-          price: 'price_1SMh7wDipsIpa8WwwtVag1ej',
-          quantity: 1,
-        },
-      ],
-      mode: 'subscription',
-      success_url: `${req.headers.get('origin')}/consumer/shop?subscription=success`,
-      cancel_url: `${req.headers.get('origin')}/consumer/shop?subscription=cancelled`,
+  // Add trial if requested
+  if (ctx.input.enable_trial) {
+    sessionConfig.subscription_data = {
+      trial_period_days: 60, // 2 months
     };
-
-    // Add trial if requested
-    if (input.enable_trial) {
-      sessionConfig.subscription_data = {
-        trial_period_days: 60, // 2 months
-      };
-      console.log(`[${requestId}] Trial enabled: 60 days`);
-    }
-
-    const session = await stripe.checkout.sessions.create(sessionConfig);
-
-    console.log(`[${requestId}] ✅ Checkout session created: ${session.id}`);
-
-    return new Response(
-      JSON.stringify({ url: session.url }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  } catch (error: any) {
-    console.error(`[create-subscription-checkout] Error:`, error);
-    return new Response(
-      JSON.stringify({
-        error: 'INTERNAL_ERROR',
-        message: error.message || 'An unexpected error occurred',
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    console.log(`[${ctx.requestId}] Trial enabled: 60 days`);
+    ctx.metrics.mark('trial_enabled');
   }
-});
+
+  const session = await stripe.checkout.sessions.create(sessionConfig);
+
+  console.log(`[${ctx.requestId}] ✅ Checkout session created: ${session.id}`);
+  ctx.metrics.mark('session_created');
+
+  return new Response(
+    JSON.stringify({ url: session.url }),
+    {
+      status: 200,
+      headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' },
+    }
+  );
+};
+
+// Compose middleware stack
+const middlewareStack = createMiddlewareStack<Context>([
+  withRequestId,
+  withCORS,
+  withAuth,
+  withValidation(CreateSubscriptionCheckoutSchema),
+  withRateLimit(RATE_LIMITS.CREATE_SUBSCRIPTION),
+  withMetrics('create-subscription-checkout'),
+  withErrorHandling
+]);
+
+serve((req) => middlewareStack(handler)(req, {} as Partial<Context>));

@@ -220,4 +220,4 @@ const middlewareStack = createMiddlewareStack<Context>(
   withErrorHandling
 );
 
-serve(middlewareStack(handler));
+serve((req) => middlewareStack(handler)(req, {} as Partial<Context>));

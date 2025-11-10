@@ -1,9 +1,23 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { loadConfig } from '../_shared/config.ts';
+import { 
+  withRequestId, 
+  withCORS, 
+  withErrorHandling, 
+  withMetrics,
+  createMiddlewareStack,
+  type RequestIdContext,
+  type CORSContext,
+  type MetricsContext
+} from '../_shared/middleware/index.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+/**
+ * SEED TEST USERS EDGE FUNCTION
+ * 
+ * Development utility to create test users for all roles.
+ * Requires service role key authentication.
+ */
 
 interface TestUser {
   email: string;
@@ -12,44 +26,56 @@ interface TestUser {
   full_name: string;
 }
 
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+type Context = RequestIdContext & CORSContext & MetricsContext;
 
-  try {
-    // Simple secret check for one-time seeding
-    const authHeader = req.headers.get('authorization');
-    const expectedSecret = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    
-    if (!authHeader || !authHeader.includes(expectedSecret || '')) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      );
-    }
-
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
+/**
+ * Main handler with middleware composition
+ */
+const handler = async (req: Request, ctx: Context): Promise<Response> => {
+  ctx.metrics.mark('seeding_started');
+  
+  const config = loadConfig();
+  
+  // Simple secret check for one-time seeding
+  const authHeader = req.headers.get('authorization');
+  const expectedSecret = config.supabase.serviceRoleKey;
+  
+  if (!authHeader || !authHeader.includes(expectedSecret)) {
+    console.error(`[${ctx.requestId}] ❌ Unauthorized seed attempt`);
+    ctx.metrics.mark('unauthorized_attempt');
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized', code: 'UNAUTHORIZED' }),
+      { 
+        headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' }, 
+        status: 401 
       }
     );
+  }
 
-    const testUsers: TestUser[] = [
-      { email: 'test-consumer@example.com', password: 'password123', role: 'consumer', full_name: 'Test Consumer' },
-      { email: 'test-farmer@example.com', password: 'password123', role: 'farmer', full_name: 'Test Farmer' },
-      { email: 'test-driver@example.com', password: 'password123', role: 'driver', full_name: 'Test Driver' },
-      { email: 'test-admin@example.com', password: 'password123', role: 'admin', full_name: 'Test Admin' },
-    ];
+  const supabaseAdmin = createClient(
+    config.supabase.url,
+    config.supabase.serviceRoleKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  );
 
-    const results = [];
+  const testUsers: TestUser[] = [
+    { email: 'test-consumer@example.com', password: 'password123', role: 'consumer', full_name: 'Test Consumer' },
+    { email: 'test-farmer@example.com', password: 'password123', role: 'farmer', full_name: 'Test Farmer' },
+    { email: 'test-driver@example.com', password: 'password123', role: 'driver', full_name: 'Test Driver' },
+    { email: 'test-admin@example.com', password: 'password123', role: 'admin', full_name: 'Test Admin' },
+  ];
 
-    for (const user of testUsers) {
+  console.log(`[${ctx.requestId}] Creating ${testUsers.length} test users`);
+
+  const results = [];
+
+  for (const user of testUsers) {
+    try {
       // Create auth user
       const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: user.email,
@@ -59,8 +85,9 @@ Deno.serve(async (req) => {
       });
 
       if (authError) {
-        console.error(`Error creating ${user.role}:`, authError);
+        console.error(`[${ctx.requestId}] Error creating ${user.role}:`, authError);
         results.push({ email: user.email, success: false, error: authError.message });
+        ctx.metrics.mark('user_creation_failed');
         continue;
       }
 
@@ -70,8 +97,9 @@ Deno.serve(async (req) => {
         .insert({ user_id: authUser.user.id, role: user.role });
 
       if (roleError) {
-        console.error(`Error assigning role to ${user.role}:`, roleError);
+        console.error(`[${ctx.requestId}] Error assigning role to ${user.role}:`, roleError);
         results.push({ email: user.email, success: false, error: roleError.message });
+        ctx.metrics.mark('role_assignment_failed');
         continue;
       }
 
@@ -86,18 +114,32 @@ Deno.serve(async (req) => {
           .eq('id', authUser.user.id);
       }
 
+      console.log(`[${ctx.requestId}] ✅ Created ${user.role}: ${user.email}`);
       results.push({ email: user.email, role: user.role, success: true });
+      ctx.metrics.mark(`user_created_${user.role}`);
+    } catch (error: any) {
+      console.error(`[${ctx.requestId}] Failed to create user ${user.email}:`, error);
+      results.push({ email: user.email, success: false, error: error.message });
+      ctx.metrics.mark('user_creation_error');
     }
-
-    return new Response(
-      JSON.stringify({ results }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-    );
   }
-});
+
+  const successCount = results.filter(r => r.success).length;
+  console.log(`[${ctx.requestId}] ✅ Seeding complete: ${successCount}/${testUsers.length} successful`);
+  ctx.metrics.mark('seeding_complete');
+
+  return new Response(
+    JSON.stringify({ results }),
+    { headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' } }
+  );
+};
+
+// Compose middleware stack (no auth needed - uses service role check)
+const middlewareStack = createMiddlewareStack<Context>([
+  withRequestId,
+  withCORS,
+  withMetrics('seed-test-users'),
+  withErrorHandling
+]);
+
+serve((req) => middlewareStack(handler)(req, {} as Partial<Context>));

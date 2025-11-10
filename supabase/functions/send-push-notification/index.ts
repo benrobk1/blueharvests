@@ -114,7 +114,7 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
 };
 
 // Compose middleware stack
-const middlewareStack = createMiddlewareStack<Context>(
+const middlewareStack = createMiddlewareStack<Context>([
   withRequestId,
   withCORS,
   withAuth,
@@ -122,6 +122,6 @@ const middlewareStack = createMiddlewareStack<Context>(
   withRateLimit(RATE_LIMITS.SEND_PUSH_NOTIFICATION),
   withMetrics('send-push-notification'),
   withErrorHandling
-);
+]);
 
-serve(middlewareStack(handler));
+serve((req) => middlewareStack(handler)(req, {} as Partial<Context>));
