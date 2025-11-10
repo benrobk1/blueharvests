@@ -30,6 +30,7 @@ import Financials from '@/pages/farmer/Financials';
 import MyLeadFarmer from '@/pages/farmer/MyLeadFarmer';
 import AffiliatedFarmers from '@/pages/farmer/AffiliatedFarmers';
 import CustomerAnalytics from '@/pages/farmer/CustomerAnalytics';
+import Monitoring from "./pages/admin/Monitoring";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AnalyticsAndFinancials from "./pages/admin/AnalyticsAndFinancials";
 import AdminRoles from "./pages/admin/AdminRoles";
@@ -266,6 +267,11 @@ const AppContent = () => {
           <Route path="/admin/tax-documents" element={
             <RoleGate roles={['admin']}>
               <TaxDocuments />
+            </RoleGate>
+          } />
+          <Route path="/admin/monitoring" element={
+            <RoleGate roles={['admin']}>
+              <Monitoring />
             </RoleGate>
           } />
           
