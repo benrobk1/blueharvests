@@ -2,6 +2,9 @@
  * REPORT DELIVERY ISSUE EDGE FUNCTION
  * Allows drivers and farmers to report delivery problems to admins
  * Sends immediate email and push notifications to all admins
+ * 
+ * Full Middleware Pattern:
+ * RequestId + CORS + Auth + RateLimit + Validation + ErrorHandling
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -9,12 +12,15 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
 import { loadConfig } from '../_shared/config.ts';
 import { RATE_LIMITS } from '../_shared/constants.ts';
-import { checkRateLimit } from '../_shared/rateLimiter.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import {
+  withRequestId,
+  withCORS,
+  withAuth,
+  withRateLimit,
+  withValidation,
+  withErrorHandling,
+  createMiddlewareStack,
+} from '../_shared/middleware/index.ts';
 
 const ReportIssueSchema = z.object({
   category: z.enum([
@@ -39,135 +45,77 @@ const ReportIssueSchema = z.object({
   photo_urls: z.array(z.string().url()).optional(),
 });
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+type ReportIssueContext = {
+  requestId: string;
+  corsHeaders: Record<string, string>;
+  user: any;
+  supabase: any;
+  input: z.infer<typeof ReportIssueSchema>;
+};
 
-  const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] [REPORT_ISSUE] Request started`);
+const handler = async (req: Request, ctx: ReportIssueContext) => {
+  const { requestId, corsHeaders, user, supabase, input } = ctx;
 
-  try {
-    const config = loadConfig();
-    const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
+  // Check user role
+  const { data: isDriver } = await supabase.rpc('has_role', {
+    _user_id: user.id,
+    _role: 'driver',
+  });
 
-    // Auth
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+  const { data: isFarmer } = await supabase.rpc('has_role', {
+    _user_id: user.id,
+    _role: 'farmer',
+  });
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'UNAUTHORIZED' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+  const { data: isLeadFarmer } = await supabase.rpc('has_role', {
+    _user_id: user.id,
+    _role: 'lead_farmer',
+  });
 
-    // Rate limiting
-    const rateCheck = await checkRateLimit(supabase, user.id, RATE_LIMITS.REPORT_ISSUE);
-    if (!rateCheck.allowed) {
-      return new Response(JSON.stringify({ 
-        error: 'TOO_MANY_REQUESTS',
-        retryAfter: rateCheck.retryAfter 
-      }), {
-        status: 429,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Validate input
-    const body = await req.json();
-    const validated = ReportIssueSchema.parse(body);
-
-    // Check user role
-    const { data: isDriver } = await supabase.rpc('has_role', {
-      _user_id: user.id,
-      _role: 'driver',
-    });
-
-    const { data: isFarmer } = await supabase.rpc('has_role', {
-      _user_id: user.id,
-      _role: 'farmer',
-    });
-
-    const { data: isLeadFarmer } = await supabase.rpc('has_role', {
-      _user_id: user.id,
-      _role: 'lead_farmer',
-    });
-
-    if (!isDriver && !isFarmer && !isLeadFarmer) {
-      return new Response(JSON.stringify({ 
-        error: 'FORBIDDEN',
-        message: 'Only drivers and farmers can report issues' 
-      }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const reporter_type = isDriver ? 'driver' : (isLeadFarmer ? 'lead_farmer' : 'farmer');
-
-    // Insert issue
-    const { data: issue, error: insertError } = await supabase
-      .from('delivery_issues')
-      .insert({
-        ...validated,
-        reporter_id: user.id,
-        reporter_type,
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error(`[${requestId}] Failed to insert issue:`, insertError);
-      throw insertError;
-    }
-
-    console.log(`[${requestId}] Issue created: ${issue.id}`);
-
-    // Notify admins
-    await notifyAdmins(supabase, issue, requestId);
-
-    // Notify affected customers
-    await notifyAffectedCustomers(supabase, issue, requestId);
-
-    return new Response(
-      JSON.stringify({ success: true, issue_id: issue.id }),
-      { 
-        status: 201, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
-    );
-
-  } catch (error: any) {
-    console.error(`[${requestId}] Error:`, error);
-    
-    if (error.name === 'ZodError') {
-      return new Response(JSON.stringify({ 
-        error: 'VALIDATION_ERROR',
-        details: error.errors 
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
+  if (!isDriver && !isFarmer && !isLeadFarmer) {
     return new Response(JSON.stringify({ 
-      error: 'INTERNAL_ERROR',
-      message: error.message 
+      error: 'FORBIDDEN',
+      message: 'Only drivers and farmers can report issues' 
     }), {
-      status: 500,
+      status: 403,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
-});
+
+  const reporter_type = isDriver ? 'driver' : (isLeadFarmer ? 'lead_farmer' : 'farmer');
+
+  // Insert issue
+  const { data: issue, error: insertError } = await supabase
+    .from('delivery_issues')
+    .insert({
+      ...input,
+      reporter_id: user.id,
+      reporter_type,
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error(`[${requestId}] Failed to insert issue:`, insertError);
+    throw insertError;
+  }
+
+  console.log(`[${requestId}] Issue created: ${issue.id}`);
+
+  // Notify admins
+  await notifyAdmins(supabase, issue, requestId);
+
+  // Notify affected customers
+  await notifyAffectedCustomers(supabase, issue, requestId);
+
+  return new Response(
+    JSON.stringify({ success: true, issue_id: issue.id }),
+    { 
+      status: 201, 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    }
+  );
+};
 
 async function notifyAdmins(supabase: any, issue: any, requestId: string) {
   const severityEmoji: Record<string, string> = {
@@ -242,6 +190,25 @@ async function notifyAdmins(supabase: any, issue: any, requestId: string) {
     }
   }
 }
+
+// Compose middleware manually
+const composed = withErrorHandling(
+  withRequestId(
+    withCORS(
+      withAuth(
+        withRateLimit(RATE_LIMITS.REPORT_ISSUE)(
+          withValidation(ReportIssueSchema)(handler)
+        )
+      )
+    )
+  )
+);
+
+serve(async (req) => {
+  const config = loadConfig();
+  const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
+  return composed(req, { supabase });
+});
 
 async function notifyAffectedCustomers(supabase: any, issue: any, requestId: string) {
   try {

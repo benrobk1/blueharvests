@@ -3,7 +3,7 @@
  * Allows drivers to claim available delivery batches
  * 
  * Full Middleware Pattern:
- * RequestId + Auth + Driver Check + RateLimit + Validation + ErrorHandling
+ * RequestId + CORS + Auth + DriverAuth + RateLimit + Validation + ErrorHandling
  */
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
@@ -11,106 +11,29 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { loadConfig } from '../_shared/config.ts';
 import { RATE_LIMITS } from '../_shared/constants.ts';
 import { ClaimRouteRequestSchema } from '../_shared/contracts/index.ts';
-import { checkRateLimit } from '../_shared/rateLimiter.ts';
+import {
+  withRequestId,
+  withCORS,
+  withAuth,
+  withDriverAuth,
+  withRateLimit,
+  withValidation,
+  withErrorHandling,
+  createMiddlewareStack,
+} from '../_shared/middleware/index.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+type ClaimRouteContext = {
+  requestId: string;
+  corsHeaders: Record<string, string>;
+  user: any;
+  supabase: any;
+  input: any;
 };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+const handler = async (req: Request, ctx: ClaimRouteContext) => {
+  const { requestId, corsHeaders, user, supabase, input } = ctx;
 
-  const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] [CLAIM-ROUTE] Request started`);
-
-  try {
-    const config = loadConfig();
-    const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
-
-    // Auth middleware
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error(`[${requestId}] Missing authorization header`);
-      return new Response(
-        JSON.stringify({ error: 'UNAUTHORIZED', message: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      console.error(`[${requestId}] Authentication failed:`, authError?.message);
-      return new Response(
-        JSON.stringify({ error: 'UNAUTHORIZED', message: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`[${requestId}] Authenticated user: ${user.id}`);
-
-    // Driver role check
-    const { data: isDriver, error: roleErr } = await supabase.rpc('has_role', {
-      _user_id: user.id,
-      _role: 'driver',
-    });
-
-    if (roleErr || !isDriver) {
-      console.warn(`[${requestId}] Driver role check failed for user ${user.id}`);
-      return new Response(
-        JSON.stringify({
-          error: 'DRIVER_ROLE_REQUIRED',
-          message: 'Driver role required to access this resource',
-        }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Rate limiting
-    const rateCheck = await checkRateLimit(supabase, user.id, RATE_LIMITS.CLAIM_ROUTE);
-    if (!rateCheck.allowed) {
-      console.warn(`[${requestId}] Rate limit exceeded for user ${user.id}`);
-      return new Response(
-        JSON.stringify({
-          error: 'TOO_MANY_REQUESTS',
-          message: 'Too many requests. Please try again later.',
-          retryAfter: rateCheck.retryAfter,
-        }),
-        {
-          status: 429,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-            'Retry-After': String(rateCheck.retryAfter || 60),
-          },
-        }
-      );
-    }
-
-    // Input validation
-    const body = await req.json();
-    const validation = ClaimRouteRequestSchema.safeParse(body);
-
-    if (!validation.success) {
-      console.warn(`[${requestId}] Validation failed:`, validation.error.flatten());
-      return new Response(
-        JSON.stringify({
-          error: 'VALIDATION_ERROR',
-          message: 'Request validation failed',
-          details: validation.error.flatten(),
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const input = validation.data;
-
-    // Business logic
-    console.log(`[${requestId}] Driver ${user.id} claiming batch ${input.batch_id}`);
+  console.log(`[${requestId}] Driver ${user.id} claiming batch ${input.batch_id}`);
 
     const { data: batch, error: loadErr } = await supabase
       .from('delivery_batches')
@@ -150,26 +73,34 @@ serve(async (req) => {
       throw new Error(`Failed to assign batch: ${updateErr.message}`);
     }
 
-    console.log(`[${requestId}] ✅ Batch ${input.batch_id} assigned to driver ${user.id}`);
+  console.log(`[${requestId}] ✅ Batch ${input.batch_id} assigned to driver ${user.id}`);
 
-    return new Response(
-      JSON.stringify({ success: true }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  } catch (error: any) {
-    console.error(`[claim-route] Error:`, error);
-    return new Response(
-      JSON.stringify({
-        error: 'INTERNAL_ERROR',
-        message: error.message || 'An unexpected error occurred',
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
-  }
+  return new Response(
+    JSON.stringify({ success: true }),
+    {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    }
+  );
+};
+
+// Compose middleware manually
+const composed = withErrorHandling(
+  withRequestId(
+    withCORS(
+      withAuth(
+        withDriverAuth(
+          withRateLimit(RATE_LIMITS.CLAIM_ROUTE)(
+            withValidation(ClaimRouteRequestSchema)(handler)
+          )
+        )
+      )
+    )
+  )
+);
+
+serve(async (req) => {
+  const config = loadConfig();
+  const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
+  return composed(req, { supabase, config });
 });

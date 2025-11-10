@@ -2,8 +2,16 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { loadConfig } from '../_shared/config.ts';
 import { RATE_LIMITS } from '../_shared/constants.ts';
-import { checkRateLimit } from '../_shared/rateLimiter.ts';
 import { BatchGenerationService } from '../_shared/services/BatchGenerationService.ts';
+import {
+  withRequestId,
+  withCORS,
+  withAuth,
+  withAdminAuth,
+  withRateLimit,
+  withErrorHandling,
+  createMiddlewareStack,
+} from '../_shared/middleware/index.ts';
 
 /**
  * GENERATE BATCHES EDGE FUNCTION
@@ -11,77 +19,23 @@ import { BatchGenerationService } from '../_shared/services/BatchGenerationServi
  * Creates optimized delivery batches for pending orders.
  * Uses OSRM for routing and 2-opt optimization.
  * Requires admin authentication.
+ * 
+ * Full Middleware Pattern:
+ * RequestId + CORS + Auth + AdminAuth + RateLimit + ErrorHandling
  */
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+type GenerateBatchesContext = {
+  requestId: string;
+  corsHeaders: Record<string, string>;
+  user: any;
+  supabase: any;
+  config: any;
 };
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+const handler = async (req: Request, ctx: GenerateBatchesContext) => {
+  const { requestId, corsHeaders, supabase, config } = ctx;
 
-  const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] [GENERATE-BATCHES] Request started`);
-
-  try {
-    const config = loadConfig();
-    const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
-
-    // Authenticate admin user
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'UNAUTHORIZED', code: 'UNAUTHORIZED' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: userData } = await supabase.auth.getUser(token);
-    const user = userData.user;
-    
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'UNAUTHORIZED', code: 'UNAUTHORIZED' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Check admin role
-    const { data: hasAdmin } = await supabase.rpc('has_role', {
-      _user_id: user.id,
-      _role: 'admin'
-    });
-
-    if (!hasAdmin) {
-      return new Response(JSON.stringify({ error: 'Admin access required', code: 'UNAUTHORIZED' }), {
-        status: 403,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Rate limiting
-    const rateCheck = await checkRateLimit(supabase, user.id, RATE_LIMITS.GENERATE_BATCHES);
-    if (!rateCheck.allowed) {
-      console.warn(`[${requestId}] ⚠️ Rate limit exceeded for user ${user.id}`);
-      return new Response(JSON.stringify({ 
-        error: 'TOO_MANY_REQUESTS', 
-        message: 'Too many requests. Please try again later.',
-        retryAfter: rateCheck.retryAfter,
-      }), {
-        status: 429,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json',
-          'Retry-After': String(rateCheck.retryAfter || 60),
-        }
-      });
-    }
-
-    console.log(`[${requestId}] Starting batch generation...`);
+  console.log(`[${requestId}] Starting batch generation...`);
 
     // Calculate tomorrow's date
     const tomorrow = new Date();
@@ -449,21 +403,29 @@ serve(async (req) => {
       errors: errors.length > 0 ? errors : undefined
     };
 
-    console.log(`[${requestId}] ✅ Batch generation complete:`, response);
+  console.log(`[${requestId}] ✅ Batch generation complete:`, response);
 
-    return new Response(JSON.stringify(response), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+  return new Response(JSON.stringify(response), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+};
 
-  } catch (error: any) {
-    console.error(`[${requestId}] ❌ Batch generation error:`, error);
-    return new Response(JSON.stringify({ 
-      error: 'SERVER_ERROR',
-      message: error.message 
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
+// Compose middleware manually
+const composed = withErrorHandling(
+  withRequestId(
+    withCORS(
+      withAuth(
+        withAdminAuth(
+          withRateLimit(RATE_LIMITS.GENERATE_BATCHES)(handler)
+        )
+      )
+    )
+  )
+);
+
+serve(async (req) => {
+  const config = loadConfig();
+  const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
+  return composed(req, { supabase, config });
 });
