@@ -168,4 +168,4 @@ const middlewareStack = createMiddlewareStack<Context>([
   withErrorHandling
 ]);
 
-serve((req) => middlewareStack(handler)(req, {} as Partial<Context>));
+serve((req) => middlewareStack(handler)(req, {} as any));

@@ -213,11 +213,11 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
 };
 
 // Compose middleware stack (no auth needed for webhooks)
-const middlewareStack = createMiddlewareStack<Context>(
+const middlewareStack = createMiddlewareStack<Context>([
   withRequestId,
   withCORS,
   withMetrics('stripe-webhook'),
   withErrorHandling
-);
+]);
 
-serve((req) => middlewareStack(handler)(req, {} as Partial<Context>));
+serve((req) => middlewareStack(handler)(req, {} as any));
