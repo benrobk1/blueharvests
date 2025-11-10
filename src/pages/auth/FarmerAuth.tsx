@@ -353,7 +353,7 @@ const FarmerAuth = () => {
                     <Input 
                       id="password" 
                       type="password" 
-                      placeholder="At least 6 characters" 
+                      placeholder="Enter your password" 
                       required 
                       value={formData.password}
                       onChange={(e) => {
@@ -363,7 +363,11 @@ const FarmerAuth = () => {
                       }}
                       className={passwordError ? 'border-destructive' : ''}
                     />
-                    {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
+                    {passwordError ? (
+                      <p className="text-xs text-destructive">{passwordError}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Must be at least 6 characters long</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password *</Label>

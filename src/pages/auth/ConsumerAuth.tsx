@@ -280,7 +280,7 @@ const ConsumerAuth = () => {
                       id="signupPassword" 
                       name="password" 
                       type="password" 
-                      placeholder="At least 6 characters" 
+                      placeholder="Enter your password" 
                       required 
                       onChange={(e) => {
                         validatePassword(e.target.value);
@@ -289,7 +289,11 @@ const ConsumerAuth = () => {
                       }}
                       className={passwordError ? 'border-destructive' : ''}
                     />
-                    {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
+                    {passwordError ? (
+                      <p className="text-xs text-destructive">{passwordError}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">Must be at least 6 characters long</p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password *</Label>

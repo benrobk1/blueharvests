@@ -153,6 +153,7 @@ const AdminAuth = () => {
                   placeholder="••••••••"
                   required 
                 />
+                {isSignUp && <p className="text-xs text-muted-foreground">Must be at least 6 characters long</p>}
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? (isSignUp ? "Creating Account..." : "Verifying...") : (isSignUp ? "Create Admin Account" : "Access Portal")}
