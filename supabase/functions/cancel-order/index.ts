@@ -3,7 +3,7 @@
  * Cancels orders with inventory restoration and cleanup
  * 
  * Full Middleware Pattern:
- * RequestId + Auth + RateLimit + Validation + ErrorHandling
+ * RequestId + CORS + Auth + RateLimit + Validation + ErrorHandling
  */
 
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
@@ -12,152 +12,96 @@ import { loadConfig } from '../_shared/config.ts';
 import { RATE_LIMITS } from '../_shared/constants.ts';
 import { CancelOrderRequestSchema } from '../_shared/contracts/index.ts';
 import { OrderCancellationService } from '../_shared/services/OrderCancellationService.ts';
-import { checkRateLimit } from '../_shared/rateLimiter.ts';
+import { 
+  withRequestId, 
+  withCORS, 
+  withAuth,
+  withValidation,
+  withRateLimit,
+  withErrorHandling, 
+  createMiddlewareStack,
+  type RequestIdContext,
+  type CORSContext,
+  type AuthContext,
+  type ValidationContext
+} from '../_shared/middleware/index.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+type CancelOrderInput = { orderId: string };
+type Context = RequestIdContext & CORSContext & AuthContext & ValidationContext<CancelOrderInput>;
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+/**
+ * Main handler with middleware composition
+ */
+const handler = async (req: Request, ctx: Context): Promise<Response> => {
+  const config = loadConfig();
+  const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
+  const user = ctx.user;
+  const { orderId } = ctx.input;
 
-  const requestId = crypto.randomUUID();
-  console.log(`[${requestId}] [CANCEL-ORDER] Request started`);
+  // Business logic
+  console.log(`[${ctx.requestId}] Cancelling order ${orderId} for user ${user.id}`);
+  const cancellationService = new OrderCancellationService(supabase);
 
   try {
-    const config = loadConfig();
-    const supabase = createClient(config.supabase.url, config.supabase.serviceRoleKey);
-
-    // Auth middleware
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      console.error(`[${requestId}] Missing authorization header`);
-      return new Response(
-        JSON.stringify({ error: 'UNAUTHORIZED', message: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-    if (authError || !user) {
-      console.error(`[${requestId}] Authentication failed:`, authError?.message);
-      return new Response(
-        JSON.stringify({ error: 'UNAUTHORIZED', message: 'Invalid or expired token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log(`[${requestId}] Authenticated user: ${user.id}`);
-
-    // Rate limiting
-    const rateCheck = await checkRateLimit(supabase, user.id, RATE_LIMITS.CANCEL_ORDER);
-    if (!rateCheck.allowed) {
-      console.warn(`[${requestId}] Rate limit exceeded for user ${user.id}`);
-      return new Response(
-        JSON.stringify({
-          error: 'TOO_MANY_REQUESTS',
-          message: 'Too many requests. Please try again later.',
-          retryAfter: rateCheck.retryAfter,
-        }),
-        {
-          status: 429,
-          headers: {
-            ...corsHeaders,
-            'Content-Type': 'application/json',
-            'Retry-After': String(rateCheck.retryAfter || 60),
-          },
-        }
-      );
-    }
-
-    // Input validation
-    const body = await req.json();
-    const validation = CancelOrderRequestSchema.safeParse(body);
-
-    if (!validation.success) {
-      console.warn(`[${requestId}] Validation failed:`, validation.error.flatten());
-      return new Response(
-        JSON.stringify({
-          error: 'VALIDATION_ERROR',
-          message: 'Request validation failed',
-          details: validation.error.flatten(),
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const input = validation.data;
-
-    // Business logic
-    console.log(`[${requestId}] Cancelling order ${input.orderId} for user ${user.id}`);
-    const cancellationService = new OrderCancellationService(supabase);
-
-    try {
-      await cancellationService.cancelOrder(input.orderId, user.id);
-    } catch (error: any) {
-      const errorMessage = error.message || 'Unknown error';
-
-      if (errorMessage.includes('ORDER_NOT_FOUND')) {
-        return new Response(
-          JSON.stringify({
-            error: 'ORDER_NOT_FOUND',
-            message: 'Order not found',
-          }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (errorMessage.includes('INVALID_STATUS')) {
-        return new Response(
-          JSON.stringify({
-            error: 'INVALID_STATUS',
-            message: errorMessage.split(': ')[1] || 'Cannot cancel order with current status',
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      if (errorMessage.includes('TOO_LATE_TO_CANCEL')) {
-        return new Response(
-          JSON.stringify({
-            error: 'TOO_LATE_TO_CANCEL',
-            message: 'Cannot cancel orders within 24 hours of delivery',
-          }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      throw error;
-    }
-
-    console.log(`[${requestId}] ✅ Order ${input.orderId} cancelled successfully`);
-
-    return new Response(
-      JSON.stringify({
-        success: true,
-        message: 'Order cancelled and deleted successfully',
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    await cancellationService.cancelOrder(orderId, user.id);
   } catch (error: any) {
-    console.error(`[cancel-order] Error:`, error);
-    return new Response(
-      JSON.stringify({
-        error: 'INTERNAL_ERROR',
-        message: error.message || 'An unexpected error occurred',
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
-    );
+    const errorMessage = error.message || 'Unknown error';
+
+    if (errorMessage.includes('ORDER_NOT_FOUND')) {
+      return new Response(
+        JSON.stringify({
+          error: 'ORDER_NOT_FOUND',
+          message: 'Order not found',
+        }),
+        { status: 404, headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (errorMessage.includes('INVALID_STATUS')) {
+      return new Response(
+        JSON.stringify({
+          error: 'INVALID_STATUS',
+          message: errorMessage.split(': ')[1] || 'Cannot cancel order with current status',
+        }),
+        { status: 400, headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (errorMessage.includes('TOO_LATE_TO_CANCEL')) {
+      return new Response(
+        JSON.stringify({
+          error: 'TOO_LATE_TO_CANCEL',
+          message: 'Cannot cancel orders within 24 hours of delivery',
+        }),
+        { status: 400, headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    throw error;
   }
-});
+
+  console.log(`[${ctx.requestId}] ✅ Order ${orderId} cancelled successfully`);
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      message: 'Order cancelled and deleted successfully',
+    }),
+    {
+      status: 200,
+      headers: { ...ctx.corsHeaders, 'Content-Type': 'application/json' },
+    }
+  );
+};
+
+// Compose middleware stack
+const middlewareStack = createMiddlewareStack<Context>([
+  withRequestId,
+  withCORS,
+  withAuth,
+  withRateLimit(RATE_LIMITS.CANCEL_ORDER),
+  withValidation(CancelOrderRequestSchema),
+  withErrorHandling
+]);
+
+serve((req) => middlewareStack(handler)(req, {} as any));
