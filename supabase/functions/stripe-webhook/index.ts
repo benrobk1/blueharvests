@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 
+import { requireStripe } from "../_shared/config.ts";
 import {
   createMiddlewareStack,
   withCORS,
@@ -26,6 +27,7 @@ const stack = createMiddlewareStack<StripeWebhookContext>([
 
 const handler = stack(async (req, ctx) => {
   const { corsHeaders, requestId, supabase, config } = ctx;
+  requireStripe(config);
 
   const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
 
