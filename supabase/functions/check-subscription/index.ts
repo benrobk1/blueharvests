@@ -37,6 +37,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { requireStripe } from "../_shared/config.ts";
 import {
   createMiddlewareStack,
   withAuth,
@@ -66,6 +67,7 @@ const stack = createMiddlewareStack<CheckSubscriptionContext>([
 
 const handler = stack(async (_req, ctx) => {
   const { supabase, corsHeaders, requestId, user, config } = ctx;
+  requireStripe(config);
 
   if (!user.email) {
     throw new Error('Authenticated user must include an email address');

@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 
+import { requireStripe } from "../_shared/config.ts";
 import {
   createMiddlewareStack,
   withAuth,
@@ -30,6 +31,7 @@ const stack = createMiddlewareStack<CheckStripeContext>([
 
 const handler = stack(async (_req, ctx) => {
   const { supabase, user, corsHeaders, requestId, config } = ctx;
+  requireStripe(config);
 
   const { data: profile } = await supabase
     .from('profiles')
