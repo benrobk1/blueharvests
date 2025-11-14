@@ -44,11 +44,11 @@ const handler = stack(async (req, ctx) => {
     );
   }
 
-  const { token, password, fullName } = payload;
+  const { token, password, fullName } = payload as Partial<AcceptInvitationRequest>;
 
-  if (!token || !password || !fullName) {
+  if (typeof token !== "string" || typeof password !== "string" || typeof fullName !== "string") {
     return new Response(
-      JSON.stringify({ error: "Missing required fields" }),
+      JSON.stringify({ error: "Missing or invalid required fields" }),
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
