@@ -72,6 +72,11 @@ const handler = stack(async (_req, ctx) => {
     throw new Error("Recipient tax ID type is missing");
   }
 
+  // Validate tax_id_last4 is present for recipient verification
+  if (!profile.tax_id_last4) {
+    throw new Error("Recipient tax ID last 4 digits not available");
+  }
+
   // Load payer information from company_settings
   const { data: payerInfo, error: payerError } = await supabase
     .from("company_settings")
@@ -183,11 +188,9 @@ const handler = stack(async (_req, ctx) => {
     font,
   });
 
-  // Use placeholder for last-4 digits since tax_id_encrypted is ciphertext
-  // and doesn't contain actual digits. A dedicated tax_id_last4 field
-  // would be needed to show real last-4 digits.
+  // Use tax_id_last4 for recipient verification on 1099 forms
   const taxIdType = profile.tax_id_type.toUpperCase();
-  const taxIdDisplay = `${taxIdType}: XXX-XX-XXXX`;
+  const taxIdDisplay = `${taxIdType}: XXX-XX-${profile.tax_id_last4}`;
 
   page.drawText(taxIdDisplay, {
     x: 350,
