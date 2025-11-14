@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import type { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
+import { requireStripe } from "../_shared/config.ts";
 import { CheckoutRequestSchema } from "../_shared/contracts/checkout.ts";
 import { CheckoutError, CheckoutService } from "../_shared/services/CheckoutService.ts";
 import {
@@ -45,6 +46,7 @@ const stack = createMiddlewareStack<CheckoutContext>([
 
 const handler = stack(async (req, ctx) => {
   const { supabase, corsHeaders, requestId, user, config, input } = ctx;
+  requireStripe(config);
 
   console.log(
     `[${requestId}] [CHECKOUT] Processing checkout for cart ${input.cart_id}`,

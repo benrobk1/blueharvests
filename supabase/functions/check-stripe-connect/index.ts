@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 
+import { requireStripe } from "../_shared/config.ts";
 import {
   createMiddlewareStack,
   withAuth,
@@ -30,12 +31,18 @@ const stack = createMiddlewareStack<CheckStripeContext>([
 
 const handler = stack(async (_req, ctx) => {
   const { supabase, user, corsHeaders, requestId, config } = ctx;
+  requireStripe(config);
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('stripe_connect_account_id')
     .eq('id', user.id)
     .single();
+
+  if (profileError) {
+    console.error(`[${requestId}] [CHECK-STRIPE-CONNECT] Failed to load profile`, profileError);
+    throw profileError;
+  }
 
   if (!profile?.stripe_connect_account_id) {
     return new Response(JSON.stringify({
@@ -56,7 +63,7 @@ const handler = stack(async (_req, ctx) => {
   const chargesEnabled = account.charges_enabled ?? false;
   const payoutsEnabled = account.payouts_enabled ?? false;
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('profiles')
     .update({
       stripe_onboarding_complete: onboardingComplete,
@@ -64,6 +71,11 @@ const handler = stack(async (_req, ctx) => {
       stripe_payouts_enabled: payoutsEnabled
     })
     .eq('id', user.id);
+
+  if (updateError) {
+    console.error(`[${requestId}] [CHECK-STRIPE-CONNECT] Failed to update profile`, updateError);
+    throw updateError;
+  }
 
   console.log(`[${requestId}] [CHECK-STRIPE-CONNECT] Updated status for user ${user.id}`, {
     onboardingComplete,

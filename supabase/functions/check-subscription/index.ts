@@ -37,6 +37,7 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
+import { requireStripe } from "../_shared/config.ts";
 import {
   createMiddlewareStack,
   withAuth,
@@ -66,6 +67,7 @@ const stack = createMiddlewareStack<CheckSubscriptionContext>([
 
 const handler = stack(async (_req, ctx) => {
   const { supabase, corsHeaders, requestId, user, config } = ctx;
+  requireStripe(config);
 
   if (!user.email) {
     throw new Error('Authenticated user must include an email address');
@@ -116,17 +118,21 @@ const handler = stack(async (_req, ctx) => {
 
   const subscriptions = await stripe.subscriptions.list({
     customer: customerId,
-    status: 'active',
+    status: 'all',
     limit: 1,
   });
 
-  const hasActiveSub = subscriptions.data.length > 0;
+  // Filter for active or trialing subscriptions only
+  const validSubscription = subscriptions.data.find(
+    sub => sub.status === 'active' || sub.status === 'trialing'
+  );
+  const hasActiveSub = validSubscription !== undefined;
   let subscriptionEnd: string | null = null;
   let trialEnd: string | null = null;
   let isTrialing = false;
 
-  if (hasActiveSub) {
-    const subscription = subscriptions.data[0];
+  if (hasActiveSub && validSubscription) {
+    const subscription = validSubscription;
     subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
     isTrialing = subscription.status === 'trialing';
 

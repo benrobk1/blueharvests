@@ -9,7 +9,7 @@ export interface EdgeFunctionConfig {
     url: string;
     serviceRoleKey: string;
   };
-  stripe: {
+  stripe?: {
     secretKey: string;
     // No apiVersion = use account default (safest)
   };
@@ -63,14 +63,15 @@ export function loadConfig(): EdgeFunctionConfig {
   if (!supabaseServiceRoleKey) {
     throw new Error('❌ SUPABASE_SERVICE_ROLE_KEY is required. Check your Lovable Cloud configuration.');
   }
-  if (!stripeSecretKey) {
-    throw new Error('❌ STRIPE_SECRET_KEY is required. Add it in Lovable Cloud Secrets UI.');
-  }
 
   // Optional env vars - log warnings but continue
   const mapboxToken = Deno.env.get('MAPBOX_PUBLIC_TOKEN');
   const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
   const sentryDsn = Deno.env.get('SENTRY_DSN');
+  
+  if (!stripeSecretKey) {
+    console.warn('⚠️  STRIPE_SECRET_KEY not configured - payment processing endpoints will fail');
+  }
   
   if (!mapboxToken) {
     console.warn('⚠️  MAPBOX_PUBLIC_TOKEN not configured - geocoding will use ZIP fallbacks');
@@ -89,12 +90,23 @@ export function loadConfig(): EdgeFunctionConfig {
       url: supabaseUrl,
       serviceRoleKey: supabaseServiceRoleKey,
     },
-    stripe: {
+    stripe: stripeSecretKey ? {
       secretKey: stripeSecretKey,
       // No apiVersion specified = use Stripe account default (safest)
-    },
+    } : undefined,
     mapbox: mapboxToken ? { publicToken: mapboxToken } : undefined,
     lovable: lovableApiKey ? { apiKey: lovableApiKey } : undefined,
     sentry: sentryDsn ? { dsn: sentryDsn } : undefined,
   };
+}
+
+/**
+ * Validate that Stripe configuration is present
+ * Call this from edge functions that require Stripe integration
+ * @throws Error if Stripe is not configured
+ */
+export function requireStripe(config: EdgeFunctionConfig): asserts config is EdgeFunctionConfig & { stripe: { secretKey: string } } {
+  if (!config.stripe?.secretKey) {
+    throw new Error('❌ STRIPE_SECRET_KEY is required for this endpoint. Add it in Lovable Cloud Secrets UI.');
+  }
 }

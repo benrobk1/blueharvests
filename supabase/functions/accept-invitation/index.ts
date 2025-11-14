@@ -44,11 +44,11 @@ const handler = stack(async (req, ctx) => {
     );
   }
 
-  const { token, password, fullName } = payload;
+  const { token, password, fullName } = payload as Partial<AcceptInvitationRequest>;
 
-  if (!token || !password || !fullName) {
+  if (typeof token !== "string" || typeof password !== "string" || typeof fullName !== "string") {
     return new Response(
-      JSON.stringify({ error: "Missing required fields" }),
+      JSON.stringify({ error: "Missing or invalid required fields" }),
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -68,16 +68,18 @@ const handler = stack(async (req, ctx) => {
 
   console.log(`[${requestId}] [ACCEPT-INVITATION] Processing token: ${token.substring(0, 8)}...`);
 
-  // Fetch and validate invitation
-  const { data: invitation, error: invitationError } = await supabase
+  // Atomically consume the token: mark as used with WHERE used_at IS NULL
+  // This prevents race conditions and ensures token can only be used once
+  const { data: consumedInvitations, error: consumeError } = await supabase
     .from("admin_invitations")
-    .select("*")
+    .update({ used_at: new Date().toISOString() })
     .eq("invitation_token", token)
     .is("used_at", null)
-    .single();
+    .gte("expires_at", new Date().toISOString())
+    .select("*");
 
-  if (invitationError || !invitation) {
-    console.error(`[${requestId}] [ACCEPT-INVITATION] Invalid token:`, invitationError);
+  if (consumeError) {
+    console.error(`[${requestId}] [ACCEPT-INVITATION] Error consuming token:`, consumeError);
     return new Response(
       JSON.stringify({ error: "Invalid or expired invitation" }),
       {
@@ -87,10 +89,11 @@ const handler = stack(async (req, ctx) => {
     );
   }
 
-  if (new Date(invitation.expires_at) < new Date()) {
-    console.error(`[${requestId}] [ACCEPT-INVITATION] Token expired`);
+  // Verify exactly one row was affected (token exists, unused, and not expired)
+  if (!consumedInvitations || consumedInvitations.length !== 1) {
+    console.error(`[${requestId}] [ACCEPT-INVITATION] Token already used or invalid`);
     return new Response(
-      JSON.stringify({ error: "This invitation has expired" }),
+      JSON.stringify({ error: "Invalid or expired invitation" }),
       {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -98,7 +101,8 @@ const handler = stack(async (req, ctx) => {
     );
   }
 
-  console.log(`[${requestId}] [ACCEPT-INVITATION] Creating user for ${invitation.email}`);
+  const invitation = consumedInvitations[0];
+  console.log(`[${requestId}] [ACCEPT-INVITATION] Token consumed, creating user for ${invitation.email}`);
 
   const { data: authData, error: authError } = await supabase.auth.admin.createUser({
     email: invitation.email,
@@ -143,17 +147,25 @@ const handler = stack(async (req, ctx) => {
 
   console.log(`[${requestId}] [ACCEPT-INVITATION] Admin role assigned`);
 
-  await supabase
-    .from("admin_invitations")
-    .update({ used_at: new Date().toISOString() })
-    .eq("invitation_token", token);
-
   if (invitation.invited_by) {
-    await supabase.rpc("log_admin_action", {
+    const { error: logError } = await supabase.rpc("log_admin_action", {
       _action_type: "admin_invitation_accepted",
       _target_user_id: authData.user.id,
       _new_value: { email: invitation.email, full_name: fullName },
     });
+
+    if (logError) {
+      console.error(
+        `[${requestId}] [ACCEPT-INVITATION] Failed to log admin action`,
+        {
+          error: logError,
+          invited_by: invitation.invited_by,
+          target_user_id: authData.user.id,
+          email: invitation.email,
+          full_name: fullName,
+        }
+      );
+    }
   }
 
   console.log(`[${requestId}] [ACCEPT-INVITATION] Success for ${invitation.email}`);

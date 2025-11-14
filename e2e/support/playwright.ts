@@ -23,33 +23,46 @@ try {
   
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const skipTest = (title: string, fn?: (...args: unknown[]) => unknown) => bun.test.skip(title, fn as any);
-
-  // Type the stub to match Playwright's test interface as closely as possible
-  const stubTest = ((title: string, fn?: (...args: unknown[]) => unknown) => skipTest(title, fn)) as PlaywrightTest;
-  
-  // Assign properties to match Playwright test API
-  // Using 'as any' is necessary here to dynamically add properties to the function
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const testStub = stubTest as any;
-  testStub.skip = skipTest;
-  testStub.only = skipTest;
-  testStub.fixme = skipTest;
-  
   const noop = () => {};
-  testStub.describe = Object.assign(noop, {
-    skip: noop,
-    only: noop,
-    parallel: noop
-  });
-  
-  testStub.step = async <T>(_: string, body: () => Promise<T> | T) => body();
-  testStub.use = () => {};
-  testStub.beforeAll = (...args: Parameters<typeof bun.beforeAll>) => bun.beforeAll?.(...args);
-  testStub.afterAll = (...args: Parameters<typeof bun.afterAll>) => bun.afterAll?.(...args);
-  testStub.beforeEach = (...args: Parameters<typeof bun.beforeEach>) => bun.beforeEach?.(...args);
-  testStub.afterEach = (...args: Parameters<typeof bun.afterEach>) => bun.afterEach?.(...args);
 
-  test = stubTest;
+  // Use Proxy for cleaner stub implementation while maintaining type safety
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const stubTest: any = new Proxy(
+    (title: string, fn?: (...args: unknown[]) => unknown) => skipTest(title, fn),
+    {
+      get(target, prop) {
+        if (prop === 'describe') {
+          return Object.assign(noop, {
+            skip: noop,
+            only: noop,
+            parallel: noop
+          });
+        }
+        if (prop === 'step') {
+          return async <T>(_: string, body: () => Promise<T> | T) => body();
+        }
+        if (prop === 'use') {
+          return noop;
+        }
+        if (prop === 'beforeAll') {
+          return (...args: Parameters<typeof bun.beforeAll>) => bun.beforeAll?.(...args);
+        }
+        if (prop === 'afterAll') {
+          return (...args: Parameters<typeof bun.afterAll>) => bun.afterAll?.(...args);
+        }
+        if (prop === 'beforeEach') {
+          return (...args: Parameters<typeof bun.beforeEach>) => bun.beforeEach?.(...args);
+        }
+        if (prop === 'afterEach') {
+          return (...args: Parameters<typeof bun.afterEach>) => bun.afterEach?.(...args);
+        }
+        // Default: return skipTest for any unknown property
+        return skipTest;
+      }
+    }
+  );
+
+  test = stubTest as PlaywrightTest;
   
   // Type the expect stub to match Playwright's expect interface
   expect = (() => {
