@@ -9,9 +9,10 @@
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "test:edge-functions": "deno test --allow-env --allow-net supabase/functions/__tests__/"
+    "test:edge-functions": "deno test --allow-net --allow-env supabase/functions/__tests__/"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
@@ -61,7 +62,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
-    "date-fns": "^4.1.0",
+    "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
     "jsdom": "^27.0.1",
