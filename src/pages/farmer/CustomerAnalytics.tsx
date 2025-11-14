@@ -9,8 +9,47 @@ import { useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatMoney } from '@/lib/formatMoney';
 import { farmerQueries } from '@/features/farmers';
+import type { CustomerZipSummary } from '@/features/farmers';
+import type { Database } from '@/integrations/supabase/types';
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))'];
+
+type OrderWithZip = Database['public']['Tables']['orders']['Row'] & {
+  profiles: Pick<Database['public']['Tables']['profiles']['Row'], 'zip_code'> | null;
+};
+
+function summarizeOrdersByZip(orders: OrderWithZip[] = []): CustomerZipSummary[] {
+  const zipMap = new Map<
+    string,
+    { order_count: number; total_revenue: number; uniqueCustomers: Set<string> }
+  >();
+
+  orders.forEach(order => {
+    const zip = order.profiles?.zip_code;
+    if (!zip) return;
+
+    const summary = zipMap.get(zip) ?? {
+      order_count: 0,
+      total_revenue: 0,
+      uniqueCustomers: new Set<string>(),
+    };
+
+    summary.order_count += 1;
+    summary.total_revenue += Number(order.total_amount ?? 0);
+    if (order.consumer_id) {
+      summary.uniqueCustomers.add(order.consumer_id);
+    }
+
+    zipMap.set(zip, summary);
+  });
+
+  return Array.from(zipMap.entries()).map(([zip, data]) => ({
+    zip_code: zip,
+    order_count: data.order_count,
+    total_revenue: data.total_revenue,
+    unique_customers: data.uniqueCustomers.size,
+  }));
+}
 
 // Demo data for Milton zip code with customer details
 const DEMO_ZIP_DATA = [
@@ -82,37 +121,10 @@ export default function CustomerAnalytics() {
             )
           `)
           .in('order_items.products.farm_profile_id', farmProfileIds)
-          .eq('status', 'delivered');
+          .eq('status', 'delivered')
+          .returns<OrderWithZip[]>();
 
-        if (!orders?.length) return [];
-
-        // Aggregate by zip code
-        const zipMap = new Map();
-        orders.forEach(order => {
-          const zip = order.profiles?.zip_code;
-          if (!zip) return;
-
-          if (!zipMap.has(zip)) {
-            zipMap.set(zip, {
-              zip_code: zip,
-              order_count: 0,
-              total_revenue: 0,
-              unique_customers: new Set(),
-            });
-          }
-
-          const zipData = zipMap.get(zip);
-          zipData.order_count++;
-          zipData.total_revenue += Number(order.total_amount);
-          zipData.unique_customers.add(order.consumer_id);
-        });
-
-        return Array.from(zipMap.values()).map(data => ({
-          zip_code: data.zip_code,
-          order_count: data.order_count,
-          total_revenue: data.total_revenue,
-          unique_customers: data.unique_customers.size,
-        }));
+        return summarizeOrdersByZip(orders ?? []);
 
       } else {
         // For regular farmers, get their own farm's data
@@ -140,43 +152,16 @@ export default function CustomerAnalytics() {
             )
           `)
           .eq('order_items.products.farm_profile_id', farmProfile.id)
-          .eq('status', 'delivered');
+          .eq('status', 'delivered')
+          .returns<OrderWithZip[]>();
 
-        if (!orders?.length) return [];
-
-        // Aggregate by zip code
-        const zipMap = new Map();
-        orders.forEach(order => {
-          const zip = order.profiles?.zip_code;
-          if (!zip) return;
-
-          if (!zipMap.has(zip)) {
-            zipMap.set(zip, {
-              zip_code: zip,
-              order_count: 0,
-              total_revenue: 0,
-              unique_customers: new Set(),
-            });
-          }
-
-          const zipData = zipMap.get(zip);
-          zipData.order_count++;
-          zipData.total_revenue += Number(order.total_amount);
-          zipData.unique_customers.add(order.consumer_id);
-        });
-
-        return Array.from(zipMap.values()).map(data => ({
-          zip_code: data.zip_code,
-          order_count: data.order_count,
-          total_revenue: data.total_revenue,
-          unique_customers: data.unique_customers.size,
-        }));
+        return summarizeOrdersByZip(orders ?? []);
       }
     },
     enabled: !!user?.id,
   });
 
-  const displayZipData = zipCodeData || [];
+  const displayZipData: CustomerZipSummary[] = zipCodeData || [];
 
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: farmerQueries.customerSummary(user?.id || '', displayZipData),
@@ -185,9 +170,15 @@ export default function CustomerAnalytics() {
         return { totalCustomers: 0, totalOrders: 0, totalRevenue: 0, avgOrderValue: 0 };
       }
 
-      const totalCustomers = displayZipData.reduce((sum: number, z: any) => sum + Number(z.unique_customers), 0);
-      const totalOrders = displayZipData.reduce((sum: number, z: any) => sum + Number(z.order_count), 0);
-      const totalRevenue = displayZipData.reduce((sum: number, z: any) => sum + Number(z.total_revenue), 0);
+      const totalCustomers = displayZipData.reduce(
+        (sum, zip) => sum + Number(zip.unique_customers),
+        0
+      );
+      const totalOrders = displayZipData.reduce((sum, zip) => sum + Number(zip.order_count), 0);
+      const totalRevenue = displayZipData.reduce(
+        (sum, zip) => sum + Number(zip.total_revenue),
+        0
+      );
 
       return {
         totalCustomers,
