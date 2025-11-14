@@ -20,29 +20,34 @@ try {
 } catch (error) {
   hasPlaywright = false;
   const bun = await import('bun:test');
-  const skipTest = (title: string, fn?: (...args: any[]) => unknown) => bun.test.skip(title, fn as any);
+  
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const skipTest = (title: string, fn?: (...args: unknown[]) => unknown) => bun.test.skip(title, fn as any);
 
   // Type the stub to match Playwright's test interface as closely as possible
-  const stubTest = ((title: string, fn?: (...args: any[]) => unknown) => skipTest(title, fn)) as PlaywrightTest;
+  const stubTest = ((title: string, fn?: (...args: unknown[]) => unknown) => skipTest(title, fn)) as PlaywrightTest;
   
   // Assign properties to match Playwright test API
-  (stubTest as any).skip = skipTest;
-  (stubTest as any).only = skipTest;
-  (stubTest as any).fixme = skipTest;
+  // Using 'as any' is necessary here to dynamically add properties to the function
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const testStub = stubTest as any;
+  testStub.skip = skipTest;
+  testStub.only = skipTest;
+  testStub.fixme = skipTest;
   
   const noop = () => {};
-  (stubTest as any).describe = Object.assign(noop, {
+  testStub.describe = Object.assign(noop, {
     skip: noop,
     only: noop,
     parallel: noop
   });
   
-  (stubTest as any).step = async <T>(_: string, body: () => Promise<T> | T) => body();
-  (stubTest as any).use = () => {};
-  (stubTest as any).beforeAll = (...args: Parameters<typeof bun.beforeAll>) => bun.beforeAll?.(...args);
-  (stubTest as any).afterAll = (...args: Parameters<typeof bun.afterAll>) => bun.afterAll?.(...args);
-  (stubTest as any).beforeEach = (...args: Parameters<typeof bun.beforeEach>) => bun.beforeEach?.(...args);
-  (stubTest as any).afterEach = (...args: Parameters<typeof bun.afterEach>) => bun.afterEach?.(...args);
+  testStub.step = async <T>(_: string, body: () => Promise<T> | T) => body();
+  testStub.use = () => {};
+  testStub.beforeAll = (...args: Parameters<typeof bun.beforeAll>) => bun.beforeAll?.(...args);
+  testStub.afterAll = (...args: Parameters<typeof bun.afterAll>) => bun.afterAll?.(...args);
+  testStub.beforeEach = (...args: Parameters<typeof bun.beforeEach>) => bun.beforeEach?.(...args);
+  testStub.afterEach = (...args: Parameters<typeof bun.afterEach>) => bun.afterEach?.(...args);
 
   test = stubTest;
   
