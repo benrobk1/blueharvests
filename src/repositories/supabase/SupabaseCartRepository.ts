@@ -10,7 +10,7 @@ import type { ShoppingCart, SavedCart } from '@/features/cart/types';
 
 export class SupabaseCartRepository implements ICartRepository {
   async getOrCreateCart(consumerId: string): Promise<ShoppingCart> {
-    let { data: existingCart, error: fetchError } = await supabase
+    const { data: existingCart, error: fetchError } = await supabase
       .from('shopping_carts')
       .select(`
         *,
