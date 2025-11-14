@@ -101,10 +101,18 @@ const handler = stack(async (req, ctx) => {
 
     accountId = account.id;
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('profiles')
       .update({ stripe_connect_account_id: accountId })
       .eq('id', user.id);
+
+    if (updateError) {
+      console.error(`[${requestId}] [STRIPE-CONNECT-ONBOARD] Failed to persist accountId`, updateError);
+      return new Response(JSON.stringify({ error: 'Failed to persist Stripe account' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
   }
 
   const origin = req.headers.get('origin') || 'http://localhost:3000';
