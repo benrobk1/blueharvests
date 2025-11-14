@@ -9,7 +9,11 @@ import { assertEquals } from 'https://deno.land/std@0.192.0/testing/asserts.ts';
 import { withAuth } from '../_shared/middleware/withAuth.ts';
 import { withAdminAuth } from '../_shared/middleware/withAdminAuth.ts';
 import { withDriverAuth } from '../_shared/middleware/withDriverAuth.ts';
+import { withRateLimit } from '../_shared/middleware/withRateLimit.ts';
+import { withValidation } from '../_shared/middleware/withValidation.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts';
+import { RATE_LIMITS } from '../_shared/constants.ts';
 
 // Mock Supabase client
 const mockSupabase = createClient('https://test.supabase.co', 'test-key');
@@ -92,6 +96,46 @@ Deno.test('withDriverAuth - allows OPTIONS requests without authentication', asy
   const response = await handler(req, ctx);
 
   // Should pass through to handler without role check
+  assertEquals(response.status, 200);
+  const body = await response.text();
+  assertEquals(body, 'OK');
+});
+
+Deno.test('withRateLimit - allows OPTIONS requests without rate limiting', async () => {
+  const handler = withRateLimit(RATE_LIMITS.GENERAL)(async (req, ctx) => {
+    return new Response('OK', { status: 200 });
+  });
+
+  const req = new Request('https://test.com/test', { method: 'OPTIONS' });
+  const ctx = { 
+    supabase: mockSupabase,
+    user: { id: 'test-user' } as any 
+  };
+  
+  const response = await handler(req, ctx);
+
+  // Should pass through without checking rate limits
+  assertEquals(response.status, 200);
+  const body = await response.text();
+  assertEquals(body, 'OK');
+});
+
+Deno.test('withValidation - allows OPTIONS requests without validation', async () => {
+  const TestSchema = z.object({
+    email: z.string().email(),
+    amount: z.number().positive(),
+  });
+
+  const handler = withValidation(TestSchema)(async (req, ctx) => {
+    return new Response('OK', { status: 200 });
+  });
+
+  const req = new Request('https://test.com/test', { method: 'OPTIONS' });
+  const ctx = { corsHeaders: {} };
+  
+  const response = await handler(req, ctx);
+
+  // Should pass through without validation
   assertEquals(response.status, 200);
   const body = await response.text();
   assertEquals(body, 'OK');
