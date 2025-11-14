@@ -158,7 +158,7 @@ const handler = stack(async (req, ctx) => {
         email: invitation.email,
       }
     );
-    throw markUsedError;
+    // Don't throw - user creation succeeded; log for manual cleanup
   }
 
   if (invitation.invited_by) {
