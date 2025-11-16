@@ -40,6 +40,10 @@
 
 `createMiddlewareStack` enforces **left-to-right execution**. The first middleware in the array
 executes first, and each successive middleware receives the context produced by upstream layers.
+Internally the factory reverses the array before composition so the public API remains intuitive
+(top-to-bottom ordering) while still leveraging the `composeMiddleware` reduce-right
+implementation. The result: the array you pass in is the array you reason about, with no mental
+gymnastics about reversed execution order.
 
 ## Request lifecycle
 
