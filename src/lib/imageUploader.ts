@@ -44,15 +44,15 @@ export async function uploadImageFromUrl(
     const fileName = `${farmProfileId}/${productName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.${fileExt}`;
     
     // Upload to Supabase storage (product-images bucket)
-    const { data, error } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('product-images')
       .upload(fileName, blob, {
         contentType: blob.type,
         upsert: false,
       });
-    
-    if (error) {
-      return { success: false, error: error.message };
+
+    if (uploadError) {
+      return { success: false, error: uploadError.message };
     }
     
     // Get public URL
