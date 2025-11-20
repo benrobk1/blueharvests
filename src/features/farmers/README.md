@@ -172,7 +172,7 @@ Lead farmers manage collection points where multiple farmers deliver products.
 ### Responsibilities
 - Provide collection point address
 - Coordinate batch pickup times
-- Receive 2% commission on affiliated farmer sales
+- Receive 5% commission on affiliated farmer sales
 - Consolidate orders from multiple farms
 
 ### Affiliate Management

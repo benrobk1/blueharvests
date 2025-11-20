@@ -615,8 +615,8 @@ export class CheckoutService {
       const product = item.products;
       const farmProfile = product.farm_profiles;
       const itemTotal = product.price * item.quantity;
-      const farmerShare = itemTotal * 0.88; // 88%
-      const leadFarmerShare = itemTotal * 0.02; // 2%
+      const farmerShare = itemTotal * 0.85; // 85%
+      const leadFarmerShare = itemTotal * 0.05; // 5%
 
       farmerPayouts.set(farmProfile.farmer_id, (farmerPayouts.get(farmProfile.farmer_id) || 0) + farmerShare);
     }

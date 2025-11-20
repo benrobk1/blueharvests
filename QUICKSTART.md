@@ -120,7 +120,7 @@ src/contracts/checkout.ts                         → Type-safe contracts
 
 **Key concepts:**
 - **Middleware pattern:** Request flows through auth → validation → business logic
-- **Revenue splits:** 88% farmer, 2% lead farmer, 10% platform
+- **Revenue splits:** 85% farmer, 5% lead farmer, 10% platform
 - **Stripe integration:** PaymentIntent creation and confirmation
 - **Inventory validation:** Checks stock availability before order creation
 
