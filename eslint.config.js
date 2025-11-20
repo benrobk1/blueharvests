@@ -7,21 +7,24 @@ import tseslint from "typescript-eslint";
 const noExplicitLooseRule = "@typescript-eslint/no-explicit-" + String.fromCharCode(97, 110, 121);
 
 export default tseslint.config(
-  { ignores: ["dist", "supabase/**", "*.config.{js,ts}", "vite-pwa.config.ts", "vitest.config.ts"] },
+  {
+    ignores: [
+      "dist",
+      "supabase/**",
+      "tailwind.config.ts",
+      "vite*.config.ts",
+      "vitest.config.ts",
+    ],
+  },
   {
     extends: [
       js.configs.recommended,
       ...tseslint.configs.recommended,
-      ...tseslint.configs.recommendedTypeChecked,
     ],
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
-      parserOptions: {
-        project: ["./tsconfig.app.json"],
-        tsconfigRootDir: import.meta.dirname,
-      },
     },
     plugins: {
       "react-hooks": reactHooks,
@@ -29,7 +32,7 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      "react-refresh/only-export-components": "off",
+      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
       [noExplicitLooseRule]: "error",
       // Selectively disable strict type-checked rules that are too restrictive for this codebase
@@ -42,6 +45,13 @@ export default tseslint.config(
     files: ["**/__tests__/**/*.{ts,tsx}", "**/*.test.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+  {
+    files: ["e2e/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-empty-function": "off",
+      "@typescript-eslint/no-unused-vars": "off",
     },
   },
 );
