@@ -7,8 +7,8 @@
  * ## Revenue Distribution Model
  * 
  * ### Product Revenue Split (from product subtotal)
- * - **88%** → Farmer (product sellers)
- * - **2%** → Lead Farmer (collection point coordination fee)
+ * - **85%** → Farmer (product sellers)
+ * - **5%** → Lead Farmer (collection point coordination fee)
  * - **10%** → Platform (operating costs, batch optimization, infrastructure)
  * 
  * ### Delivery Fee
@@ -19,16 +19,16 @@
  * 
  * ## Implementation Details
  * 
- * ### Why 88/2/10 Split?
- * 1. **Farmer Priority:** Maximizes earnings for producers (88%)
- * 2. **Lead Farmer Incentive:** Compensates collection point management (2%)
+ * ### Why 85/5/10 Split?
+ * 1. **Farmer Priority:** Maximizes earnings for producers (85%)
+ * 2. **Lead Farmer Incentive:** Compensates collection point management (5%)
  * 3. **Platform Sustainability:** Covers AI optimization, infrastructure, support (10%)
  * 
  * ### Lead Farmer Role
  * - Manages collection point where farmers drop off orders
  * - Coordinates pickup schedules
  * - Quality checks before driver pickup
- * - Earns 2% commission on all orders in their batch
+ * - Earns 5% commission on all orders in their batch
  * 
  * ### Driver Economics
  * - Fixed $7.50 per delivery (predictable income)
@@ -46,7 +46,7 @@
  * ```typescript
  * // $100 order revenue split
  * const split = calculateRevenueSplit(100);
- * // { farmerShare: 88, leadFarmerShare: 2, platformFee: 10 }
+ * // { farmerShare: 85, leadFarmerShare: 5, platformFee: 10 }
  * 
  * // Driver payout for 37-delivery batch
  * const driverPayout = calculateDriverPayout(37); // $277.50
@@ -57,9 +57,9 @@
  * Revenue distribution breakdown for product sales
  */
 export interface RevenueSplit {
-  /** Farmer's share (always 88%) */
+  /** Farmer's share (always 85%) */
   farmerShare: number;
-  /** Lead farmer's coordination fee (always 2%) */
+  /** Lead farmer's coordination fee (always 5%) */
   leadFarmerShare: number;
   /** Platform fee (always 10%) */
   platformFee: number;
@@ -68,7 +68,7 @@ export interface RevenueSplit {
 /**
  * Calculate revenue split from product subtotal
  * 
- * @description All farmers are affiliated with lead farmers, so split is always 88/2/10.
+ * @description All farmers are affiliated with lead farmers, so split is always 85/5/10.
  * This applies only to product revenue, not delivery fees.
  * 
  * @param productSubtotal - Total product sales amount (excluding delivery fee)
@@ -77,13 +77,13 @@ export interface RevenueSplit {
  * @example
  * ```typescript
  * calculateRevenueSplit(100)
- * // { farmerShare: 88, leadFarmerShare: 2, platformFee: 10 }
+ * // { farmerShare: 85, leadFarmerShare: 5, platformFee: 10 }
  * ```
  */
 export function calculateRevenueSplit(productSubtotal: number): RevenueSplit {
   return {
-    farmerShare: productSubtotal * 0.88,
-    leadFarmerShare: productSubtotal * 0.02,
+    farmerShare: productSubtotal * 0.85,
+    leadFarmerShare: productSubtotal * 0.05,
     platformFee: productSubtotal * 0.10,
   };
 }

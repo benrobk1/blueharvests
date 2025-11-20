@@ -25,13 +25,13 @@ const PriceBreakdownDrawer = ({
   farmName,
   isCheckout = false 
 }: PriceBreakdownDrawerProps) => {
-  // REVENUE MODEL: 88/2/10 split (product price only)
-  // - 88% to farmer (significantly higher than traditional grocery ~10-15%)
-  // - 2% to lead farmer (coordination fee)
+  // REVENUE MODEL: 85/5/10 split (product price only)
+  // - 85% to farmer (significantly higher than traditional grocery ~10-15%)
+  // - 5% to lead farmer (coordination fee)
   // - 10% platform fee (operations, support, infrastructure)
   // Note: Delivery fee ($7.50) is separate and goes 100% to driver
-  const farmerShare = price * 0.88;
-  const leadFarmerShare = price * 0.02;
+  const farmerShare = price * 0.85;
+  const leadFarmerShare = price * 0.05;
   const platformFee = price * 0.10;
 
   return (
@@ -56,21 +56,21 @@ const PriceBreakdownDrawer = ({
             </div>
             <Separator />
             
-            {/* Farmer Share - 88% */}
+            {/* Farmer Share - 85% */}
             <div className="flex justify-between items-center py-2 bg-earth/10 px-3 rounded-lg">
               <span className="flex items-center gap-2 font-medium">
                 <Sprout className="h-4 w-4 text-earth" />
                 {farmName} gets
               </span>
               <span className="font-bold text-earth">
-                {formatMoney(farmerShare)} <span className="text-xs font-normal">(88%)</span>
+                {formatMoney(farmerShare)} <span className="text-xs font-normal">(85%)</span>
               </span>
             </div>
-            
-            {/* Lead Farmer Commission - 2% */}
+
+            {/* Lead Farmer Commission - 5% */}
             <div className="flex justify-between items-center text-sm px-3">
               <span className="text-muted-foreground">Lead farmer coordination</span>
-              <span>{formatMoney(leadFarmerShare)} (2%)</span>
+              <span>{formatMoney(leadFarmerShare)} (5%)</span>
             </div>
             
             {/* Platform Fee - 10% */}
@@ -91,7 +91,7 @@ const PriceBreakdownDrawer = ({
           <Alert>
             <Info className="h-4 w-4" />
             <AlertDescription>
-              Farmers receive 90% of product price (vs 10-15% at grocery stores).
+              Farmers receive 85% of product price (vs 10-15% at grocery stores).
             </AlertDescription>
           </Alert>
         </div>

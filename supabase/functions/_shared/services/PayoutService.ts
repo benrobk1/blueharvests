@@ -48,8 +48,8 @@ export class PayoutService {
    * 5. Update payout record with transfer ID and status
    * 
    * Revenue Split Model:
-   * - Farmer: 88% of product price
-   * - Lead Farmer Commission: 2% of product price (if applicable)
+   * - Farmer: 85% of product price
+   * - Lead Farmer Commission: 5% of product price (if applicable)
    * - Driver: Fixed per-delivery fee + variable based on distance
    * - Platform: 10% of subtotal
    * 

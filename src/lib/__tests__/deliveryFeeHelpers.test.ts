@@ -6,10 +6,10 @@ import {
 } from '../deliveryFeeHelpers';
 
 describe('calculateRevenueSplit', () => {
-  it('always splits 88/2/10 (farmer/lead/platform)', () => {
+  it('always splits 85/5/10 (farmer/lead/platform)', () => {
     const split = calculateRevenueSplit(100.00);
-    expect(split.farmerShare).toBe(88.00);
-    expect(split.leadFarmerShare).toBe(2.00);
+    expect(split.farmerShare).toBe(85.00);
+    expect(split.leadFarmerShare).toBe(5.00);
     expect(split.platformFee).toBe(10.00);
   });
 
@@ -24,9 +24,9 @@ describe('calculateRevenueSplit', () => {
     
     testAmounts.forEach(amount => {
       const split = calculateRevenueSplit(amount);
-      
-      expect(split.farmerShare).toBeCloseTo(amount * 0.88, 2);
-      expect(split.leadFarmerShare).toBeCloseTo(amount * 0.02, 2);
+
+      expect(split.farmerShare).toBeCloseTo(amount * 0.85, 2);
+      expect(split.leadFarmerShare).toBeCloseTo(amount * 0.05, 2);
       expect(split.platformFee).toBeCloseTo(amount * 0.10, 2);
       
       // Verify total
@@ -48,8 +48,8 @@ describe('calculateRevenueSplit', () => {
     expect(zeroSplit.platformFee).toBe(0);
 
     const smallSplit = calculateRevenueSplit(1.00);
-    expect(smallSplit.farmerShare).toBe(0.88);
-    expect(smallSplit.leadFarmerShare).toBe(0.02);
+    expect(smallSplit.farmerShare).toBe(0.85);
+    expect(smallSplit.leadFarmerShare).toBe(0.05);
     expect(smallSplit.platformFee).toBe(0.10);
   });
 });

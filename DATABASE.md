@@ -539,8 +539,8 @@ Function `get_driver_rating(driver_id)` returns average rating rounded to 1 deci
 - `description` - Fee explanation
 
 **Revenue Split:**
-- **88%** → Farmer (product sales)
-- **2%** → Lead Farmer (collection point commission)
+- **85%** → Farmer (product sales)
+- **5%** → Lead Farmer (collection point commission)
 - **10%** → Platform (operating costs)
 - **$7.50** → Driver (flat delivery fee, separate from order total)
 
@@ -925,7 +925,7 @@ sequenceDiagram
     Cron->>Payout: Trigger (after delivery)
     Payout->>Orders: Fetch delivered orders
     Payout->>Items: Calculate revenue split
-    Note right of Payout: 88% farmer<br/>2% lead farmer<br/>10% platform<br/>$7.50 driver
+    Note right of Payout: 85% farmer<br/>5% lead farmer<br/>10% platform<br/>$7.50 driver
     Payout->>Stripe: Create transfers
     Stripe-->>PayoutTbl: Log farmer payout
     Stripe-->>PayoutTbl: Log driver payout

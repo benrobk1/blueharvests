@@ -63,7 +63,7 @@ flowchart TB
 
     subgraph Database["🗄️ DATABASE"]
         L --> N[(orders table<br/>order_items<br/>products)]
-        N --> O[Calculate Revenue Split<br/>88% Farmer<br/>2% Lead Farmer<br/>10% Platform]
+        N --> O[Calculate Revenue Split<br/>85% Farmer<br/>5% Lead Farmer<br/>10% Platform]
         O --> P[(payouts table<br/>status: pending)]
     end
 
@@ -95,8 +95,8 @@ flowchart TB
         AF --> AG[process-payouts<br/>Edge Function<br/>PayoutService]
         AG --> AH[Calculate Earnings<br/>From completed orders]
         AH --> AI{Recipient<br/>Type?}
-        AI -->|Farmer| AJ[88% of Product Total<br/>Stripe Connect Transfer]
-        AI -->|Lead Farmer| AK[2% Commission<br/>Stripe Connect Transfer]
+        AI -->|Farmer| AJ[85% of Product Total<br/>Stripe Connect Transfer]
+        AI -->|Lead Farmer| AK[5% Commission<br/>Stripe Connect Transfer]
         AI -->|Driver| AL[$7.50 per Delivery<br/>+ Tips]
         AJ --> AM[Update payout<br/>status: paid]
         AK --> AM
@@ -165,9 +165,9 @@ The system is organized into clear architectural layers:
 
 ### Key Technical Decisions
 
-**Revenue Split Model (88/2/10)**
-- **88%** to Farmer (product seller)
-- **2%** to Lead Farmer (coordinator/aggregator)
+**Revenue Split Model (85/5/10)**
+- **85%** to Farmer (product seller)
+- **5%** to Lead Farmer (coordinator/aggregator)
 - **10%** to Platform (operational costs)
 - Delivery fee ($7.50) goes 100% to driver
 
@@ -508,7 +508,7 @@ sequenceDiagram
     
     CheckoutSvc->>CheckoutSvc: Calculate totals<br/>(subtotal + delivery + tip)
     
-    CheckoutSvc->>CheckoutSvc: Calculate revenue splits<br/>88% farmer | 2% lead | 10% platform
+    CheckoutSvc->>CheckoutSvc: Calculate revenue splits<br/>85% farmer | 5% lead | 10% platform
     
     CheckoutSvc->>DB: Create inventory_reservations
     
@@ -684,7 +684,7 @@ sequenceDiagram
                 PayoutSvc->>DB: UPDATE payouts<br/>SET status = 'failed'<br/>description = 'PAYOUTS_NOT_ENABLED'
                 Note over PayoutSvc: Count as failed<br/>Requires Connect onboarding
             else Payouts enabled
-                PayoutSvc->>PayoutSvc: Calculate amount<br/>Farmer: 88% of product subtotal<br/>Lead Farmer: 2% commission<br/>Driver: $7.50 per delivery
+                PayoutSvc->>PayoutSvc: Calculate amount<br/>Farmer: 85% of product subtotal<br/>Lead Farmer: 5% commission<br/>Driver: $7.50 per delivery
                 
                 PayoutSvc->>Stripe: transfers.create({<br/>  amount: amount * 100,<br/>  destination: connect_account_id,<br/>  metadata: {payout_id, order_id}<br/>})
                 
@@ -820,8 +820,8 @@ sequenceDiagram
 
 | Component          | Percentage | Recipient       | Notes                        |
 |--------------------|------------|-----------------|------------------------------|
-| Product Revenue    | 88%        | Farmer          | Base farmer earnings         |
-| Product Revenue    | 2%         | Lead Farmer     | Collection point management  |
+| Product Revenue    | 85%        | Farmer          | Base farmer earnings         |
+| Product Revenue    | 5%         | Lead Farmer     | Collection point management  |
 | Product Revenue    | 10%        | Platform Fee    | Operating costs              |
 | Delivery Fee       | $7.50      | Driver          | Flat fee per order           |
 | Tip (optional)     | 100%       | Driver          | Consumer tips go to driver   |
@@ -982,7 +982,7 @@ See `.env.example` for detailed descriptions.
 - **Delivery Accuracy**: % of on-time deliveries
 
 ### Financial Metrics
-- **Revenue Split Accuracy**: Automated validation of 88/2/10 split
+- **Revenue Split Accuracy**: Automated validation of 85/5/10 split
 - **Driver Earnings**: Delivery fees + tips per route
 - **Platform Revenue**: 10% of product sales + delivery fees
 - **Credit Redemption Rate**: % of orders using credits

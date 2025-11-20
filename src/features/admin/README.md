@@ -77,7 +77,7 @@ import { KPIHeader } from '@/features/admin';
 - Total Revenue (with weekly comparison)
 - Active Orders (pending + in_transit)
 - Products Available (approved products only)
-- Revenue Split (88% farmer / 2% lead / 10% platform)
+- Revenue Split (85% farmer / 5% lead / 10% platform)
 
 ### TaxDocumentGenerator
 Generate 1099 tax forms for contractors (farmers & drivers).

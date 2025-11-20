@@ -6,8 +6,8 @@
 
 // Revenue splits (must sum to 100%)
 export const REVENUE_SPLITS = {
-  FARMER_SHARE: 0.88,      // 88% to farmer
-  LEAD_FARMER_SHARE: 0.02, // 2% to lead farmer
+  FARMER_SHARE: 0.85,      // 85% to farmer
+  LEAD_FARMER_SHARE: 0.05, // 5% to lead farmer
   PLATFORM_FEE: 0.10,      // 10% platform fee
 } as const;
 

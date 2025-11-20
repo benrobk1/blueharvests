@@ -182,8 +182,8 @@ throw createProductApprovalError('Product approval failed');
 - Prices set by farmers
 - Server-side validation prevents price tampering
 - Platform fee: 10% of subtotal
-- Farmer receives: 88% of product price
-- Lead farmer commission: 2% of product price
+- Farmer receives: 85% of product price
+- Lead farmer commission: 5% of product price
 
 ## Components Using This Feature
 
