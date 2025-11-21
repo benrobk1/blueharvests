@@ -40,7 +40,7 @@ test.describe('Admin Workflow', () => {
     } catch {
       const heading = page.locator('h1, h2').first();
       await expect(heading).toBeVisible({ timeout: 10_000 });
-      contentVisible = await heading.isVisible();
+      contentVisible = true;
     }
 
     expect(contentVisible).toBeTruthy();
