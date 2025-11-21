@@ -73,15 +73,12 @@ test.describe('Driver Workflow', () => {
     // Navigate to payout details
     await navigateAndWait(page, '/driver/payouts');
 
-    // Verify payout page loaded or redirected appropriately
-    const payoutContent = page.locator(
-      'h1, h2, text=/payout/i, text=/earning/i, text=/payment/i'
-    ).first();
+    // Verify we're on the payout details page
+    await expect(page).toHaveURL(/\/driver\/payout-details/, { timeout: 10000 });
 
-    const hasPayoutContent = await payoutContent.isVisible({ timeout: 10000 }).catch(() => false);
-    const pageLoaded = await page.locator('h1, h2').first().isVisible();
-
-    expect(hasPayoutContent || pageLoaded).toBeTruthy();
+    // Verify payout page content is visible
+    const payoutHeading = page.getByRole('heading', { name: /Payout Details/i });
+    await expect(payoutHeading).toBeVisible({ timeout: 10000 });
   });
 
   test('driver can access tax information', async ({ page, auth }) => {
@@ -91,15 +88,12 @@ test.describe('Driver Workflow', () => {
     // Navigate to tax info
     await navigateAndWait(page, '/driver/tax-info');
 
-    // Verify tax info page loaded
-    const taxContent = page.locator(
-      'h1, h2, text=/tax/i, text=/w-9/i, text=/1099/i, text=/information/i'
-    ).first();
+    // Verify we're on the tax information page
+    await expect(page).toHaveURL(/\/driver\/tax-info/, { timeout: 10000 });
 
-    const hasTaxContent = await taxContent.isVisible({ timeout: 10000 }).catch(() => false);
-    const pageLoaded = await page.locator('h1, h2').first().isVisible();
-
-    expect(hasTaxContent || pageLoaded).toBeTruthy();
+    // Verify tax info page content is visible
+    const taxHeading = page.getByRole('heading', { name: /Tax Information/i });
+    await expect(taxHeading).toBeVisible({ timeout: 10000 });
   });
 
   test('driver profile is accessible', async ({ page, auth }) => {
@@ -109,14 +103,11 @@ test.describe('Driver Workflow', () => {
     // Navigate to driver profile
     await navigateAndWait(page, '/driver/profile');
 
-    // Verify profile page loaded
-    const profileContent = page.locator(
-      'h1, h2, text=/profile/i, text=/account/i, text=/settings/i'
-    ).first();
+    // Verify we're on the driver profile page
+    await expect(page).toHaveURL(/\/profile\/driver/, { timeout: 10000 });
 
-    const hasProfileContent = await profileContent.isVisible({ timeout: 10000 }).catch(() => false);
-    const pageLoaded = await page.locator('h1, h2').first().isVisible();
-
-    expect(hasProfileContent || pageLoaded).toBeTruthy();
+    // Verify profile page content is visible
+    const profileHeading = page.getByRole('heading', { name: /Driver Profile/i });
+    await expect(profileHeading).toBeVisible({ timeout: 10000 });
   });
 });
