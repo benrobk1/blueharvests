@@ -1,29 +1,30 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { preloadImage, getImagePlaceholder, isValidImageUrl } from '../imageHelpers';
 
 describe('preloadImage', () => {
-  let mockImage: { onload: (() => void) | null; onerror: (() => void) | null; src: string };
-
   beforeEach(() => {
-    mockImage = {
-      onload: null,
-      onerror: null,
-      src: '',
-    };
+    // Mock the global Image constructor to simulate a successful load
+    Object.defineProperty(globalThis, 'Image', {
+      writable: true,
+      configurable: true,
+      value: class {
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        src = '';
+        constructor() {
+          setTimeout(() => {
+            if (this.onload) {
+              this.onload();
+            }
+          }, 0);
+        }
+      },
+    });
+  });
 
-    // Mock the Image constructor
-    (global as any).Image = class {
-      onload: (() => void) | null = null;
-      onerror: (() => void) | null = null;
-      src = '';
-      constructor() {
-        setTimeout(() => {
-          if (this.onload) {
-            this.onload();
-          }
-        }, 0);
-      }
-    };
+  afterEach(() => {
+    // Clean up the Image mock
+    Reflect.deleteProperty(globalThis, 'Image');
   });
 
   it('resolves when image loads successfully', async () => {
@@ -31,19 +32,23 @@ describe('preloadImage', () => {
   });
 
   it('rejects when image fails to load', async () => {
-    // Mock the Image constructor to trigger error
-    (global as any).Image = class {
-      onload: (() => void) | null = null;
-      onerror: (() => void) | null = null;
-      src = '';
-      constructor() {
-        setTimeout(() => {
-          if (this.onerror) {
-            this.onerror();
-          }
-        }, 0);
-      }
-    };
+    // Override the Image constructor to simulate a load error
+    Object.defineProperty(globalThis, 'Image', {
+      writable: true,
+      configurable: true,
+      value: class {
+        onload: (() => void) | null = null;
+        onerror: (() => void) | null = null;
+        src = '';
+        constructor() {
+          setTimeout(() => {
+            if (this.onerror) {
+              this.onerror();
+            }
+          }, 0);
+        }
+      },
+    });
 
     await expect(preloadImage('invalid-url')).rejects.toBeUndefined();
   });
