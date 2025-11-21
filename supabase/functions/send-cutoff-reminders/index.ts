@@ -61,12 +61,14 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
 
   // OPTIMIZED: Query carts with items in batches of distinct carts
   // Prevents OOM with 50k+ users and ensures we get actual cart count, not joined row count
-  const cartsWithItems: CartWithProfile[] = [];
+  const MAX_CARTS_LIMIT = 10000;
   const CART_BATCH_SIZE = 1000;
+  const cartsWithItems: CartWithProfile[] = [];
+  const seenCartIds = new Set<string>(); // Global deduplication across all batches
   let hasMore = true;
   let lastCartId: string | null = null;
 
-  while (hasMore && cartsWithItems.length < 10000) {
+  while (hasMore && cartsWithItems.length < MAX_CARTS_LIMIT) {
     // Query distinct carts that have items, ordered by ID for stable pagination
     const query = supabaseClient
       .from('shopping_carts')
@@ -98,24 +100,27 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
     }
 
     // Deduplicate carts in this batch (since inner join creates multiple rows per cart)
-    const seenCartIds = new Set<string>();
+    // Track last processed cart ID for accurate pagination cursor
+    let lastProcessedCartId: string | null = null;
     for (const row of batch) {
       const cart = row as CartWithProfile;
+      lastProcessedCartId = cart.id; // Track the actual last cart we see
+      
       if (!seenCartIds.has(cart.id)) {
         seenCartIds.add(cart.id);
         cartsWithItems.push(cart);
         
         // Stop if we've reached the target limit
-        if (cartsWithItems.length >= 10000) {
+        if (cartsWithItems.length >= MAX_CARTS_LIMIT) {
           hasMore = false;
           break;
         }
       }
     }
 
-    // Update cursor and check if we got a full batch
-    if (hasMore) {
-      lastCartId = (batch[batch.length - 1] as CartWithProfile).id;
+    // Update cursor using the last processed cart ID (not last in batch)
+    if (hasMore && lastProcessedCartId) {
+      lastCartId = lastProcessedCartId;
       hasMore = batch.length === CART_BATCH_SIZE;
     }
   }
