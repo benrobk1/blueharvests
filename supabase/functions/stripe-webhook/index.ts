@@ -152,7 +152,63 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
       console.log(`[${ctx.requestId}] Payment succeeded: ${paymentIntent.id}`);
       ctx.metrics.mark('payment_succeeded');
-      // TODO: Implementation
+
+      // Update payment_intents table
+      const { data: paymentIntentRecord, error: piError } = await supabase
+        .from('payment_intents')
+        .update({ status: 'succeeded' })
+        .eq('stripe_payment_intent_id', paymentIntent.id)
+        .select('order_id, consumer_id')
+        .single();
+
+      if (piError) {
+        console.error(`[${ctx.requestId}] ❌ Failed to update payment_intent: ${piError.message}`);
+        throw piError;
+      }
+
+      if (!paymentIntentRecord) {
+        console.warn(`[${ctx.requestId}] ⚠️ Payment intent not found in database: ${paymentIntent.id}`);
+        break;
+      }
+
+      // Update order status to confirmed
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({ status: 'confirmed' })
+        .eq('id', paymentIntentRecord.order_id);
+
+      if (orderError) {
+        console.error(`[${ctx.requestId}] ❌ Failed to update order: ${orderError.message}`);
+        throw orderError;
+      }
+
+      // Get order details for notification
+      const { data: order } = await supabase
+        .from('orders')
+        .select('delivery_date, total_amount')
+        .eq('id', paymentIntentRecord.order_id)
+        .single();
+
+      // Send order confirmation notification (fire and forget)
+      try {
+        await supabase.functions.invoke('send-notification', {
+          body: {
+            event_type: 'order_confirmation',
+            recipient_id: paymentIntentRecord.consumer_id,
+            data: {
+              order_id: paymentIntentRecord.order_id,
+              delivery_date: order?.delivery_date,
+              total_amount: order?.total_amount
+            }
+          }
+        });
+        console.log(`[${ctx.requestId}] ✅ Order confirmation notification sent`);
+      } catch (notifError) {
+        console.error(`[${ctx.requestId}] ⚠️ Failed to send notification: ${notifError}`);
+        // Don't throw - notification failure shouldn't fail the webhook
+      }
+
+      console.log(`[${ctx.requestId}] ✅ Payment processed successfully for order: ${paymentIntentRecord.order_id}`);
       break;
     }
 
@@ -160,7 +216,78 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
       console.log(`[${ctx.requestId}] Payment failed: ${paymentIntent.id}`);
       ctx.metrics.mark('payment_failed');
-      // TODO: Implementation
+
+      // Update payment_intents table
+      const { data: paymentIntentRecord, error: piError } = await supabase
+        .from('payment_intents')
+        .update({ status: 'failed' })
+        .eq('stripe_payment_intent_id', paymentIntent.id)
+        .select('order_id, consumer_id')
+        .single();
+
+      if (piError) {
+        console.error(`[${ctx.requestId}] ❌ Failed to update payment_intent: ${piError.message}`);
+        throw piError;
+      }
+
+      if (!paymentIntentRecord) {
+        console.warn(`[${ctx.requestId}] ⚠️ Payment intent not found in database: ${paymentIntent.id}`);
+        break;
+      }
+
+      // Update order status to cancelled
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({ status: 'cancelled' })
+        .eq('id', paymentIntentRecord.order_id);
+
+      if (orderError) {
+        console.error(`[${ctx.requestId}] ❌ Failed to update order: ${orderError.message}`);
+        throw orderError;
+      }
+
+      // Release inventory reservations
+      const { error: reservationError } = await supabase
+        .from('inventory_reservations')
+        .delete()
+        .eq('order_id', paymentIntentRecord.order_id);
+
+      if (reservationError) {
+        console.error(`[${ctx.requestId}] ⚠️ Failed to release inventory reservations: ${reservationError.message}`);
+        // Don't throw - continue with notification
+      }
+
+      // Get order details for notification
+      const { data: order } = await supabase
+        .from('orders')
+        .select('delivery_date, total_amount')
+        .eq('id', paymentIntentRecord.order_id)
+        .single();
+
+      // Get failure reason
+      const failureMessage = paymentIntent.last_payment_error?.message || 'Payment could not be processed';
+
+      // Send payment failure notification (fire and forget)
+      try {
+        await supabase.functions.invoke('send-notification', {
+          body: {
+            event_type: 'customer_delivery_update',
+            recipient_id: paymentIntentRecord.consumer_id,
+            data: {
+              title: 'Payment Failed',
+              description: `Your payment for order ${paymentIntentRecord.order_id.substring(0, 8)} failed: ${failureMessage}. Please update your payment method and try again.`,
+              order_id: paymentIntentRecord.order_id,
+              delivery_date: order?.delivery_date,
+              total_amount: order?.total_amount
+            }
+          }
+        });
+        console.log(`[${ctx.requestId}] ✅ Payment failure notification sent`);
+      } catch (notifError) {
+        console.error(`[${ctx.requestId}] ⚠️ Failed to send notification: ${notifError}`);
+      }
+
+      console.log(`[${ctx.requestId}] ✅ Payment failure processed for order: ${paymentIntentRecord.order_id}`);
       break;
     }
 
@@ -184,7 +311,73 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
       const dispute = event.data.object as Stripe.Dispute;
       console.log(`[${ctx.requestId}] Dispute created: ${dispute.id}`);
       ctx.metrics.mark('dispute_created');
-      // TODO: Implementation
+
+      // Find the payment intent associated with this charge
+      const { data: paymentIntentRecord } = await supabase
+        .from('payment_intents')
+        .select('order_id, consumer_id')
+        .eq('stripe_payment_intent_id', dispute.payment_intent as string)
+        .single();
+
+      if (!paymentIntentRecord) {
+        console.warn(`[${ctx.requestId}] ⚠️ Payment intent not found for dispute: ${dispute.id}`);
+        break;
+      }
+
+      // Create dispute record in database
+      const disputeType = dispute.reason === 'product_not_received' ? 'missing_items' :
+                          dispute.reason === 'product_unacceptable' ? 'product_quality' :
+                          'other';
+
+      const { error: disputeError } = await supabase
+        .from('disputes')
+        .insert({
+          order_id: paymentIntentRecord.order_id,
+          consumer_id: paymentIntentRecord.consumer_id,
+          dispute_type: disputeType,
+          description: `Stripe dispute created: ${dispute.reason}. Dispute ID: ${dispute.id}. Amount: $${(dispute.amount / 100).toFixed(2)}`,
+          status: 'investigating'
+        });
+
+      if (disputeError) {
+        console.error(`[${ctx.requestId}] ❌ Failed to create dispute record: ${disputeError.message}`);
+        // Don't throw - continue to send alerts even if DB insert fails
+      }
+
+      // Send admin alert for dispute
+      try {
+        // Get admin users
+        const { data: adminRoles } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'admin')
+          .limit(5);
+
+        if (adminRoles && adminRoles.length > 0) {
+          // Send alert to each admin
+          for (const admin of adminRoles) {
+            await supabase.functions.invoke('send-notification', {
+              body: {
+                event_type: 'admin_alert',
+                recipient_id: admin.user_id,
+                data: {
+                  title: `Payment Dispute Created - ${dispute.reason}`,
+                  category: 'payment_dispute',
+                  severity: 'high',
+                  reporter_type: 'stripe_webhook',
+                  description: `A payment dispute has been filed for order ${paymentIntentRecord.order_id.substring(0, 8)}.\n\nDispute ID: ${dispute.id}\nReason: ${dispute.reason}\nAmount: $${(dispute.amount / 100).toFixed(2)}\nStatus: ${dispute.status}\n\nEvidence deadline: ${dispute.evidence_details?.due_by ? new Date(dispute.evidence_details.due_by * 1000).toLocaleDateString() : 'Unknown'}\n\nAction required: Review the order and submit evidence to Stripe before the deadline.`,
+                  issue_id: dispute.id
+                }
+              }
+            });
+          }
+          console.log(`[${ctx.requestId}] ✅ Dispute alerts sent to ${adminRoles.length} admin(s)`);
+        }
+      } catch (notifError) {
+        console.error(`[${ctx.requestId}] ⚠️ Failed to send admin alerts: ${notifError}`);
+      }
+
+      console.log(`[${ctx.requestId}] ✅ Dispute processed: ${dispute.id}`);
       break;
     }
 
@@ -192,7 +385,65 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
       const payout = event.data.object as Stripe.Payout;
       console.log(`[${ctx.requestId}] Payout failed: ${payout.id}`);
       ctx.metrics.mark('payout_failed');
-      // TODO: Implementation
+
+      // Update payouts table to mark as failed
+      const { data: payoutRecords, error: payoutError } = await supabase
+        .from('payouts')
+        .update({
+          status: 'failed',
+          // Store failure reason in a note (if payouts table has such field)
+        })
+        .eq('stripe_transfer_id', payout.id)
+        .select('id, recipient_id, recipient_type, amount, order_id');
+
+      if (payoutError) {
+        console.error(`[${ctx.requestId}] ❌ Failed to update payout: ${payoutError.message}`);
+        throw payoutError;
+      }
+
+      if (!payoutRecords || payoutRecords.length === 0) {
+        console.warn(`[${ctx.requestId}] ⚠️ Payout not found in database: ${payout.id}`);
+        break;
+      }
+
+      // Get failure reason
+      const failureMessage = payout.failure_message || payout.failure_code || 'Unknown payout failure';
+      const failureCode = payout.failure_code || 'unknown_error';
+
+      // Send admin alert for payout failure
+      try {
+        // Get admin users
+        const { data: adminRoles } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .eq('role', 'admin')
+          .limit(5); // Send to first 5 admins
+
+        if (adminRoles && adminRoles.length > 0) {
+          // Send alert to each admin
+          for (const admin of adminRoles) {
+            await supabase.functions.invoke('send-notification', {
+              body: {
+                event_type: 'admin_alert',
+                recipient_id: admin.user_id,
+                data: {
+                  title: `Payout Failed - ${failureCode}`,
+                  category: 'payout_failure',
+                  severity: 'high',
+                  reporter_type: 'system',
+                  description: `Payout failed for ${payoutRecords[0].recipient_type} (ID: ${payoutRecords[0].recipient_id}).\n\nAmount: $${payoutRecords[0].amount}\nStripe Payout ID: ${payout.id}\nFailure: ${failureMessage}\n\nAction required: Please investigate and retry the payout manually if needed.`,
+                  issue_id: payoutRecords[0].id
+                }
+              }
+            });
+          }
+          console.log(`[${ctx.requestId}] ✅ Payout failure alerts sent to ${adminRoles.length} admin(s)`);
+        }
+      } catch (notifError) {
+        console.error(`[${ctx.requestId}] ⚠️ Failed to send admin alerts: ${notifError}`);
+      }
+
+      console.log(`[${ctx.requestId}] ✅ Payout failure processed: ${payout.id}`);
       break;
     }
 
