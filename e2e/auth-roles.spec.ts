@@ -75,8 +75,8 @@ test.describe('Role-Based Access Control', () => {
     await page.goto('/admin/dashboard');
     await waitForPageReady(page);
 
-    // Wait for redirect to auth or home (should not stay on admin dashboard)
-    await page.waitForURL((url) => url.pathname.includes('/auth') || url.pathname === '/' || !url.pathname.includes('/admin/dashboard'), { timeout: 5000 }).catch(() => {});
+    // Wait for redirect to complete (should not stay on admin dashboard)
+    await page.waitForURL((url) => !url.pathname.includes('/admin/dashboard'), { timeout: 5000 }).catch(() => {});
 
     const url = page.url();
     const isRedirected = url.includes('/auth') || url === new URL('/', page.url()).href || !url.includes('/admin/dashboard');
