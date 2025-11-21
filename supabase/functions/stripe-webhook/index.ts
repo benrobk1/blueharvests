@@ -61,6 +61,8 @@ function getPaymentFailureMessage(error: Stripe.PaymentIntent.LastPaymentError |
  * Safely formats an order ID for display in notifications.
  * Handles various order ID formats (UUID, numeric, short strings).
  */
+const ORDER_ID_DISPLAY_LENGTH = 8;
+
 function formatOrderIdForDisplay(orderId: string | number | null | undefined): string {
   if (!orderId) {
     return 'N/A';
@@ -68,7 +70,7 @@ function formatOrderIdForDisplay(orderId: string | number | null | undefined): s
   
   const orderIdStr = String(orderId);
   // Only truncate if it's long enough (likely a UUID)
-  return orderIdStr.length > 8 ? orderIdStr.slice(0, 8) : orderIdStr;
+  return orderIdStr.length > ORDER_ID_DISPLAY_LENGTH ? orderIdStr.slice(0, ORDER_ID_DISPLAY_LENGTH) : orderIdStr;
 }
 
 /**
@@ -327,7 +329,7 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
             recipient_id: paymentIntentRecord.consumer_id,
             data: {
               title: 'Payment Failed',
-              description: `Your payment for order ${orderIdDisplay} failed: ${userFriendlyMessage}`,
+              description: `Your payment for order ${orderIdDisplay} failed: ${userFriendlyMessage}. Please update your payment method and try again.`,
               order_id: paymentIntentRecord.order_id,
               delivery_date: order?.delivery_date,
               total_amount: order?.total_amount
