@@ -51,7 +51,7 @@ export const formatOrderItems = (items: OrderItemSummary[]): string => {
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const itemNames = items.map(item => item.products.name).slice(0, 2).join(', ');
   return items.length > 2 
-    ? `${itemNames}, +${items.length - 2} more (${itemCount} items total)`
+    ? `${itemNames}, +${items.length - 2} more (${itemCount} items total)`.trim()
     : `${itemNames} (${itemCount} items)`.trim();
 };
 
