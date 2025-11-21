@@ -70,18 +70,20 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
 
     if (!pendingOrders || pendingOrders.length === 0) {
       hasMoreOrders = false;
-    } else {
-      for (const order of pendingOrders) {
-        const profile = (order as OrderWithProfile).profiles;
-        if (profile?.email) {
-          consumersToNotify.add(order.consumer_id);
-          consumerEmails.set(order.consumer_id, profile.email);
-        }
-      }
-
-      hasMoreOrders = pendingOrders.length === PAGE_SIZE;
-      pendingOrdersPage++;
+      break;
     }
+
+    for (const order of pendingOrders) {
+      const profile = (order as OrderWithProfile).profiles;
+      if (profile?.email) {
+        consumersToNotify.add(order.consumer_id);
+        consumerEmails.set(order.consumer_id, profile.email);
+      }
+    }
+
+    pendingOrdersPage++;
+    // Continue if we got a full page, indicating there may be more results
+    hasMoreOrders = pendingOrders.length >= PAGE_SIZE;
   }
 
   console.log(`[${ctx.requestId}] Processed ${pendingOrdersPage} pages of pending orders`);
@@ -103,18 +105,20 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
 
     if (!cartsWithItems || cartsWithItems.length === 0) {
       hasMoreCarts = false;
-    } else {
-      for (const cart of cartsWithItems) {
-        const profile = (cart as CartWithProfile).profiles;
-        if (cart?.consumer_id && profile?.email) {
-          consumersToNotify.add(cart.consumer_id);
-          consumerEmails.set(cart.consumer_id, profile.email);
-        }
-      }
-
-      hasMoreCarts = cartsWithItems.length === PAGE_SIZE;
-      cartsPage++;
+      break;
     }
+
+    for (const cart of cartsWithItems) {
+      const profile = (cart as CartWithProfile).profiles;
+      if (cart?.consumer_id && profile?.email) {
+        consumersToNotify.add(cart.consumer_id);
+        consumerEmails.set(cart.consumer_id, profile.email);
+      }
+    }
+
+    cartsPage++;
+    // Continue if we got a full page, indicating there may be more results
+    hasMoreCarts = cartsWithItems.length >= PAGE_SIZE;
   }
 
   console.log(`[${ctx.requestId}] Processed ${cartsPage} pages of active carts`);
