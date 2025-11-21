@@ -59,16 +59,52 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
     .eq('status', 'pending')
     .limit(10000); // Reasonable limit: max 10k pending orders per day
 
-  // OPTIMIZED: Query carts with items using EXISTS subquery to reduce memory
-  // Prevents OOM with 50k+ users - only returns distinct carts, not all cart_items
-  const { data: cartsWithItems } = await supabaseClient
-    .from('shopping_carts')
-    .select(`
-      consumer_id,
-      profiles (email),
-      cart_items!inner(id)
-    `)
-    .limit(10000); // Reasonable limit: max 10k active carts
+  // OPTIMIZED: Query carts with items in batches of distinct carts
+  // Prevents OOM with 50k+ users and ensures we get actual cart count, not joined row count
+  const cartsWithItems: CartWithProfile[] = [];
+  const CART_BATCH_SIZE = 1000;
+  let hasMore = true;
+  let lastCartId: string | null = null;
+
+  while (hasMore && cartsWithItems.length < 10000) {
+    // Query distinct carts that have items, ordered by ID for stable pagination
+    const query = supabaseClient
+      .from('shopping_carts')
+      .select(`
+        id,
+        consumer_id,
+        profiles (email),
+        cart_items!inner(id)
+      `)
+      .order('id', { ascending: true })
+      .limit(CART_BATCH_SIZE);
+
+    // Apply cursor pagination if not first batch
+    if (lastCartId) {
+      query.gt('id', lastCartId);
+    }
+
+    const { data: batch, error } = await query;
+
+    if (error || !batch || batch.length === 0) {
+      hasMore = false;
+      break;
+    }
+
+    // Deduplicate carts in this batch (since inner join creates multiple rows per cart)
+    const seenCartIds = new Set<string>();
+    for (const row of batch) {
+      const cartId = (row as any).id;
+      if (!seenCartIds.has(cartId)) {
+        seenCartIds.add(cartId);
+        cartsWithItems.push(row as CartWithProfile);
+      }
+    }
+
+    // Update cursor and check if we got a full batch
+    lastCartId = (batch[batch.length - 1] as any).id;
+    hasMore = batch.length === CART_BATCH_SIZE;
+  }
 
   ctx.metrics.mark('consumers_fetched');
 
