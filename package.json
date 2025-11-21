@@ -12,7 +12,9 @@
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
-    "test:edge-functions": "deno test --allow-net --allow-env supabase/functions/__tests__/"
+    "test:edge-functions": "deno test --allow-net --allow-env supabase/functions/__tests__/",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.4",
