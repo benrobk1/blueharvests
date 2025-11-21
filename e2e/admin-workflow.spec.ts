@@ -33,17 +33,12 @@ test.describe('Admin Workflow', () => {
     ).first();
 
     // Wait for content or empty state with proper wait APIs
-    let contentVisible = false;
     try {
       await expect(approvalsContent).toBeVisible({ timeout: 10_000 });
-      contentVisible = true;
     } catch {
       const heading = page.locator('h1, h2').first();
       await expect(heading).toBeVisible({ timeout: 10_000 });
-      contentVisible = true;
     }
-
-    expect(contentVisible).toBeTruthy();
   });
 
   test('should access product approval page', async ({ page, auth }) => {
