@@ -31,6 +31,47 @@ import {
 type Context = RequestIdContext & CORSContext & MetricsContext & SupabaseServiceRoleContext;
 
 /**
+ * Maps Stripe payment failure codes to user-friendly messages.
+ * This prevents exposing raw technical error messages to customers.
+ */
+function getPaymentFailureMessage(error: Stripe.PaymentIntent.LastPaymentError | null | undefined): string {
+  if (!error) {
+    return 'Payment could not be processed. Please try again or use a different payment method.';
+  }
+
+  // Map common Stripe error codes to friendly messages
+  const codeMessageMap: Record<string, string> = {
+    'card_declined': 'Your card was declined. Please contact your bank or try a different card.',
+    'insufficient_funds': 'Your card has insufficient funds. Please use a different payment method.',
+    'expired_card': 'Your card has expired. Please update your card details.',
+    'incorrect_cvc': 'The security code (CVC) is incorrect. Please check your card details.',
+    'processing_error': 'An error occurred while processing your payment. Please try again.',
+    'incorrect_number': 'The card number is incorrect. Please check your card details.',
+    'authentication_required': 'Your payment requires additional authentication. Please try again.',
+    'card_not_supported': 'This card type is not supported. Please use a different card.',
+  };
+
+  // Return mapped message if available, otherwise a generic message
+  // Note: We log the raw error message for debugging but don't expose it to the customer
+  return codeMessageMap[error.code || ''] || 
+    'Payment could not be processed. Please try again or use a different payment method.';
+}
+
+/**
+ * Safely formats an order ID for display in notifications.
+ * Handles various order ID formats (UUID, numeric, short strings).
+ */
+function formatOrderIdForDisplay(orderId: string | number | null | undefined): string {
+  if (!orderId) {
+    return 'N/A';
+  }
+  
+  const orderIdStr = String(orderId);
+  // Only truncate if it's long enough (likely a UUID)
+  return orderIdStr.length > 8 ? orderIdStr.slice(0, 8) : orderIdStr;
+}
+
+/**
  * Main webhook handler with middleware composition
  */
 const handler = async (req: Request, ctx: Context): Promise<Response> => {
@@ -101,7 +142,7 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
     );
   }
 
-  // Idempotency check
+  // Idempotency check - verify this event hasn't already been processed
   const { data: existingEvent } = await supabase
     .from('stripe_webhook_events')
     .select('id')
@@ -120,31 +161,33 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
     );
   }
 
-  // Record event
-  const { error: insertError } = await supabase
-    .from('stripe_webhook_events')
-    .insert({
-      stripe_event_id: event.id,
-      event_type: event.type,
-    });
-
-  if (insertError) {
-    if (insertError.code === '23505') {
-      console.log(`[${requestId}] ⚠️ Event ${event.id} being processed concurrently`);
-      ctx.metrics.mark('event_concurrent');
-      return new Response(
-        JSON.stringify({ received: true, skipped: true }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        }
-      );
-    }
-    throw insertError;
-  }
-
-  console.log(`[${requestId}] 📝 Event ${event.id} recorded, processing...`);
+  console.log(`[${requestId}] 📝 Processing event ${event.id}...`);
   ctx.metrics.mark('event_processing');
+
+  /**
+   * Helper function to record the event as processed after successful business logic execution.
+   * This ensures idempotency while preventing partial state issues.
+   */
+  const recordEventProcessed = async () => {
+    const { error: insertError } = await supabase
+      .from('stripe_webhook_events')
+      .insert({
+        stripe_event_id: event.id,
+        event_type: event.type,
+      });
+
+    if (insertError) {
+      // If we get a duplicate key error, another concurrent process completed first
+      if (insertError.code === '23505') {
+        console.log(`[${requestId}] ⚠️ Event ${event.id} was processed concurrently`);
+      } else {
+        console.error(`[${requestId}] ❌ Failed to record event: ${insertError.message}`);
+        throw insertError;
+      }
+    } else {
+      console.log(`[${requestId}] ✅ Event ${event.id} recorded as processed`);
+    }
+  };
 
   // Handle events
   switch (event.type) {
@@ -209,6 +252,9 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
       }
 
       console.log(`[${ctx.requestId}] ✅ Payment processed successfully for order: ${paymentIntentRecord.order_id}`);
+      
+      // Record event as processed after all critical operations succeed
+      await recordEventProcessed();
       break;
     }
 
@@ -264,8 +310,14 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
         .eq('id', paymentIntentRecord.order_id)
         .single();
 
-      // Get failure reason
-      const failureMessage = paymentIntent.last_payment_error?.message || 'Payment could not be processed';
+      // Get user-friendly failure message and log raw error for debugging
+      const userFriendlyMessage = getPaymentFailureMessage(paymentIntent.last_payment_error);
+      if (paymentIntent.last_payment_error) {
+        console.log(`[${ctx.requestId}] 🔍 Raw Stripe error for debugging - Code: ${paymentIntent.last_payment_error.code}, Message: ${paymentIntent.last_payment_error.message}`);
+      }
+
+      // Format order ID safely for display
+      const orderIdDisplay = formatOrderIdForDisplay(paymentIntentRecord.order_id);
 
       // Send payment failure notification (fire and forget)
       try {
@@ -275,7 +327,7 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
             recipient_id: paymentIntentRecord.consumer_id,
             data: {
               title: 'Payment Failed',
-              description: `Your payment for order ${paymentIntentRecord.order_id.substring(0, 8)} failed: ${failureMessage}. Please update your payment method and try again.`,
+              description: `Your payment for order ${orderIdDisplay} failed: ${userFriendlyMessage}`,
               order_id: paymentIntentRecord.order_id,
               delivery_date: order?.delivery_date,
               total_amount: order?.total_amount
@@ -288,6 +340,9 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
       }
 
       console.log(`[${ctx.requestId}] ✅ Payment failure processed for order: ${paymentIntentRecord.order_id}`);
+      
+      // Record event as processed after all critical operations succeed
+      await recordEventProcessed();
       break;
     }
 
