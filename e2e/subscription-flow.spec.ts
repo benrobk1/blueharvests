@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './support/playwright';
 
 test.describe('Subscription Flow', () => {
   test.beforeEach(async ({ page }) => {
