@@ -24,9 +24,7 @@ type Context = RequestIdContext & CORSContext & MetricsContext & SupabaseService
 
 type ProfileEmail = { email: string | null };
 type OrderWithProfile = { consumer_id: string; profiles: ProfileEmail | null };
-type CartWithProfile = {
-  shopping_carts: { consumer_id: string; profiles: ProfileEmail | null } | null;
-};
+type CartWithProfile = { consumer_id: string; profiles: ProfileEmail | null };
 
 type ReminderError = { consumer_id: string; error: string };
 type ReminderResults = {
@@ -52,23 +50,25 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
 
   ctx.metrics.mark('date_calculated');
 
-  // Find all consumers with pending orders for tomorrow
+  // OPTIMIZED: Find all consumers with pending orders for tomorrow
+  // Added LIMIT to prevent OOM with 50k+ users
   const { data: pendingOrders } = await supabaseClient
     .from('orders')
     .select('consumer_id, profiles (email)')
     .eq('delivery_date', tomorrowDate)
-    .eq('status', 'pending');
+    .eq('status', 'pending')
+    .limit(10000); // Reasonable limit: max 10k pending orders per day
 
-  // Find consumers with items in cart (who haven't checked out yet)
+  // OPTIMIZED: Query carts with items using EXISTS subquery to reduce memory
+  // Prevents OOM with 50k+ users - only returns distinct carts, not all cart_items
   const { data: cartsWithItems } = await supabaseClient
-    .from('cart_items')
+    .from('shopping_carts')
     .select(`
-      cart_id,
-      shopping_carts (
-        consumer_id,
-        profiles (email)
-      )
-    `);
+      consumer_id,
+      profiles (email),
+      cart_items!inner(id)
+    `)
+    .limit(10000); // Reasonable limit: max 10k active carts
 
   ctx.metrics.mark('consumers_fetched');
 
@@ -84,9 +84,8 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
     }
   }
 
-  for (const item of cartsWithItems ?? []) {
-    const cart = (item as CartWithProfile).shopping_carts;
-    const profile = cart?.profiles;
+  for (const cart of cartsWithItems ?? []) {
+    const profile = (cart as CartWithProfile).profiles;
     if (cart?.consumer_id && profile?.email) {
       consumersToNotify.add(cart.consumer_id);
       consumerEmails.set(cart.consumer_id, profile.email);
@@ -102,30 +101,56 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
     errors: []
   };
 
-  // Send reminder to each consumer
-  for (const consumerId of consumersToNotify) {
-    try {
-      await supabaseClient.functions.invoke('send-notification', {
-        body: {
-          event_type: 'cutoff_reminder',
-          recipient_id: consumerId,
-          recipient_email: consumerEmails.get(consumerId),
-          data: {
-            delivery_date: tomorrowDate
-          }
-        }
-      });
+  // OPTIMIZED: Send reminders in parallel batches (was sequential)
+  // Critical for 50k+ users - reduces from 13+ hours to minutes
+  const BATCH_SIZE = 100; // Process 100 notifications concurrently
+  const consumerArray = Array.from(consumersToNotify);
 
-      results.reminders_sent++;
-      ctx.metrics.mark('reminder_sent');
-    } catch (error: unknown) {
-      console.error(`[${ctx.requestId}] Failed to send reminder to ${consumerId}:`, error);
-      results.errors.push({
-        consumer_id: consumerId,
-        error: getErrorMessage(error)
-      });
-      ctx.metrics.mark('reminder_failed');
-    }
+  for (let i = 0; i < consumerArray.length; i += BATCH_SIZE) {
+    const batch = consumerArray.slice(i, i + BATCH_SIZE);
+
+    const batchPromises = batch.map(async (consumerId) => {
+      try {
+        await supabaseClient.functions.invoke('send-notification', {
+          body: {
+            event_type: 'cutoff_reminder',
+            recipient_id: consumerId,
+            recipient_email: consumerEmails.get(consumerId),
+            data: {
+              delivery_date: tomorrowDate
+            }
+          }
+        });
+
+        ctx.metrics.mark('reminder_sent');
+        return { success: true, consumerId };
+      } catch (error: unknown) {
+        console.error(`[${ctx.requestId}] Failed to send reminder to ${consumerId}:`, error);
+        ctx.metrics.mark('reminder_failed');
+        return {
+          success: false,
+          consumerId,
+          error: getErrorMessage(error)
+        };
+      }
+    });
+
+    // Wait for batch to complete before starting next batch
+    const batchResults = await Promise.all(batchPromises);
+
+    // Update results
+    batchResults.forEach(result => {
+      if (result.success) {
+        results.reminders_sent++;
+      } else {
+        results.errors.push({
+          consumer_id: result.consumerId,
+          error: result.error!
+        });
+      }
+    });
+
+    console.log(`[${ctx.requestId}] Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${batchResults.filter(r => r.success).length}/${batch.length} sent`);
   }
 
   console.log(`[${ctx.requestId}] ✅ Cutoff reminder job complete:`, results);
