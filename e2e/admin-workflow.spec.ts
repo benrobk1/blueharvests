@@ -35,7 +35,7 @@ test.describe('Admin Workflow', () => {
     // Wait for content or empty state with proper wait APIs
     try {
       await expect(approvalsContent).toBeVisible({ timeout: 10_000 });
-    } catch {
+    } catch (_error) {
       const heading = page.locator('h1, h2').first();
       await expect(heading).toBeVisible({ timeout: 10_000 });
     }
