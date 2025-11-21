@@ -464,7 +464,7 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
 
         if (adminRoles && adminRoles.length > 0) {
           // Build description with all affected payouts
-          const totalAmount = payoutRecords.reduce((sum, record) => sum + Number(record.amount), 0);
+          const totalAmount = payoutRecords.reduce((sum, record) => sum + parseFloat(String(record.amount)), 0);
           const recipientSummary = payoutRecords.length === 1 
             ? `${payoutRecords[0].recipient_type} (ID: ${payoutRecords[0].recipient_id})`
             : `${payoutRecords.length} recipients (${payoutRecords.map(r => r.recipient_type).join(', ')})`;
