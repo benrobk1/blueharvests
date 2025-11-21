@@ -387,10 +387,9 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
       ctx.metrics.mark('payout_failed');
 
       // Retrieve balance transactions for this payout to find associated transfers
-      let transferIds: string[] = [];
+      const transferIds: string[] = [];
       try {
         // Fetch balance transactions with pagination to handle payouts with many transfers
-        const allTransferIds: string[] = [];
         let hasMore = true;
         let startingAfter: string | undefined;
         
@@ -403,20 +402,17 @@ const handler = async (req: Request, ctx: Context): Promise<Response> => {
           });
           
           const pageTransferIds = balanceTransactions.data
-            .map(txn => txn.source as string)
-            .filter(id => id && id.startsWith('tr_'));
+            .filter(txn => txn.source && typeof txn.source === 'string' && txn.source.startsWith('tr_'))
+            .map(txn => txn.source as string);
           
-          allTransferIds.push(...pageTransferIds);
+          transferIds.push(...pageTransferIds);
           
           hasMore = balanceTransactions.has_more;
           if (hasMore && balanceTransactions.data.length > 0) {
             startingAfter = balanceTransactions.data[balanceTransactions.data.length - 1].id;
-          } else {
-            hasMore = false;
           }
         }
         
-        transferIds = allTransferIds;
         console.log(`[${ctx.requestId}] Found ${transferIds.length} transfer(s) for payout ${payout.id}`);
       } catch (stripeError) {
         console.error(`[${ctx.requestId}] ❌ Failed to fetch balance transactions: ${stripeError}`);
